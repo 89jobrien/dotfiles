@@ -1,0 +1,19 @@
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Sensitive files (if you add them)
+**/secrets/
+**/*.secret
+**/*.key
+**/*.pem

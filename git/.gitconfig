@@ -1,0 +1,25 @@
+[user]
+	name = 89jobrien
+	email = jobrien89@protonmail.com
+
+[core]
+	editor = vim
+	autocrlf = input
+
+[init]
+	defaultBranch = main
+
+[pull]
+	rebase = false
+
+[alias]
+	st = status
+	co = checkout
+	br = branch
+	ci = commit
+	lg = log --oneline --graph --decorate --all
+	last = log -1 HEAD
+	unstage = reset HEAD --
+
+[color]
+	ui = auto
