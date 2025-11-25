@@ -1,0 +1,12 @@
+{
+  "basic-memory": {
+    "name": "basic-memory",
+    "profile_tags": [],
+    "command": "uvx",
+    "args": [
+      "basic-memory",
+      "mcp"
+    ],
+    "env": {}
+  }
+}

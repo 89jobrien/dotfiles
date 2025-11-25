@@ -17,3 +17,15 @@
 **/*.secret
 **/*.key
 **/*.pem
+
+# Shell history files (contain sensitive data)
+**/.zsh_history
+**/.bash_history
+**/fish_variables
+
+# 1Password config (may contain sensitive paths)
+**/op/
+
+# API keys and tokens
+**/raycast/ai/
+**/raycast/extensions/*/secrets.json

@@ -1,6 +1,12 @@
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+
 [user]
-	name = 89jobrien
-	email = jobrien89@protonmail.com
+	name = Joesph O'Brien
+	email = 98370624+89jobrien@users.noreply.github.com
 
 [core]
 	editor = vim
