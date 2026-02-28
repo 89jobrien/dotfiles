@@ -32,4 +32,53 @@ if status is-interactive
     if command -q sccache
         set -gx RUSTC_WRAPPER sccache
     end
+
+    # Core short aliases.
+    alias m "mise"
+    alias mr "mise run"
+    alias mi "mise install"
+    alias mt "mise tasks ls"
+
+    alias g "git"
+    alias gs "git status -sb"
+    alias ga "git add"
+    alias gc "git commit"
+    alias gco "git checkout"
+    alias gb "git branch"
+    alias gl "git pull --ff-only"
+    alias gp "git push"
+    alias gd "git diff"
+
+    # Dotfiles workflow helpers.
+    alias dot "cd $HOME/dotfiles"
+    alias dotgs "cd $HOME/dotfiles && git status -sb"
+    alias dotpull "cd $HOME/dotfiles && git pull --ff-only"
+    alias dotpush "cd $HOME/dotfiles && git push"
+
+    function dfr --description "Run a mise task from ~/dotfiles"
+        cd $HOME/dotfiles; and mise run $argv
+    end
+
+    function dfj --description "Run a just recipe from ~/dotfiles"
+        cd $HOME/dotfiles; and just $argv
+    end
+
+    alias updev "dfr up"
+    alias obs "dfr observe"
+    alias obsk "dfr observe-k8s"
+    alias obsl "dfr observe-logs"
+    alias kctx "kubectl config current-context"
+    alias kpods "kubectl get pods -A"
+
+    function klogs --description "Tail logs across namespaces (stern)"
+        set pattern "."
+        if test (count $argv) -gt 0
+            set pattern $argv[1]
+        end
+        stern $pattern -A
+    end
+
+    if command -q zoxide
+        zoxide init fish | source
+    end
 end

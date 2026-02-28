@@ -149,6 +149,49 @@ if command -v sccache >/dev/null 2>&1; then
   export RUSTC_WRAPPER='sccache'
 fi
 
+# Core short aliases.
+alias m='mise'
+alias mr='mise run'
+alias mi='mise install'
+alias mt='mise tasks ls'
+
+alias g='git'
+alias gs='git status -sb'
+alias ga='git add'
+alias gc='git commit'
+alias gco='git checkout'
+alias gb='git branch'
+alias gl='git pull --ff-only'
+alias gp='git push'
+alias gd='git diff'
+
+# Dotfiles workflow helpers.
+alias dot='cd "$HOME/dotfiles"'
+alias dotgs='cd "$HOME/dotfiles" && git status -sb'
+alias dotpull='cd "$HOME/dotfiles" && git pull --ff-only'
+alias dotpush='cd "$HOME/dotfiles" && git push'
+
+dfr() {
+  (cd "$HOME/dotfiles" && mise run "$@")
+}
+
+dfj() {
+  (cd "$HOME/dotfiles" && just "$@")
+}
+
+alias updev='dfr up'
+alias obs='dfr observe'
+alias obsk='dfr observe-k8s'
+alias obsl='dfr observe-logs'
+alias kctx='kubectl config current-context'
+alias kpods='kubectl get pods -A'
+
+# Tail logs across all namespaces with optional stern pattern.
+klogs() {
+  local pattern="${1:-.}"
+  stern "${pattern}" -A
+}
+
 # Auto-load decrypted bootstrap secrets (dotenv format).
 if [ -f "$HOME/.config/dev-bootstrap/secrets.env" ]; then
   set -a
@@ -156,7 +199,9 @@ if [ -f "$HOME/.config/dev-bootstrap/secrets.env" ]; then
   set +a
 fi
 
-eval "$(zoxide init zsh)"
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+fi
 source /opt/homebrew/share/zsh-autopair/autopair.zsh
 source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 

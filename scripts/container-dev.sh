@@ -9,7 +9,11 @@ K3D_CLUSTER="${K3D_CLUSTER_NAME:-dev}"
 KIND_CLUSTER="${KIND_CLUSTER_NAME:-dev}"
 
 log() {
-  printf '[containers] %s\n' "$*"
+  if command -v gum >/dev/null 2>&1; then
+    gum style --foreground 212 "[containers] $*"
+  else
+    printf '[containers] %s\n' "$*"
+  fi
 }
 
 need_cmd() {

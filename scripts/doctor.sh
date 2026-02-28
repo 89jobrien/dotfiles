@@ -33,7 +33,7 @@ for c in git curl stow nvim; do
 done
 
 echo "[doctor] preferred commands"
-for c in gh rg fd jq tmux alacritty mise zb uv bun bunx docker colima kubectl helm k9s kind k3d tilt; do
+for c in gh rg fd fzf eza zoxide gum jq tmux alacritty mise zb uv bun bunx docker colima kubectl helm k9s kind k3d tilt; do
   check_cmd "${c}"
 done
 
