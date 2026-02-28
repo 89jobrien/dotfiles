@@ -37,7 +37,7 @@ Preferred interfaces:
 - Falls back to `apt` on Linux if Homebrew is unavailable (`config/apt-packages.txt`).
 - Stows default managed packages from `config/stow-packages.txt`.
 - Runs post-setup hooks:
-  - `scripts/setup-git-config.sh` (configure global git identity from `gh`/env/prompt)
+  - `scripts/setup-git-config.sh` (configure global git identity + `gh` credential helper + sane push defaults)
   - `scripts/setup-oh-my-zsh.sh` (installs Oh My Zsh unattended, keeps managed `.zshrc`)
   - `scripts/macos-defaults.sh` (Alacritty defaults on macOS)
   - `scripts/setup-secret-hygiene.sh` (install local dotfiles pre-commit secret policy)
@@ -209,3 +209,10 @@ This generates `secrets/.env.sops.json` from your local age key and can be safel
 - `raycast`, `mcpm`, and `vector` are local-only by default; enable via `config/stow-packages.local.txt` when needed.
 - On macOS, run containers with `colima` (lighter than Docker Desktop). Use `scripts/container-dev.sh` or `make container-start`.
 - For non-interactive bootstrap, set `GIT_USER_NAME` and `GIT_USER_EMAIL` to avoid git identity prompts.
+- Shell git shortcuts default to GitHub CLI credential flow:
+  - `gp` => push with `gh auth git-credential`
+  - `gl` => pull `--ff-only` with `gh auth git-credential`
+  - `gpf` => push `--force-with-lease` with `gh auth git-credential`
+- Git Flow is included via `git-flow-next` (maintained) with shortcuts:
+  - `gfi` (init), `gffs`/`gfff` (feature start/finish)
+  - `gfrs`/`gfrf` (release start/finish), `gfhs`/`gfhf` (hotfix start/finish)

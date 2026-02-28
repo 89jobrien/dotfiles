@@ -45,7 +45,6 @@ main() {
 
   if [[ -n "${current_name}" && -n "${current_email}" ]]; then
     log "Global git identity already configured (${current_name} <${current_email}>)."
-    return 0
   fi
 
   local gh_login gh_name gh_email
@@ -89,6 +88,27 @@ main() {
     log "  git config --global user.name \"Your Name\""
     log "  git config --global user.email \"you@example.com\""
   fi
+
+  # Prefer GitHub CLI credential flow for github.com remotes.
+  if command -v gh >/dev/null 2>&1; then
+    if gh auth status >/dev/null 2>&1; then
+      gh auth setup-git >/dev/null 2>&1 || true
+      git config --global credential.https://github.com.helper ""
+      git config --global credential.https://github.com.helper "!$(command -v gh) auth git-credential"
+      git config --global credential.https://gist.github.com.helper ""
+      git config --global credential.https://gist.github.com.helper "!$(command -v gh) auth git-credential"
+      log "Configured git to use gh credentials for github.com remotes."
+    else
+      log "gh is installed but not authenticated; skipping git credential helper setup."
+      log "Run: gh auth login -h github.com && gh auth setup-git"
+    fi
+  fi
+
+  # Sensible push/pull defaults.
+  git config --global push.autoSetupRemote true
+  git config --global push.default current
+  git config --global fetch.prune true
+  log "Set git defaults: push.autoSetupRemote=true push.default=current fetch.prune=true"
 }
 
 main "$@"

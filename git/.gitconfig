@@ -19,6 +19,13 @@
 [pull]
 	rebase = false
 
+[push]
+	autoSetupRemote = true
+	default = current
+
+[fetch]
+	prune = true
+
 [alias]
 	st = status
 	co = checkout
@@ -30,3 +37,9 @@
 
 [color]
 	ui = auto
+[credential "https://github.com"]
+	helper = 
+	helper = !/opt/homebrew/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/opt/homebrew/bin/gh auth git-credential

@@ -1,6 +1,7 @@
 # Core tooling (Linux-safe; no casks)
 brew "stow"
 brew "git"
+brew "git-flow-next"
 brew "gh"
 brew "ripgrep"
 brew "fd"

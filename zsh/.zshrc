@@ -182,9 +182,22 @@ alias ga='git add'
 alias gc='git commit'
 alias gco='git checkout'
 alias gb='git branch'
-alias gl='git pull --ff-only'
-alias gp='git push'
 alias gd='git diff'
+_git_gh() {
+  git -c credential.helper= -c credential.helper='!/opt/homebrew/bin/gh auth git-credential' "$@"
+}
+gp() { _git_gh push "$@"; }
+gl() { _git_gh pull --ff-only "$@"; }
+gpf() { _git_gh push --force-with-lease "$@"; }
+if git flow version >/dev/null 2>&1; then
+  alias gfi='git flow init -fd'
+  alias gffs='git flow feature start'
+  alias gfff='git flow feature finish'
+  alias gfrs='git flow release start'
+  alias gfrf='git flow release finish'
+  alias gfhs='git flow hotfix start'
+  alias gfhf='git flow hotfix finish'
+fi
 
 alias ghst='gh auth status'
 alias ghrepo='gh repo view --web'

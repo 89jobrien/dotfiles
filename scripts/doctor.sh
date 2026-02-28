@@ -36,6 +36,12 @@ echo "[doctor] preferred commands"
 for c in gh rg fd fzf eza zoxide gum jq tmux alacritty mise zb uv bun bunx docker colima kubectl helm k9s kind k3d tilt btm btop procs duf dust; do
   check_cmd "${c}"
 done
+if git flow version >/dev/null 2>&1; then
+  echo "[ok] git-flow -> $(command -v git)"
+else
+  echo "[missing] git-flow (git flow)"
+  status=1
+fi
 check_optional_cmd "zed"
 
 echo "[doctor] rust workflow commands"
@@ -68,6 +74,22 @@ if [[ -n "${git_name}" && -n "${git_email}" ]]; then
   echo "[doctor] git identity configured (${git_name} <${git_email}>)"
 else
   echo "[doctor] warning: git identity incomplete (user.name/user.email)"
+fi
+
+git_gh_helper="$(git config --global --get credential.https://github.com.helper || true)"
+if [[ "${git_gh_helper}" == *"gh auth git-credential"* ]]; then
+  echo "[doctor] git github helper configured (${git_gh_helper})"
+else
+  echo "[doctor] warning: git github helper not configured to use gh"
+  echo "[doctor]         run ./scripts/setup-git-config.sh"
+fi
+
+if command -v gh >/dev/null 2>&1; then
+  if gh auth status -h github.com >/dev/null 2>&1; then
+    echo "[doctor] gh auth OK"
+  else
+    echo "[doctor] warning: gh auth not valid; pushes may fail"
+  fi
 fi
 
 if [[ $status -ne 0 ]]; then

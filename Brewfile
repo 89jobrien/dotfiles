@@ -1,6 +1,7 @@
 # Core tooling
 brew "stow"
 brew "git"
+brew "git-flow-next"
 brew "gh"
 brew "ripgrep"
 brew "fd"

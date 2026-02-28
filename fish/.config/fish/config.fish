@@ -60,9 +60,28 @@ if status is-interactive
     alias gc "git commit"
     alias gco "git checkout"
     alias gb "git branch"
-    alias gl "git pull --ff-only"
-    alias gp "git push"
     alias gd "git diff"
+    function __git_gh --description "Git with GH credential helper"
+        git -c credential.helper= -c credential.helper="!/opt/homebrew/bin/gh auth git-credential" $argv
+    end
+    function gp --description "Push using GH credential helper"
+        __git_gh push $argv
+    end
+    function gl --description "Pull --ff-only using GH credential helper"
+        __git_gh pull --ff-only $argv
+    end
+    function gpf --description "Force push safely using GH credential helper"
+        __git_gh push --force-with-lease $argv
+    end
+    if git flow version >/dev/null 2>&1
+        alias gfi "git flow init -fd"
+        alias gffs "git flow feature start"
+        alias gfff "git flow feature finish"
+        alias gfrs "git flow release start"
+        alias gfrf "git flow release finish"
+        alias gfhs "git flow hotfix start"
+        alias gfhf "git flow hotfix finish"
+    end
 
     alias ghst "gh auth status"
     alias ghrepo "gh repo view --web"
