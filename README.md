@@ -150,9 +150,15 @@ mise run secrets-check
   - loads `[".env", ".env.local", "secrets/.env.json", "secrets/.env.sops.json"]`
   - extends PATH for common project bins
   - auto-creates `.venv` for Python workflows
+  - sets `pj` TUI defaults (`PJ_TUI_EVENT_STREAM=app`, `PJ_TUI_EVENT_MAX_CHARS=140`)
 - Local-only overrides: `mise.local.toml` (gitignored)
   - copy from `mise.local.toml.example`
   - use `__SECRET_*` keys for masked `mise env` output
+  - override `PJ_TUI_EVENT_STREAM` with:
+    - `off`
+    - `app`
+    - `file:/absolute/path/to/events.log`
+    - a static text message
 - Encrypted option:
   - store secrets as `secrets/.env.sops.json` (committable encrypted file)
   - `MISE_SOPS_AGE_KEY_FILE` is auto-set to `~/.config/sops/age/keys.txt` when present

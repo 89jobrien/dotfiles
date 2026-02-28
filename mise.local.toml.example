@@ -11,3 +11,12 @@ REDIS_URL = "redis://localhost:6379"
 AWS_ACCESS_KEY_ID = "replace-me"
 AWS_SECRET_ACCESS_KEY = "replace-me"
 OPENAI_API_KEY = "replace-me"
+
+# pj TUI local overrides
+# options:
+# - "app" (default app event stream)
+# - "off"
+# - "file:/absolute/path/to/events.log"
+# - any static text
+PJ_TUI_EVENT_STREAM = "app"
+PJ_TUI_EVENT_MAX_CHARS = "180"
