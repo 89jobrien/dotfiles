@@ -1,9 +1,25 @@
 {
-  "theme": "Catppuccin Mocha",
-  "vim_mode": true,
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false
+  },
+  "session": {
+    "trust_all_worktrees": true
+  },
+  "theme": "One Dark",
+  "vim_mode": false,
   "format_on_save": "on",
   "ui_font_size": 15,
   "buffer_font_size": 14,
   "tab_size": 2,
-  "hard_tabs": false
+  "hard_tabs": false,
+  "context_servers": {
+    "personal": {
+      "command": "/Users/rentamac/.local/bin/personal-mcp",
+      "args": [],
+      "env": {
+        "MCP_CTX_DIR": "/Users/rentamac/.ctx"
+      }
+    }
+  }
 }
