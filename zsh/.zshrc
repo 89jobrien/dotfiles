@@ -104,11 +104,61 @@ source $ZSH/oh-my-zsh.sh
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
 # bun completions
-[ -s "/Users/joe/.bun/_bun" ] && source "/Users/joe/.bun/_bun"
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+[ -d "$HOME/.zerobrew/bin" ] && export PATH="$HOME/.zerobrew/bin:$PATH"
+[ -d "$HOME/.local/bin" ] && export PATH="$HOME/.local/bin:$PATH"
+
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+
+# Prefer mise shims first for reproducible tool resolution.
+export PATH="$HOME/.local/share/mise/shims:$PATH"
+
+if [ -f "$HOME/.config/sops/age/keys.txt" ]; then
+  export MISE_SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+fi
+
+if command -v zb >/dev/null 2>&1; then
+  alias zbi='zb install'
+  alias zbs='zb search'
+  alias zbl='zb list'
+  alias zbu='zb update'
+fi
+
+# Prefer uv for Python workflows.
+if command -v uv >/dev/null 2>&1; then
+  alias pip='uv pip'
+  alias pip3='uv pip'
+  alias py='uv run python'
+fi
+
+# Prefer Bun for JS package management where compatible.
+if command -v bun >/dev/null 2>&1; then
+  alias npm='bun'
+  alias npx='bunx'
+  alias pnpm='bun'
+  alias yarn='bun'
+fi
+
+if command -v sccache >/dev/null 2>&1; then
+  export RUSTC_WRAPPER='sccache'
+fi
+
+# Auto-load decrypted bootstrap secrets (dotenv format).
+if [ -f "$HOME/.config/dev-bootstrap/secrets.env" ]; then
+  set -a
+  . "$HOME/.config/dev-bootstrap/secrets.env"
+  set +a
+fi
+
 eval "$(zoxide init zsh)"
 source /opt/homebrew/share/zsh-autopair/autopair.zsh
 source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+
+# Mutable local overrides (not managed by stow repo)
+[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"

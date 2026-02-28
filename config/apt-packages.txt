@@ -1,0 +1,12 @@
+# Linux fallback packages if Homebrew is unavailable.
+git
+curl
+stow
+ripgrep
+fd-find
+fzf
+jq
+tmux
+neovim
+python3
+nodejs

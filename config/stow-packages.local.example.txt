@@ -1,0 +1,6 @@
+# Copy to config/stow-packages.local.txt to add personal machine-only stow packages.
+# One package directory per line.
+# Example local-only packages:
+raycast
+mcpm
+vector

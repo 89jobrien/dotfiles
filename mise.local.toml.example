@@ -1,0 +1,13 @@
+[env]
+# Local-only secrets and overrides.
+# Copy to `mise.local.toml` (gitignored) and set real values.
+
+# Masked in `mise env` output, still available to child processes.
+__SECRET_KEY = "replace-me"
+
+# Common dev secrets
+DATABASE_URL = "postgresql://user:password@localhost/app_dev"
+REDIS_URL = "redis://localhost:6379"
+AWS_ACCESS_KEY_ID = "replace-me"
+AWS_SECRET_ACCESS_KEY = "replace-me"
+OPENAI_API_KEY = "replace-me"

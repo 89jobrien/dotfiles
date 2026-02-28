@@ -1,0 +1,107 @@
+[tools]
+bun = "latest"
+go = "1.25"
+node = "22"
+python = "3.13"
+rust = "1.88"
+uv = "latest"
+
+[env]
+# Project-local env loading pattern.
+# Keep secrets out of this file; put machine-specific values in `mise.local.toml`
+# (ignored by git), `.env.local`, or encrypted `secrets/.env.sops.json`.
+_.file = [".env", ".env.local", "secrets/.env.json", "secrets/.env.sops.json"]
+_.path = ["bin", "scripts", "node_modules/.bin", ".venv/bin", "target/debug", "target/release"]
+_.python.venv = { path = ".venv", create = true }
+
+[tasks.install]
+description = "Run full bootstrap install"
+run = "./install.sh"
+
+[tasks.doctor]
+description = "Check environment requirements"
+run = "./scripts/doctor.sh"
+
+[tasks.drift]
+description = "Detect local drift from managed dotfiles"
+run = "./scripts/drift-check.sh"
+
+[tasks.stow]
+description = "Restow managed package set only"
+run = "./install.sh --no-packages --no-post"
+
+[tasks.post]
+description = "Run post bootstrap hooks only"
+run = "./install.sh --no-packages --no-stow"
+
+[tasks.nvim]
+description = "Run Neovim NvChad + Avante setup"
+run = "./scripts/setup-nvchad-avante.sh"
+
+[tasks.dev-tools]
+description = "Install core global dev tools used across repos"
+run = "./scripts/setup-dev-tools.sh"
+
+[tasks.up]
+description = "Start runtime, bring up k3d, then run doctor"
+run = "mise run container-start && mise run k3d-up && mise run doctor"
+
+[tasks.container-start]
+description = "Start local container runtime (colima)"
+run = "./scripts/container-dev.sh start"
+
+[tasks.container-stop]
+description = "Stop local container runtime (colima)"
+run = "./scripts/container-dev.sh stop"
+
+[tasks.container-status]
+description = "Show local container and kube status"
+run = "./scripts/container-dev.sh status"
+
+[tasks.k3d-up]
+description = "Create local k3d cluster"
+run = "./scripts/container-dev.sh k3d-up"
+
+[tasks.k3d-down]
+description = "Delete local k3d cluster"
+run = "./scripts/container-dev.sh k3d-down"
+
+[tasks.kind-up]
+description = "Create local kind cluster"
+run = "./scripts/container-dev.sh kind-up"
+
+[tasks.kind-down]
+description = "Delete local kind cluster"
+run = "./scripts/container-dev.sh kind-down"
+
+[tasks.tilt-up]
+description = "Start Tilt from the current directory"
+run = "./scripts/container-dev.sh tilt-up"
+
+[tasks.observe]
+description = "Show one-shot runtime and cluster summary"
+run = "./scripts/observe-dev.sh summary"
+
+[tasks.observe-k8s]
+description = "Open k9s cluster UI"
+run = "./scripts/observe-dev.sh k8s"
+
+[tasks.observe-logs]
+description = "Tail all Kubernetes logs with stern"
+run = "./scripts/observe-dev.sh logs"
+
+[tasks.observe-docker]
+description = "Live-refresh docker container list"
+run = "./scripts/observe-dev.sh docker"
+
+[tasks.observe-docker-events]
+description = "Stream docker events"
+run = "./scripts/observe-dev.sh docker-events"
+
+[tasks.observe-docker-stats]
+description = "Stream docker stats"
+run = "./scripts/observe-dev.sh docker-stats"
+
+[tasks.secrets-sops-json]
+description = "Generate encrypted secrets/.env.sops.json from local secrets/.env.json"
+run = "./scripts/secrets/make-sops-env-json.sh"
