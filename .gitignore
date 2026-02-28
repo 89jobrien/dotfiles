@@ -29,3 +29,26 @@
 # API keys and tokens
 **/raycast/ai/
 **/raycast/extensions/*/secrets.json
+secrets/*.env
+!secrets/*.example
+!secrets/*.sops
+secrets/.env.json
+!secrets/.env.sops.json
+.env
+.env.local
+mise.local.toml
+.venv/
+
+# Machine-local app state (do not commit)
+/raycast/
+/mcpm/
+/vector/
+
+# Local build/runtime artifacts
+/.venv/
+/.cache/
+
+# Local bootstrap overrides (mutable layer)
+config/stow-packages.local.txt
+config/apt-packages.local.txt
+scripts/post-bootstrap.local.sh
