@@ -1,4 +1,4 @@
-.PHONY: install doctor drift stow post nvim up container-start container-stop container-status k3d-up k3d-down kind-up kind-down tilt-up observe observe-k8s observe-logs observe-docker observe-docker-events observe-docker-stats health health-live health-procs health-disk raycast-scripts secrets-sops-json secrets-check
+.PHONY: install doctor drift stow post nvim up container-start container-stop container-status k3d-up k3d-down kind-up kind-down tilt-up observe observe-k8s observe-logs observe-docker observe-docker-events observe-docker-stats health health-live health-procs health-disk raycast-scripts personal-mcp secrets-sops-json secrets-check
 
 install:
 	./install.sh
@@ -76,6 +76,9 @@ health-disk:
 
 raycast-scripts:
 	./scripts/setup-raycast-scripts.sh
+
+personal-mcp:
+	./scripts/setup-personal-mcp.sh
 
 secrets-sops-json:
 	./scripts/secrets/make-sops-env-json.sh

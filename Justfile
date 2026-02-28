@@ -83,6 +83,9 @@ health-disk:
 raycast-scripts:
     ./scripts/setup-raycast-scripts.sh
 
+personal-mcp:
+    ./scripts/setup-personal-mcp.sh
+
 secrets-sops-json:
     ./scripts/secrets/make-sops-env-json.sh
 

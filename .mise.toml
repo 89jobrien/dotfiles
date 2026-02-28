@@ -124,6 +124,10 @@ run = "./scripts/system-health.sh disk"
 description = "Link managed Raycast script commands"
 run = "./scripts/setup-raycast-scripts.sh"
 
+[tasks.personal-mcp]
+description = "Install and configure personal MCP for Claude/Cursor/Zed"
+run = "./scripts/setup-personal-mcp.sh"
+
 [tasks.secrets-sops-json]
 description = "Generate encrypted secrets/.env.sops.json from local secrets/.env.json"
 run = "./scripts/secrets/make-sops-env-json.sh"

@@ -216,6 +216,8 @@ run_post_hooks() {
     "${ROOT_DIR}/scripts/setup-raycast-scripts.sh" || true
   fi
 
+  "${ROOT_DIR}/scripts/setup-personal-mcp.sh" || true
+
   if command -v mise >/dev/null 2>&1 && [[ -f "${ROOT_DIR}/.mise.toml" ]]; then
     (cd "${ROOT_DIR}" && mise run dev-tools) || true
   else
