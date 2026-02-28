@@ -4,3 +4,4 @@ git
 zsh
 fish
 alacritty
+zed

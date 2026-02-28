@@ -102,6 +102,30 @@ run = "./scripts/observe-dev.sh docker-events"
 description = "Stream docker stats"
 run = "./scripts/observe-dev.sh docker-stats"
 
+[tasks.health]
+description = "Show one-shot system health and resource summary"
+run = "./scripts/system-health.sh summary"
+
+[tasks.health-live]
+description = "Open interactive system monitor"
+run = "./scripts/system-health.sh live"
+
+[tasks.health-procs]
+description = "Show process resource usage list"
+run = "./scripts/system-health.sh procs"
+
+[tasks.health-disk]
+description = "Show disk usage summary"
+run = "./scripts/system-health.sh disk"
+
+[tasks.raycast-scripts]
+description = "Link managed Raycast script commands"
+run = "./scripts/setup-raycast-scripts.sh"
+
 [tasks.secrets-sops-json]
 description = "Generate encrypted secrets/.env.sops.json from local secrets/.env.json"
 run = "./scripts/secrets/make-sops-env-json.sh"
+
+[tasks.secrets-check]
+description = "Fail if plaintext secret files/content are staged"
+run = "./scripts/secrets/check-no-plaintext.sh"

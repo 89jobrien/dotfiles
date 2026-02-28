@@ -5,9 +5,8 @@ Run from `~/dotfiles`:
 ```bash
 cd ~/dotfiles
 
-# 1) Rust tools that failed on MSRV drift
-mise exec -- cargo install --locked cargo-binstall
-mise exec -- cargo install --locked cargo-outdated
+# 1) Rust tools (optional)
+# (none required)
 
 # 2) Recreate Colima profile with Docker runtime (required by k3d)
 ./scripts/container-dev.sh stop || true

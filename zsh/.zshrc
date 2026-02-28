@@ -72,7 +72,9 @@ ZSH_THEME="robbyrussell"
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(git)
 
-source $ZSH/oh-my-zsh.sh
+if [ -f "$ZSH/oh-my-zsh.sh" ]; then
+  source "$ZSH/oh-my-zsh.sh"
+fi
 
 # User configuration
 
@@ -130,6 +132,25 @@ if command -v zb >/dev/null 2>&1; then
   alias zbu='zb update'
 fi
 
+# Default IDE preference: Zed when available.
+if command -v zed >/dev/null 2>&1; then
+  export VISUAL='zed --wait'
+  alias ide='zed .'
+else
+  alias ide='nvim .'
+fi
+
+# History safety: commands containing likely secrets are not persisted.
+setopt HIST_IGNORE_SPACE
+setopt HIST_REDUCE_BLANKS
+zshaddhistory() {
+  emulate -L zsh
+  local line="${1%%$'\n'}"
+  local pat='(OPENAI_API_KEY|ANTHROPIC_API_KEY|AWS_SECRET_ACCESS_KEY|GITHUB_TOKEN|GH_TOKEN|token=|api[_-]?key=|password=|passwd=|secret=|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]+)'
+  [[ "$line" =~ ${~pat} ]] && return 1
+  return 0
+}
+
 # Prefer uv for Python workflows.
 if command -v uv >/dev/null 2>&1; then
   alias pip='uv pip'
@@ -165,11 +186,33 @@ alias gl='git pull --ff-only'
 alias gp='git push'
 alias gd='git diff'
 
+alias ghst='gh auth status'
+alias ghrepo='gh repo view --web'
+alias ghpr='gh pr create'
+alias ghprv='gh pr view'
+alias ghprw='gh pr view --web'
+alias ghiss='gh issue list'
+alias ghrun='gh run list'
+
+if command -v pj >/dev/null 2>&1; then
+  alias obfs='pj secret redact'
+fi
+
+# Redact command output with obfsck-style tokens.
+obfsrun() {
+  if command -v pj >/dev/null 2>&1; then
+    "$@" 2>&1 | pj secret redact
+  else
+    "$@"
+  fi
+}
+
 # Dotfiles workflow helpers.
 alias dot='cd "$HOME/dotfiles"'
 alias dotgs='cd "$HOME/dotfiles" && git status -sb'
 alias dotpull='cd "$HOME/dotfiles" && git pull --ff-only'
 alias dotpush='cd "$HOME/dotfiles" && git push'
+alias dotopen='cd "$HOME/dotfiles" && gh repo view --web'
 
 dfr() {
   (cd "$HOME/dotfiles" && mise run "$@")
@@ -202,8 +245,12 @@ fi
 if command -v zoxide >/dev/null 2>&1; then
   eval "$(zoxide init zsh)"
 fi
-source /opt/homebrew/share/zsh-autopair/autopair.zsh
-source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+if [ -f /opt/homebrew/share/zsh-autopair/autopair.zsh ]; then
+  source /opt/homebrew/share/zsh-autopair/autopair.zsh
+fi
+if [ -f /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]; then
+  source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+fi
 
 # Mutable local overrides (not managed by stow repo)
 [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"

@@ -33,17 +33,15 @@ for c in git curl stow nvim; do
 done
 
 echo "[doctor] preferred commands"
-for c in gh rg fd fzf eza zoxide gum jq tmux alacritty mise zb uv bun bunx docker colima kubectl helm k9s kind k3d tilt; do
+for c in gh rg fd fzf eza zoxide gum jq tmux alacritty mise zb uv bun bunx docker colima kubectl helm k9s kind k3d tilt btm btop procs duf dust; do
   check_cmd "${c}"
 done
+check_optional_cmd "zed"
 
 echo "[doctor] rust workflow commands"
 for c in cargo rustc bacon cargo-nextest cargo-watch sccache cargo-chef cargo-llvm-cov cargo-deny cargo-audit cargo-expand cargo-machete cargo-criterion hyperfine; do
   check_cmd "${c}"
 done
-check_optional_cmd "cargo-binstall"
-check_optional_cmd "cargo-outdated"
-
 if [[ "$(uname -s)" == "Darwin" ]]; then
   echo "[doctor] macOS commands"
   for c in brew duti; do
@@ -56,6 +54,20 @@ if [[ -f "${ROOT_DIR}/config/stow-packages.txt" ]]; then
 else
   echo "[missing] config/stow-packages.txt"
   status=1
+fi
+
+if [[ -d "${HOME}/.oh-my-zsh" ]]; then
+  echo "[doctor] oh-my-zsh installed"
+else
+  echo "[doctor] warning: oh-my-zsh missing (run ./scripts/setup-oh-my-zsh.sh)"
+fi
+
+git_name="$(git config --global --get user.name || true)"
+git_email="$(git config --global --get user.email || true)"
+if [[ -n "${git_name}" && -n "${git_email}" ]]; then
+  echo "[doctor] git identity configured (${git_name} <${git_email}>)"
+else
+  echo "[doctor] warning: git identity incomplete (user.name/user.email)"
 fi
 
 if [[ $status -ne 0 ]]; then

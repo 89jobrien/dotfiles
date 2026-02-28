@@ -4,3 +4,6 @@
 raycast
 mcpm
 vector
+# Optional IDE config overlays:
+vscode
+cursor

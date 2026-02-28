@@ -1,0 +1,9 @@
+{
+  "workbench.colorTheme": "Catppuccin Mocha",
+  "editor.formatOnSave": true,
+  "editor.minimap.enabled": false,
+  "editor.fontLigatures": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "terminal.integrated.defaultProfile.osx": "zsh"
+}

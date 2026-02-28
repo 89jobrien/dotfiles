@@ -1,4 +1,13 @@
 if status is-interactive
+    # History safety: commands containing likely secrets are not persisted.
+    function fish_should_add_to_history --argument-names cmd
+        set pattern '(OPENAI_API_KEY|ANTHROPIC_API_KEY|AWS_SECRET_ACCESS_KEY|GITHUB_TOKEN|GH_TOKEN|token=|api[_-]?key=|password=|passwd=|secret=|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]+)'
+        if string match -r -i -- $pattern -- $cmd >/dev/null
+            return 1
+        end
+        return 0
+    end
+
     # Commands to run in interactive sessions can go here
     if test -d "$HOME/.zerobrew/bin"
         fish_add_path "$HOME/.zerobrew/bin"
@@ -17,6 +26,12 @@ if status is-interactive
         alias zbs "zb search"
         alias zbl "zb list"
         alias zbu "zb update"
+    end
+    if command -q zed
+        set -gx VISUAL "zed --wait"
+        alias ide "zed ."
+    else
+        alias ide "nvim ."
     end
     if command -q uv
         alias pip "uv pip"
@@ -49,11 +64,24 @@ if status is-interactive
     alias gp "git push"
     alias gd "git diff"
 
+    alias ghst "gh auth status"
+    alias ghrepo "gh repo view --web"
+    alias ghpr "gh pr create"
+    alias ghprv "gh pr view"
+    alias ghprw "gh pr view --web"
+    alias ghiss "gh issue list"
+    alias ghrun "gh run list"
+
+    if command -q pj
+        alias obfs "pj secret redact"
+    end
+
     # Dotfiles workflow helpers.
     alias dot "cd $HOME/dotfiles"
     alias dotgs "cd $HOME/dotfiles && git status -sb"
     alias dotpull "cd $HOME/dotfiles && git pull --ff-only"
     alias dotpush "cd $HOME/dotfiles && git push"
+    alias dotopen "cd $HOME/dotfiles && gh repo view --web"
 
     function dfr --description "Run a mise task from ~/dotfiles"
         cd $HOME/dotfiles; and mise run $argv
@@ -76,6 +104,14 @@ if status is-interactive
             set pattern $argv[1]
         end
         stern $pattern -A
+    end
+
+    function obfsrun --description "Run command and redact output"
+        if command -q pj
+            eval $argv 2>&1 | pj secret redact
+        else
+            eval $argv
+        end
     end
 
     if command -q zoxide

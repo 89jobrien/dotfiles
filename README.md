@@ -6,21 +6,19 @@ Reproducible dev environment bootstrap with a managed (immutable) core and local
 
 ```bash
 cd ~/dotfiles
-./install.sh
+pj dot install
 ```
 
 Equivalent:
 
 ```bash
-make install
-# or:
-mise run install
+pj dot install
 ```
 
 From anywhere (for example from `~`), use:
 
 ```bash
-make -C ~/dotfiles install
+pj dot install
 ```
 
 Recent run log:
@@ -30,6 +28,7 @@ Preferred interfaces:
 - Human workflow: `mise run <task>`
 - AI/automation workflow: `just <recipe>`
 - `make` remains as compatibility wrapper.
+- Bootstrap entrypoint: `pj dot install` (includes stow conflict prompts + backup flow).
 
 ## What bootstrap does
 
@@ -38,7 +37,10 @@ Preferred interfaces:
 - Falls back to `apt` on Linux if Homebrew is unavailable (`config/apt-packages.txt`).
 - Stows default managed packages from `config/stow-packages.txt`.
 - Runs post-setup hooks:
+  - `scripts/setup-git-config.sh` (configure global git identity from `gh`/env/prompt)
+  - `scripts/setup-oh-my-zsh.sh` (installs Oh My Zsh unattended, keeps managed `.zshrc`)
   - `scripts/macos-defaults.sh` (Alacritty defaults on macOS)
+  - `scripts/setup-secret-hygiene.sh` (install local dotfiles pre-commit secret policy)
   - `scripts/setup-dev-tools.sh` (Rust/Python CLI tooling)
   - `scripts/setup-nvchad-avante.sh` (Neovim + NvChad + Avante)
   - optional `scripts/post-bootstrap.local.sh` (local only)
@@ -48,7 +50,7 @@ Preferred interfaces:
 Managed (commit to repo):
 - `config/stow-packages.txt`
 - `Brewfile.macos`, `Brewfile.linux`
-- dotfile package directories (`git`, `zsh`, `fish`, `alacritty`, ...)
+- dotfile package directories (`git`, `zsh`, `fish`, `alacritty`, `zed`, ...)
 
 Local mutable (not committed):
 - `config/stow-packages.local.txt` (copy from `config/stow-packages.local.example.txt`)
@@ -76,6 +78,9 @@ mise run observe-logs          # tail all k8s logs with stern
 mise run observe-docker        # live-refresh docker ps
 mise run observe-docker-events # stream docker events
 mise run observe-docker-stats  # stream docker stats
+mise run health                # system summary (cpu/mem/disk/procs)
+mise run health-live           # interactive monitor
+mise run raycast-scripts       # link managed raycast script commands
 ```
 
 From `~`, for manual commands:
@@ -120,10 +125,22 @@ rm /tmp/bootstrap.env
 
 4. Run bootstrap:
 ```bash
-./install.sh
+pj dot install
 ```
 
 This decrypts to `~/.config/dev-bootstrap/secrets.env` (chmod 600), and `zsh/.zshrc` auto-loads it for new shells.
+
+## Secret policy (dotfiles)
+
+- Dotfiles policy is strict: no plaintext secrets in git history.
+- Bootstrap installs a local dotfiles pre-commit hook (`.githooks/pre-commit`) that blocks:
+  - staged plaintext secret files (`.env`, `.env.local`, `mise.local.toml`, `secrets/.env.json`, `secrets/bootstrap.env`)
+  - staged lines that look like plaintext secret assignments (`token=`, `api_key=`, `password=`, etc.)
+- Optional second gate (if `pj` exists): `pj secret scan --staged`.
+- Manual check:
+```bash
+mise run secrets-check
+```
 
 ## Mise env + secrets pattern
 
@@ -161,12 +178,16 @@ This generates `secrets/.env.sops.json` from your local age key and can be safel
 
 - Alacritty with Catppuccin dark (mocha) theme.
 - Alacritty installed from source (cargo build/install), not Homebrew cask.
-- Raycast cask in macOS Brewfile.
+- Default IDE preference: Zed (`ide` shell alias points to `zed .` when available).
+- Desktop macOS apps via casks: Raycast, Zed, Warp, GitHub Desktop.
+- Managed editor configs for Zed, with VSCode/Cursor configs available as optional stow packages.
 - Neovim with NvChad + Avante plugin scaffold.
 - Rust-focused tooling (`mise`, `bacon`, `cargo-nextest`, `cargo-watch`, `trunk`) and Python `uv`.
 - Bun-first JS/TS tooling (`bun`, `bunx`) with Node kept for compatibility.
-- Extended Rust devtools (`sccache`, `cargo-chef`, `cargo-binstall`, `cargo-llvm-cov`, `cargo-deny`, `cargo-audit`, `cargo-outdated`, `cargo-expand`, `cargo-machete`, `cargo-criterion`, `hyperfine`).
+- Extended Rust devtools (`sccache`, `cargo-chef`, `cargo-llvm-cov`, `cargo-deny`, `cargo-audit`, `cargo-expand`, `cargo-machete`, `cargo-criterion`, `hyperfine`).
 - Container + local K8s stack (`colima`, Docker CLI, `kubectl`, `helm`, `k9s`, `tilt`, `k3d`, `kind`, `stern`).
+- System health stack (`bottom`, `btop`, `procs`, `duf`, `dust`) plus `scripts/system-health.sh`.
+- Raycast script commands wired via `scripts/setup-raycast-scripts.sh` from `raycast-scripts/`.
 
 ## Tooling policy
 
@@ -182,6 +203,9 @@ This generates `secrets/.env.sops.json` from your local age key and can be safel
 ## Notes
 
 - Raycast is macOS-only and requires a supported macOS version.
+- Zed, Warp, and GitHub Desktop are installed only on environments that support Homebrew casks.
+- Enable optional VSCode/Cursor managed configs by adding `vscode` and `cursor` to `config/stow-packages.local.txt`.
 - Avante defaults to OpenAI; set `OPENAI_API_KEY` before use.
 - `raycast`, `mcpm`, and `vector` are local-only by default; enable via `config/stow-packages.local.txt` when needed.
 - On macOS, run containers with `colima` (lighter than Docker Desktop). Use `scripts/container-dev.sh` or `make container-start`.
+- For non-interactive bootstrap, set `GIT_USER_NAME` and `GIT_USER_EMAIL` to avoid git identity prompts.

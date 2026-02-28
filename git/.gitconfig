@@ -11,6 +11,7 @@
 [core]
 	editor = vim
 	autocrlf = input
+	hooksPath = /Users/rentamac/.config/git/hooks
 
 [init]
 	defaultBranch = main

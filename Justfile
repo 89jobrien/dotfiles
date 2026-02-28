@@ -68,5 +68,23 @@ observe-docker-events:
 observe-docker-stats:
     ./scripts/observe-dev.sh docker-stats
 
+health:
+    ./scripts/system-health.sh summary
+
+health-live:
+    ./scripts/system-health.sh live
+
+health-procs:
+    ./scripts/system-health.sh procs
+
+health-disk:
+    ./scripts/system-health.sh disk
+
+raycast-scripts:
+    ./scripts/setup-raycast-scripts.sh
+
 secrets-sops-json:
     ./scripts/secrets/make-sops-env-json.sh
+
+secrets-check:
+    ./scripts/secrets/check-no-plaintext.sh

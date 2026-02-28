@@ -163,8 +163,8 @@ stow_package() {
 
   local dry_run_output
   dry_run_output="$(stow -d "${ROOT_DIR}" -t "${HOME}" -n "${package}" 2>&1 || true)"
-  if printf '%s\n' "${dry_run_output}" | grep -Eq 'WARNING|ERROR'; then
-    log "Conflict detected in '${package}'. Resolve manually and rerun."
+  if printf '%s\n' "${dry_run_output}" | grep -Eq 'would cause conflicts|cannot stow|existing target is not owned by stow|ERROR'; then
+    log "Conflict detected in '${package}'. Run 'pj dot adopt' and rerun."
     return 0
   fi
 
@@ -203,12 +203,17 @@ run_post_hooks() {
     return 0
   fi
 
+  "${ROOT_DIR}/scripts/setup-git-config.sh" || true
+  "${ROOT_DIR}/scripts/setup-oh-my-zsh.sh" || true
+
   "${ROOT_DIR}/scripts/setup-secrets.sh" || true
+  "${ROOT_DIR}/scripts/setup-secret-hygiene.sh" || true
 
   "${ROOT_DIR}/scripts/setup-alacritty-source.sh" || true
 
   if [[ "$(uname -s)" == "Darwin" ]]; then
     "${ROOT_DIR}/scripts/macos-defaults.sh" || true
+    "${ROOT_DIR}/scripts/setup-raycast-scripts.sh" || true
   fi
 
   if command -v mise >/dev/null 2>&1 && [[ -f "${ROOT_DIR}/.mise.toml" ]]; then
