@@ -129,7 +129,6 @@ merge_zed_config() {
     '
     .context_servers = (.context_servers // {}) |
     .context_servers.personal = {
-      "source": "custom",
       "command": $cmd,
       "args": [],
       "env": { "MCP_CTX_DIR": $mcp_ctx }
