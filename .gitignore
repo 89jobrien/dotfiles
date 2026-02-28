@@ -47,6 +47,7 @@ mise.local.toml
 # Local build/runtime artifacts
 /.venv/
 /.cache/
+/.ctx/
 
 # Local bootstrap overrides (mutable layer)
 config/stow-packages.local.txt
