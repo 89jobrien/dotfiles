@@ -53,3 +53,7 @@ mise.local.toml
 config/stow-packages.local.txt
 config/apt-packages.local.txt
 scripts/post-bootstrap.local.sh
+
+# Local Zed artifacts
+zed/.config/zed/prompts/
+zed/.config/zed/settings_backup.json
