@@ -23,6 +23,9 @@ From anywhere (for example from `~`), use:
 make -C ~/dotfiles install
 ```
 
+Recent run log:
+- `docs/2026-02-27-bootstrap-runbook.md`
+
 Preferred interfaces:
 - Human workflow: `mise run <task>`
 - AI/automation workflow: `just <recipe>`
