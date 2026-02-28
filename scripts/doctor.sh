@@ -43,6 +43,7 @@ else
   status=1
 fi
 check_optional_cmd "zed"
+check_optional_cmd "baml-cli"
 
 echo "[doctor] rust workflow commands"
 for c in cargo rustc bacon cargo-nextest cargo-watch sccache cargo-chef cargo-llvm-cov cargo-deny cargo-audit cargo-expand cargo-machete cargo-criterion hyperfine; do

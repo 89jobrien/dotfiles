@@ -81,6 +81,7 @@ mise run observe-docker-stats  # stream docker stats
 mise run health                # system summary (cpu/mem/disk/procs)
 mise run health-live           # interactive monitor
 mise run raycast-scripts       # link managed raycast script commands
+mise run personal-mcp          # install + wire personal MCP into Claude/Cursor/Zed
 ```
 
 From `~`, for manual commands:
@@ -194,6 +195,11 @@ This generates `secrets/.env.sops.json` from your local age key and can be safel
 - Container + local K8s stack (`colima`, Docker CLI, `kubectl`, `helm`, `k9s`, `tilt`, `k3d`, `kind`, `stern`).
 - System health stack (`bottom`, `btop`, `procs`, `duf`, `dust`) plus `scripts/system-health.sh`.
 - Raycast script commands wired via `scripts/setup-raycast-scripts.sh` from `raycast-scripts/`.
+- Personal MCP server wiring via `scripts/setup-personal-mcp.sh`:
+  - installs `~/dev/personal-mcp` to `~/.local/bin/personal-mcp`
+  - ensures `~/.ctx/handoffs` and `~/.ctx/chats`
+  - configures MCP server entry for Claude Desktop, Cursor, Zed, Codex, and OpenCode
+  - includes BAML MCP tools (`baml_init`, `baml_generate`, `baml_test`) with `baml-cli`/`bunx` fallback
 
 ## Tooling policy
 

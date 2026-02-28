@@ -66,6 +66,10 @@ fi
 # JS workflow baseline.
 if command -v bun >/dev/null 2>&1; then
   log "bun available for JS/TS project workflows."
+  ensure_cmd "baml-cli" "bun add -g @boundaryml/baml" || true
+elif command -v npm >/dev/null 2>&1; then
+  log "bun missing; using npm fallback for BAML CLI."
+  ensure_cmd "baml-cli" "npm install -g @boundaryml/baml" || true
 fi
 
 if [[ ${#failed_optional[@]} -gt 0 ]]; then
