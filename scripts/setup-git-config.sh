@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-log() {
-  if command -v gum >/dev/null 2>&1 && [[ -t 1 ]]; then
-    gum style --foreground 212 "[git-config] $*"
-  else
-    printf '[git-config] %s\n' "$*"
-  fi
-}
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/log.sh"
+TAG="git-config"
 
 get_gh_field() {
   local field="$1"
@@ -44,7 +40,7 @@ main() {
   current_email="$(git config --global --get user.email || true)"
 
   if [[ -n "${current_name}" && -n "${current_email}" ]]; then
-    log "Global git identity already configured (${current_name} <${current_email}>)."
+    log_ok "identity configured (${current_name} <${current_email}>)"
   fi
 
   local gh_login gh_name gh_email
@@ -72,19 +68,19 @@ main() {
 
   if [[ -z "${current_name}" && -n "${desired_name}" ]]; then
     git config --global user.name "${desired_name}"
-    log "Set git user.name=${desired_name}"
+    log "set git user.name=${desired_name}"
   fi
 
   if [[ -z "${current_email}" && -n "${desired_email}" ]]; then
     git config --global user.email "${desired_email}"
-    log "Set git user.email=${desired_email}"
+    log "set git user.email=${desired_email}"
   fi
 
   current_name="$(git config --global --get user.name || true)"
   current_email="$(git config --global --get user.email || true)"
   if [[ -z "${current_name}" || -z "${current_email}" ]]; then
-    log "Git identity is still incomplete."
-    log "Set it manually with:"
+    log_warn "git identity is still incomplete"
+    log "set it manually with:"
     log "  git config --global user.name \"Your Name\""
     log "  git config --global user.email \"you@example.com\""
   fi
@@ -93,14 +89,14 @@ main() {
   if command -v gh >/dev/null 2>&1; then
     if gh auth status >/dev/null 2>&1; then
       gh auth setup-git >/dev/null 2>&1 || true
-      git config --global credential.https://github.com.helper ""
-      git config --global credential.https://github.com.helper "!$(command -v gh) auth git-credential"
-      git config --global credential.https://gist.github.com.helper ""
-      git config --global credential.https://gist.github.com.helper "!$(command -v gh) auth git-credential"
-      log "Configured git to use gh credentials for github.com remotes."
+      git config --global --unset-all credential.https://github.com.helper >/dev/null 2>&1 || true
+      git config --global --unset-all credential.https://gist.github.com.helper >/dev/null 2>&1 || true
+      git config --global --add credential.https://github.com.helper "!$(command -v gh) auth git-credential"
+      git config --global --add credential.https://gist.github.com.helper "!$(command -v gh) auth git-credential"
+      log_ok "configured git to use gh credentials for github.com remotes"
     else
-      log "gh is installed but not authenticated; skipping git credential helper setup."
-      log "Run: gh auth login -h github.com && gh auth setup-git"
+      log_warn "gh is installed but not authenticated; skipping git credential helper setup"
+      log "run: gh auth login -h github.com && gh auth setup-git"
     fi
   fi
 
@@ -108,7 +104,7 @@ main() {
   git config --global push.autoSetupRemote true
   git config --global push.default current
   git config --global fetch.prune true
-  log "Set git defaults: push.autoSetupRemote=true push.default=current fetch.prune=true"
+  log_ok "set git defaults: push.autoSetupRemote=true push.default=current fetch.prune=true"
 }
 
 main "$@"

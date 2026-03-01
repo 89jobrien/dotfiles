@@ -2,30 +2,33 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/log.sh"
+TAG="drift"
+
 STOW_LIST_FILE="${ROOT_DIR}/config/stow-packages.txt"
 
 status=0
 
-echo "[drift] repo=${ROOT_DIR}"
+log "repo=${ROOT_DIR}"
 
 if ! git -C "${ROOT_DIR}" diff --quiet || ! git -C "${ROOT_DIR}" diff --cached --quiet; then
-  echo "[drift] dotfiles repo has uncommitted changes"
+  log_warn "dotfiles repo has uncommitted changes"
   status=1
 fi
 
 if command -v stow >/dev/null 2>&1 && [[ -f "${STOW_LIST_FILE}" ]]; then
   while IFS= read -r pkg; do
     [[ -z "${pkg}" || "${pkg}" =~ ^[[:space:]]*# ]] && continue
-    if stow -d "${ROOT_DIR}" -t "${HOME}" -n "${pkg}" 2>&1 | grep -Eq 'WARNING|ERROR'; then
-      echo "[drift] stow conflict for package: ${pkg}"
+    if stow -d "${ROOT_DIR}" -t "${HOME}" -n "${pkg}" 2>&1 | grep -Eq 'would cause conflicts|cannot stow|existing target is not owned by stow|ERROR'; then
+      log_warn "stow conflict for package: ${pkg}"
       status=1
     fi
   done < "${STOW_LIST_FILE}"
 fi
 
 if [[ $status -ne 0 ]]; then
-  echo "[drift] FAIL"
+  log_err "FAIL"
   exit 1
 fi
 
-echo "[drift] PASS"
+log_ok "PASS"
