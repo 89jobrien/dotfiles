@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-mode="${1:-summary}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/log.sh"
+TAG="health"
 
-log() {
-  if command -v gum >/dev/null 2>&1 && [[ -t 1 ]]; then
-    gum style --foreground 212 "[health] $*"
-  else
-    printf '[health] %s\n' "$*"
-  fi
-}
+mode="${1:-summary}"
 
 summary() {
   log "host summary"
@@ -59,7 +55,7 @@ live() {
   elif command -v btop >/dev/null 2>&1; then
     exec btop
   else
-    log "install one of: bottom (btm) or btop"
+    log_warn "install one of: bottom (btm) or btop"
     exec top
   fi
 }

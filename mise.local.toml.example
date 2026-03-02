@@ -11,6 +11,7 @@ REDIS_URL = "redis://localhost:6379"
 AWS_ACCESS_KEY_ID = "replace-me"
 AWS_SECRET_ACCESS_KEY = "replace-me"
 OPENAI_API_KEY = "replace-me"
+BOUNDARY_API_KEY = "replace-me-optional"
 
 # pj TUI local overrides
 # options:

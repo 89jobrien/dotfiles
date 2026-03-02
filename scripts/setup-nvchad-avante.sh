@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/log.sh"
+TAG="nvim"
+
 NVIM_DIR="${HOME}/.config/nvim"
 NVIM_BAK_DIR="${HOME}/.config/nvim.backup.$(date +%Y%m%d-%H%M%S)"
 AVANTE_FILE="${NVIM_DIR}/lua/plugins/avante.lua"
 
-log() {
-  printf '[nvim-setup] %s\n' "$*"
-}
-
 if ! command -v nvim >/dev/null 2>&1; then
-  log "Neovim not found. Install neovim first."
+  log_skip "neovim not found"
   exit 0
 fi
 
 if [[ -d "${NVIM_DIR}" ]]; then
   if [[ ! -d "${NVIM_DIR}/.git" ]]; then
-    log "Existing nvim config is not a git checkout; backing it up to ${NVIM_BAK_DIR}"
+    log_warn "existing nvim config is not a git checkout; backing up to ${NVIM_BAK_DIR}"
     mv "${NVIM_DIR}" "${NVIM_BAK_DIR}"
   fi
 fi
 
 if [[ ! -d "${NVIM_DIR}" ]]; then
-  log "Cloning NvChad starter..."
+  log "cloning NvChad starter..."
   git clone https://github.com/NvChad/starter "${NVIM_DIR}"
 fi
 
@@ -63,8 +63,8 @@ return {
 }
 EOF
 
-log "Syncing plugins via Lazy..."
+log "syncing plugins via Lazy..."
 nvim --headless "+Lazy! sync" +qa || true
 
-log "NvChad + avante setup complete."
-log "Set OPENAI_API_KEY (or configure another provider) before using Avante."
+log_ok "NvChad + avante setup complete"
+log "set your LLM provider API key before using Avante"

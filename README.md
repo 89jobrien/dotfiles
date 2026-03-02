@@ -32,15 +32,18 @@ Preferred interfaces:
 
 ## What bootstrap does
 
-- Installs packages via Homebrew (`Brewfile.macos` on macOS, `Brewfile.linux` on Linux, fallback `Brewfile`).
+- Installs packages via `zerobrew` (`zb bundle`) when available, with `brew bundle` fallback (`Brewfile.macos` on macOS, `Brewfile.linux` on Linux, fallback `Brewfile`).
+- Installs language runtimes via `mise` (`node`, `bun`, `python`, `uv`, `go`, `rust`) to avoid Brew/runtime version drift.
 - Installs `zerobrew` (`zb`) first (when available) as a fast companion tool for Homebrew workflows.
 - Falls back to `apt` on Linux if Homebrew is unavailable (`config/apt-packages.txt`).
 - Stows default managed packages from `config/stow-packages.txt`.
 - Runs post-setup hooks:
   - `scripts/setup-git-config.sh` (configure global git identity + `gh` credential helper + sane push defaults)
   - `scripts/setup-oh-my-zsh.sh` (installs Oh My Zsh unattended, keeps managed `.zshrc`)
-  - `scripts/macos-defaults.sh` (Alacritty defaults on macOS)
-  - `scripts/setup-secret-hygiene.sh` (install local dotfiles pre-commit secret policy)
+  - `scripts/setup-secrets.sh` (decrypt secrets + install pre-commit secret policy)
+  - `scripts/setup-macos.sh` (Alacritty file handlers + Raycast script linking on macOS)
+  - `scripts/setup-ai-tools.sh` (install personal MCP + seed/merge AI tool configs)
+  - `scripts/setup-maestro.sh` (clone/update Maestro repo and run bootstrap mode)
   - `scripts/setup-dev-tools.sh` (Rust/Python CLI tooling)
   - `scripts/setup-nvchad-avante.sh` (Neovim + NvChad + Avante)
   - optional `scripts/post-bootstrap.local.sh` (local only)
@@ -70,6 +73,8 @@ mise run post              # rerun post-setup hooks only
 mise run nvim              # rerun NvChad + Avante setup
 mise run container-start
 mise run container-status
+mise run compose-up
+mise run compose-status
 mise run k3d-up            # or: mise run kind-up
 mise run tilt-up
 mise run observe               # one-shot summary of runtime + pods + containers
@@ -82,6 +87,13 @@ mise run health                # system summary (cpu/mem/disk/procs)
 mise run health-live           # interactive monitor
 mise run raycast-scripts       # link managed raycast script commands
 mise run personal-mcp          # install + wire personal MCP into Claude/Cursor/Zed
+mise run ai-config             # seed/merge Claude/OpenCode/Codex/Gemini configs
+mise run maestro-setup         # clone/update Maestro + run setup mode
+mise run maestro-doctor        # verify Maestro repo + prerequisites
+mise run maestro-up            # run Maestro dev setup + ci
+mise run maestro-up-quick      # run Maestro dev setup only
+mise run maestro-up-api        # run setup + ci + api-run
+mise run maestro-handoff       # write private handoff context
 ```
 
 From `~`, for manual commands:
@@ -97,7 +109,28 @@ For automation/agents in repo:
 ```bash
 just up
 just doctor
+just compose-up
 just observe-k8s
+just maestro-doctor
+```
+
+## Dev container
+
+This repo includes a VS Code/Cursor compatible dev container in `.devcontainer/`.
+
+To use it:
+
+```bash
+code ~/dotfiles
+# then run: "Dev Containers: Reopen in Container"
+```
+
+Compose service:
+
+```bash
+mise run compose-up
+mise run compose-status
+mise run compose-logs
 ```
 
 ## Secrets automation
@@ -186,20 +219,38 @@ This generates `secrets/.env.sops.json` from your local age key and can be safel
 - Alacritty with Catppuccin dark (mocha) theme.
 - Alacritty installed from source (cargo build/install), not Homebrew cask.
 - Default IDE preference: Zed (`ide` shell alias points to `zed .` when available).
-- Desktop macOS apps via casks: Raycast, Zed, Warp, GitHub Desktop.
+- Desktop macOS apps via casks: Raycast, Zed, Warp, GitHub Desktop, Codex, Claude Code.
 - Managed editor configs for Zed, with VSCode/Cursor configs available as optional stow packages.
 - Neovim with NvChad + Avante plugin scaffold.
 - Rust-focused tooling (`mise`, `bacon`, `cargo-nextest`, `cargo-watch`, `trunk`) and Python `uv`.
 - Bun-first JS/TS tooling (`bun`, `bunx`) with Node kept for compatibility.
-- Extended Rust devtools (`sccache`, `cargo-chef`, `cargo-llvm-cov`, `cargo-deny`, `cargo-audit`, `cargo-expand`, `cargo-machete`, `cargo-criterion`, `hyperfine`).
+- Extended Rust devtools (`sccache`, `cargo-chef`, `cargo-llvm-cov`, `cargo-deny`, `cargo-audit`, `cargo-expand`, `cargo-machete`, `cargo-criterion`, `hyperfine`, `rust-script`).
 - Container + local K8s stack (`colima`, Docker CLI, `kubectl`, `helm`, `k9s`, `tilt`, `k3d`, `kind`, `stern`).
 - System health stack (`bottom`, `btop`, `procs`, `duf`, `dust`) plus `scripts/system-health.sh`.
-- Raycast script commands wired via `scripts/setup-raycast-scripts.sh` from `raycast-scripts/`.
-- Personal MCP server wiring via `scripts/setup-personal-mcp.sh`:
+- Raycast script commands wired via `scripts/setup-macos.sh` from `raycast-scripts/`.
+- Personal MCP + AI config wiring via `scripts/setup-ai-tools.sh`:
   - installs `~/dev/personal-mcp` to `~/.local/bin/personal-mcp`
   - ensures `~/.ctx/handoffs` and `~/.ctx/chats`
-  - configures MCP server entry for Claude Desktop, Cursor, Zed, Codex, and OpenCode
+  - configures MCP server entry for Claude Desktop, Cursor, Zed, Codex, OpenCode, and Gemini
   - includes BAML MCP tools (`baml_init`, `baml_generate`, `baml_test`) with `baml-cli`/`bunx` fallback
+- AI config seeding (also in `scripts/setup-ai-tools.sh`):
+  - `~/.claude/settings.json`
+  - `~/.config/opencode/opencode.json`
+  - `~/.codex/config.toml` (seed only if missing)
+  - `~/.gemini/settings.json`
+  - standard MCP/BAML env defaults:
+    - `MCP_ENV_FILE=~/.config/dev-bootstrap/secrets.env`
+    - `BAML_LOG=info`
+    - `BOUNDARY_MAX_LOG_CHUNK_CHARS=3000`
+  - no API keys written by this script
+- Maestro helper workflow via `scripts/maestro-dev.sh`:
+  - path from `DOT_MAESTRO_DIR` (fallback `PJ_MAESTRO_DIR`, then `~/Documents/GitHub/maestro`)
+  - handoff path from `DOT_PRIVATE_CTX_DIR` (fallback `PJ_PRIVATE_CTX_DIR`, then `~/.ctx/handoffs`)
+  - commands: `where`, `doctor`, `up [--quick] [--api-run]`, `handoff`
+- Maestro bootstrap hook via `scripts/setup-maestro.sh`:
+  - `DOT_MAESTRO_DIR` (fallback `PJ_MAESTRO_DIR`, then `~/Documents/GitHub/maestro`)
+  - `DOT_MAESTRO_REPO` for first-time clone (accepts `owner/repo` with `gh`, or git URL)
+  - `DOT_MAESTRO_MODE`: `quick` (default), `full`, `api`, `none`
 
 ## Tooling policy
 
@@ -207,10 +258,39 @@ This generates `secrets/.env.sops.json` from your local age key and can be safel
 - Prefer Rust-native tools where practical (`ripgrep`, `fd`, `bat`, `eza`, `bacon`, `cargo-nextest`, `cargo-watch`, `trunk`).
 - Prefer `uv` over raw `python`/`pip` for Python workflows (`uv run`, `uv pip`, `uv venv`, `uvx`).
 - Prefer `bun`/`bunx` over `npm`/`npx`/`pnpm`/`yarn` for JS workflows where compatible.
-- Use `zerobrew` (`zb`) alongside Homebrew for faster install/search workflows where practical.
+- Prefer `zerobrew` (`zb`) for Homebrew-compatible commands (`install`, `bundle`, `list`, `info`) and fall back to `brew` for non-parity operations.
 - Keep proprietary exceptions explicit and minimal:
   - Raycast (required UX workflow on macOS)
   - Any local security tooling you explicitly choose (for example password managers)
+
+## Centralized AI logs (Vector)
+
+- Enable local `vector` stow package via `config/stow-packages.local.txt`.
+- Sources: Claude Code, Codex, OpenCode, Gemini CLI.
+- The Vector config writes normalized logs to:
+  - `~/logs/ai/<agent>/<YYYY-MM-DD>/<session>/events.jsonl`
+  - `agent` is `claude`, `codex`, `opencode`, or `gemini`
+- Useful tasks:
+  - `mise run logs-central-validate`
+  - `mise run logs-central-run`
+  - `mise run logs-central-dashboard` (serves `http://127.0.0.1:8765`)
+  - `mise run logs-central-service-install`
+  - `mise run logs-central-service-status`
+  - `mise run logs-central-service-logs`
+  - `mise run logs-central-service-stop`
+  - `mise run logs-central-service-uninstall`
+  - `mise run logs-central-retention-service-install`
+  - `mise run logs-central-retention-service-status`
+  - `mise run logs-central-retention-service-run-now`
+  - `mise run logs-central-retention-service-logs`
+  - `mise run logs-central-retention-service-uninstall`
+  - `mise run logs-central-retention`
+  - `mise run logs-central-retention-dry`
+- Retention defaults are customizable with env vars:
+  - `AI_LOG_RETENTION_DAYS` (default: `180`)
+  - `AI_LOG_COMPRESS_AFTER_DAYS` (default: `14`)
+  - `AI_LOG_ROOT` (default: `~/logs/ai`)
+  - Scheduler time vars: `VECTOR_RETENTION_HOUR` and `VECTOR_RETENTION_MINUTE`
 
 ## Notes
 

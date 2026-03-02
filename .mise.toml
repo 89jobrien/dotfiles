@@ -28,6 +28,74 @@ run = "./scripts/doctor.sh"
 description = "Detect local drift from managed dotfiles"
 run = "./scripts/drift-check.sh"
 
+[tasks.logs-central-validate]
+description = "Validate Vector config for Claude centralized logs"
+run = "mkdir -p ~/.local/state/vector && vector validate vector/.config/vector/vector.yaml"
+
+[tasks.logs-central-run]
+description = "Run Vector in foreground with Claude log config"
+run = "mkdir -p ~/.local/state/vector && vector --config vector/.config/vector/vector.yaml"
+
+[tasks.logs-central-service-install]
+description = "Install and start Vector launchd service"
+run = "./scripts/vector-service.sh install"
+
+[tasks.logs-central-service-start]
+description = "Start Vector launchd service"
+run = "./scripts/vector-service.sh start"
+
+[tasks.logs-central-service-stop]
+description = "Stop Vector launchd service"
+run = "./scripts/vector-service.sh stop"
+
+[tasks.logs-central-service-restart]
+description = "Restart Vector launchd service"
+run = "./scripts/vector-service.sh restart"
+
+[tasks.logs-central-service-status]
+description = "Show Vector launchd service status"
+run = "./scripts/vector-service.sh status"
+
+[tasks.logs-central-service-logs]
+description = "Tail Vector launchd stdout/stderr logs"
+run = "./scripts/vector-service.sh logs"
+
+[tasks.logs-central-service-uninstall]
+description = "Uninstall Vector launchd service"
+run = "./scripts/vector-service.sh uninstall"
+
+[tasks.logs-central-retention-service-install]
+description = "Install daily launchd retention schedule"
+run = "./scripts/vector-retention-service.sh install"
+
+[tasks.logs-central-retention-service-status]
+description = "Show retention launchd schedule status"
+run = "./scripts/vector-retention-service.sh status"
+
+[tasks.logs-central-retention-service-run-now]
+description = "Trigger retention run immediately"
+run = "./scripts/vector-retention-service.sh run-now"
+
+[tasks.logs-central-retention-service-logs]
+description = "Tail retention scheduler logs"
+run = "./scripts/vector-retention-service.sh logs"
+
+[tasks.logs-central-retention-service-uninstall]
+description = "Uninstall daily launchd retention schedule"
+run = "./scripts/vector-retention-service.sh uninstall"
+
+[tasks.logs-central-retention]
+description = "Apply retention/compression to centralized Claude logs"
+run = "./scripts/claude-log-retention.sh"
+
+[tasks.logs-central-retention-dry]
+description = "Dry-run retention/compression for centralized Claude logs"
+run = "./scripts/claude-log-retention.sh --dry-run"
+
+[tasks.logs-central-dashboard]
+description = "Serve local Claude logs dashboard"
+run = "python3 ./scripts/claude-log-dashboard.py"
+
 [tasks.stow]
 description = "Restow managed package set only"
 run = "./install.sh --no-packages --no-post"
@@ -59,6 +127,22 @@ run = "./scripts/container-dev.sh stop"
 [tasks.container-status]
 description = "Show local container and kube status"
 run = "./scripts/container-dev.sh status"
+
+[tasks.compose-up]
+description = "Build and start local docker compose stack"
+run = "./scripts/compose-dev.sh up"
+
+[tasks.compose-down]
+description = "Stop and remove local docker compose stack"
+run = "./scripts/compose-dev.sh down"
+
+[tasks.compose-status]
+description = "Show local docker compose service status"
+run = "./scripts/compose-dev.sh status"
+
+[tasks.compose-logs]
+description = "Tail local docker compose service logs"
+run = "./scripts/compose-dev.sh logs"
 
 [tasks.k3d-up]
 description = "Create local k3d cluster"
@@ -120,13 +204,53 @@ run = "./scripts/system-health.sh procs"
 description = "Show disk usage summary"
 run = "./scripts/system-health.sh disk"
 
+[tasks.macos]
+description = "Configure macOS defaults and link Raycast scripts"
+run = "./scripts/setup-macos.sh"
+
 [tasks.raycast-scripts]
-description = "Link managed Raycast script commands"
-run = "./scripts/setup-raycast-scripts.sh"
+description = "Link managed Raycast scripts (alias for macos)"
+run = "./scripts/setup-macos.sh"
+
+[tasks.ai-tools]
+description = "Install personal MCP and configure all AI tool configs"
+run = "./scripts/setup-ai-tools.sh"
 
 [tasks.personal-mcp]
-description = "Install and configure personal MCP for Claude/Cursor/Zed"
-run = "./scripts/setup-personal-mcp.sh"
+description = "Install personal MCP and AI configs (alias for ai-tools)"
+run = "./scripts/setup-ai-tools.sh"
+
+[tasks.ai-config]
+description = "Configure AI CLI configs (alias for ai-tools)"
+run = "./scripts/setup-ai-tools.sh"
+
+[tasks.maestro-setup]
+description = "Clone/update Maestro and run setup mode from env"
+run = "./scripts/setup-maestro.sh"
+
+[tasks.maestro-where]
+description = "Print resolved Maestro repository path"
+run = "./scripts/maestro-dev.sh where"
+
+[tasks.maestro-doctor]
+description = "Validate Maestro repo markers and local prerequisites"
+run = "./scripts/maestro-dev.sh doctor"
+
+[tasks.maestro-up]
+description = "Run Maestro setup workflow (dev-setup + ci)"
+run = "./scripts/maestro-dev.sh up"
+
+[tasks.maestro-up-quick]
+description = "Run Maestro quick setup (dev-setup only)"
+run = "./scripts/maestro-dev.sh up --quick"
+
+[tasks.maestro-up-api]
+description = "Run Maestro setup and start API (dev-setup + ci + api-run)"
+run = "./scripts/maestro-dev.sh up --api-run"
+
+[tasks.maestro-handoff]
+description = "Write Maestro handoff to private ctx directory"
+run = "./scripts/maestro-dev.sh handoff"
 
 [tasks.secrets-sops-json]
 description = "Generate encrypted secrets/.env.sops.json from local secrets/.env.json"

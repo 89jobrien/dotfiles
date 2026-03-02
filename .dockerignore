@@ -1,0 +1,15 @@
+.git
+.venv
+.ctx
+.DS_Store
+**/.DS_Store
+**/.cache
+**/.pytest_cache
+**/.mypy_cache
+**/__pycache__
+**/node_modules
+**/target
+secrets/.env.json
+secrets/.env.sops.json
+secrets/bootstrap.env.sops
+*.log

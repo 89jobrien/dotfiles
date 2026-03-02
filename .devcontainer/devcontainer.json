@@ -1,0 +1,20 @@
+{
+  "name": "dotfiles-dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "postCreateCommand": "./scripts/doctor.sh || true",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "tamasfe.even-better-toml",
+        "ms-vscode.makefile-tools"
+      ]
+    }
+  }
+}

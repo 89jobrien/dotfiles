@@ -130,6 +130,29 @@ if command -v zb >/dev/null 2>&1; then
   alias zbs='zb search'
   alias zbl='zb list'
   alias zbu='zb update'
+
+  # Route brew-compatible commands to Zerobrew when available.
+  brew() {
+    local subcmd="${1:-}"
+    case "${subcmd}" in
+      install|bundle|uninstall|list|info)
+        command zb "$@"
+        ;;
+      cleanup)
+        shift
+        command zb gc "$@"
+        ;;
+      *)
+        if command -v /opt/homebrew/bin/brew >/dev/null 2>&1; then
+          command /opt/homebrew/bin/brew "$@"
+        elif command -v /usr/local/bin/brew >/dev/null 2>&1; then
+          command /usr/local/bin/brew "$@"
+        else
+          command brew "$@"
+        fi
+        ;;
+    esac
+  }
 fi
 
 # Default IDE preference: Zed when available.
@@ -186,6 +209,8 @@ alias gd='git diff'
 _git_gh() {
   git -c credential.helper= -c credential.helper='!/opt/homebrew/bin/gh auth git-credential' "$@"
 }
+# oh-my-zsh git plugin defines gp/gl aliases; clear them before function definitions.
+unalias gp gl gpf 2>/dev/null || true
 gp() { _git_gh push "$@"; }
 gl() { _git_gh pull --ff-only "$@"; }
 gpf() { _git_gh push --force-with-lease "$@"; }

@@ -35,6 +35,18 @@ container-stop:
 container-status:
     ./scripts/container-dev.sh status
 
+compose-up:
+    ./scripts/compose-dev.sh up
+
+compose-down:
+    ./scripts/compose-dev.sh down
+
+compose-status:
+    ./scripts/compose-dev.sh status
+
+compose-logs:
+    ./scripts/compose-dev.sh logs
+
 k3d-up:
     ./scripts/container-dev.sh k3d-up
 
@@ -81,10 +93,34 @@ health-disk:
     ./scripts/system-health.sh disk
 
 raycast-scripts:
-    ./scripts/setup-raycast-scripts.sh
+    ./scripts/setup-macos.sh
 
 personal-mcp:
-    ./scripts/setup-personal-mcp.sh
+    ./scripts/setup-ai-tools.sh
+
+ai-config:
+    ./scripts/setup-ai-tools.sh
+
+maestro-setup:
+    ./scripts/setup-maestro.sh
+
+maestro-where:
+    ./scripts/maestro-dev.sh where
+
+maestro-doctor:
+    ./scripts/maestro-dev.sh doctor
+
+maestro-up:
+    ./scripts/maestro-dev.sh up
+
+maestro-up-quick:
+    ./scripts/maestro-dev.sh up --quick
+
+maestro-up-api:
+    ./scripts/maestro-dev.sh up --api-run
+
+maestro-handoff:
+    ./scripts/maestro-dev.sh handoff
 
 secrets-sops-json:
     ./scripts/secrets/make-sops-env-json.sh

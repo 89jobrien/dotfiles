@@ -54,6 +54,10 @@ config/stow-packages.local.txt
 config/apt-packages.local.txt
 scripts/post-bootstrap.local.sh
 
+# Python bytecode
+__pycache__/
+*.pyc
+
 # Local Zed artifacts
 zed/.config/zed/prompts/
 zed/.config/zed/settings_backup.json

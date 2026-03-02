@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/log.sh"
+TAG="observe"
+
 usage() {
   cat <<'EOF'
 Usage: scripts/observe-dev.sh <mode>
@@ -17,7 +21,7 @@ EOF
 
 need_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
-    printf '[observe] missing command: %s\n' "$1" >&2
+    log_err "missing command: $1"
     exit 1
   fi
 }
@@ -29,9 +33,9 @@ summary() {
   docker info --format '{{.ServerVersion}}' 2>/dev/null || echo "unavailable"
   printf '[observe] kube context: '
   kubectl config current-context 2>/dev/null || echo "unavailable"
-  echo "[observe] pods (all namespaces):"
+  log "pods (all namespaces):"
   kubectl get pods -A 2>/dev/null | sed -n '1,25p' || echo "unavailable"
-  echo "[observe] containers:"
+  log "containers:"
   docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null || echo "unavailable"
 }
 

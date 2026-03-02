@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-failed_optional=()
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/log.sh"
+TAG="dev-tools"
 
-log() {
-  printf '[dev-tools] %s\n' "$*"
-}
+failed_optional=()
 
 ensure_cmd() {
   local cmd="$1"
@@ -13,9 +13,9 @@ ensure_cmd() {
   if command -v "${cmd}" >/dev/null 2>&1; then
     return 0
   fi
-  log "Installing ${cmd}..."
+  log "installing ${cmd}..."
   if ! eval "${install_cmd}"; then
-    log "Failed to install ${cmd}; continuing."
+    log_warn "failed to install ${cmd}; continuing"
     failed_optional+=("${cmd}")
     return 1
   fi
@@ -28,6 +28,7 @@ fi
 
 if command -v cargo >/dev/null 2>&1; then
   if command -v mise >/dev/null 2>&1; then
+    ensure_cmd "alacritty" "mise exec -- cargo install --locked alacritty" || true
     ensure_cmd "bacon" "mise exec -- cargo install --locked bacon" || true
     ensure_cmd "cargo-nextest" "mise exec -- cargo install --locked cargo-nextest" || true
     ensure_cmd "cargo-watch" "mise exec -- cargo install --locked cargo-watch" || true
@@ -42,6 +43,7 @@ if command -v cargo >/dev/null 2>&1; then
     ensure_cmd "cargo-criterion" "mise exec -- cargo install --locked cargo-criterion" || true
     ensure_cmd "hyperfine" "mise exec -- cargo install --locked hyperfine" || true
   else
+    ensure_cmd "alacritty" "cargo install --locked alacritty" || true
     ensure_cmd "bacon" "cargo install --locked bacon" || true
     ensure_cmd "cargo-nextest" "cargo install --locked cargo-nextest" || true
     ensure_cmd "cargo-watch" "cargo install --locked cargo-watch" || true
@@ -60,19 +62,19 @@ fi
 
 # Python workflow baseline.
 if command -v uv >/dev/null 2>&1; then
-  log "uv available for Python project workflows."
+  log "uv available for Python project workflows"
 fi
 
 # JS workflow baseline.
 if command -v bun >/dev/null 2>&1; then
-  log "bun available for JS/TS project workflows."
+  log "bun available for JS/TS project workflows"
   ensure_cmd "baml-cli" "bun add -g @boundaryml/baml" || true
 elif command -v npm >/dev/null 2>&1; then
-  log "bun missing; using npm fallback for BAML CLI."
+  log "bun missing; using npm fallback for BAML CLI"
   ensure_cmd "baml-cli" "npm install -g @boundaryml/baml" || true
 fi
 
 if [[ ${#failed_optional[@]} -gt 0 ]]; then
-  log "Optional tool installs failed: ${failed_optional[*]}"
+  log_warn "optional tool installs failed: ${failed_optional[*]}"
 fi
-log "Dev tool setup complete."
+log_ok "dev tool setup complete"

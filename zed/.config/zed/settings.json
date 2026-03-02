@@ -18,7 +18,10 @@
       "command": "/Users/rentamac/.local/bin/personal-mcp",
       "args": [],
       "env": {
-        "MCP_CTX_DIR": "/Users/rentamac/.ctx"
+        "MCP_CTX_DIR": "/Users/rentamac/.ctx",
+        "MCP_ENV_FILE": "/Users/rentamac/.config/dev-bootstrap/secrets.env",
+        "BAML_LOG": "info",
+        "BOUNDARY_MAX_LOG_CHUNK_CHARS": "3000"
       }
     }
   }

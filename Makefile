@@ -1,4 +1,4 @@
-.PHONY: install doctor drift stow post nvim up container-start container-stop container-status k3d-up k3d-down kind-up kind-down tilt-up observe observe-k8s observe-logs observe-docker observe-docker-events observe-docker-stats health health-live health-procs health-disk raycast-scripts personal-mcp secrets-sops-json secrets-check
+.PHONY: install doctor drift stow post nvim up container-start container-stop container-status compose-up compose-down compose-status compose-logs k3d-up k3d-down kind-up kind-down tilt-up observe observe-k8s observe-logs observe-docker observe-docker-events observe-docker-stats health health-live health-procs health-disk raycast-scripts personal-mcp ai-config maestro-setup maestro-where maestro-doctor maestro-up maestro-up-quick maestro-up-api maestro-handoff secrets-sops-json secrets-check
 
 install:
 	./install.sh
@@ -28,6 +28,18 @@ container-stop:
 
 container-status:
 	./scripts/container-dev.sh status
+
+compose-up:
+	./scripts/compose-dev.sh up
+
+compose-down:
+	./scripts/compose-dev.sh down
+
+compose-status:
+	./scripts/compose-dev.sh status
+
+compose-logs:
+	./scripts/compose-dev.sh logs
 
 k3d-up:
 	./scripts/container-dev.sh k3d-up
@@ -75,10 +87,34 @@ health-disk:
 	./scripts/system-health.sh disk
 
 raycast-scripts:
-	./scripts/setup-raycast-scripts.sh
+	./scripts/setup-macos.sh
 
 personal-mcp:
-	./scripts/setup-personal-mcp.sh
+	./scripts/setup-ai-tools.sh
+
+ai-config:
+	./scripts/setup-ai-tools.sh
+
+maestro-setup:
+	./scripts/setup-maestro.sh
+
+maestro-where:
+	./scripts/maestro-dev.sh where
+
+maestro-doctor:
+	./scripts/maestro-dev.sh doctor
+
+maestro-up:
+	./scripts/maestro-dev.sh up
+
+maestro-up-quick:
+	./scripts/maestro-dev.sh up --quick
+
+maestro-up-api:
+	./scripts/maestro-dev.sh up --api-run
+
+maestro-handoff:
+	./scripts/maestro-dev.sh handoff
 
 secrets-sops-json:
 	./scripts/secrets/make-sops-env-json.sh

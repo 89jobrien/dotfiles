@@ -1,0 +1,12 @@
+services:
+  dotfiles-dev:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    container_name: dotfiles-dev
+    working_dir: /workspace/dotfiles
+    volumes:
+      - .:/workspace/dotfiles
+    command: sleep infinity
+    tty: true
+    stdin_open: true
