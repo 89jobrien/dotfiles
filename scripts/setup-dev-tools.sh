@@ -78,6 +78,19 @@ elif command -v npm >/dev/null 2>&1; then
   ensure_cmd "baml-cli" "npm install -g @boundaryml/baml" || true
 fi
 
+# Toolz — personal swiss-army CLI (embedded crate at dotfiles/toolz/).
+if command -v cargo >/dev/null 2>&1; then
+  log "building toolz..."
+  if cargo install --path "${ROOT_DIR}/toolz" --root "${HOME}/.local" --force >/dev/null 2>&1; then
+    log_ok "toolz installed to ~/.local/bin/toolz"
+  else
+    log_warn "toolz build failed — skipping"
+    failed_optional+=("toolz")
+  fi
+else
+  log_warn "cargo not found; skipping toolz install"
+fi
+
 if [[ ${#failed_optional[@]} -gt 0 ]]; then
   log_warn "optional tool installs failed: ${failed_optional[*]}"
 fi

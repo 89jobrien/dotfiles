@@ -28,14 +28,15 @@ Environment overrides:
 EOF
 }
 
-for arg in "$@"; do
-  case "${arg}" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --dry-run) DRY_RUN=1 ;;
-    --dir)     shift; SCAN_DIR="${1:-${SCAN_DIR}}" ;;
-    --days)    shift; KEEP_DAYS="${1:-${KEEP_DAYS}}" ;;
+    --dir)     shift; SCAN_DIR="${1:?--dir requires a path}" ;;
+    --days)    shift; KEEP_DAYS="${1:?--days requires a number}" ;;
     -h|--help) usage; exit 0 ;;
-    *) log_err "unknown argument: ${arg}"; usage; exit 1 ;;
+    *) log_err "unknown argument: $1"; usage; exit 1 ;;
   esac
+  shift
 done
 
 if ! command -v cargo-sweep >/dev/null 2>&1; then
