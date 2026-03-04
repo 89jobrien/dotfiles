@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="nix"
 
 # ---------------------------------------------------------------------------
@@ -36,7 +37,7 @@ resolve_system() {
 # ---------------------------------------------------------------------------
 
 install_nix() {
-  if command -v nix >/dev/null 2>&1; then
+  if has_cmd nix; then
     log_skip "nix already installed ($(nix --version))"
     return 0
   fi
@@ -51,7 +52,7 @@ install_nix() {
     source '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
   fi
 
-  if ! command -v nix >/dev/null 2>&1; then
+  if ! has_cmd nix; then
     log_err "nix not found on PATH after install"
     return 1
   fi
