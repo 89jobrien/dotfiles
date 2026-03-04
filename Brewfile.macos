@@ -48,6 +48,7 @@ brew "cargo-watch"
 brew "trunk"
 brew "rust-analyzer"
 brew "rust-script"
+brew "shellcheck"        # [nix-batch-1]
 brew "cmake"
 brew "pkgconf"
 

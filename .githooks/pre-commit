@@ -1,10 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Check for secrets in staged files
 "${ROOT_DIR}/scripts/secrets/check-no-plaintext.sh"
 if command -v pj >/dev/null 2>&1; then
   if ! pj secret scan --staged; then
     echo "warning: pj secret scan flagged potential issues (see above)" >&2
     echo "         the primary check (check-no-plaintext.sh) passed — continuing" >&2
+  fi
+fi
+
+# Run shellcheck on staged shell scripts
+if command -v shellcheck >/dev/null 2>&1; then
+  staged_scripts="$(git diff --cached --name-only --diff-filter=ACM | grep '\.sh$' || true)"
+  if [[ -n "${staged_scripts}" ]]; then
+    echo "[pre-commit] running shellcheck on staged scripts..."
+    # Exclude info-level warnings (SC2016 is intentional for JSON strings)
+    # shellcheck disable=SC2086
+    if ! shellcheck --severity=warning ${staged_scripts}; then
+      echo "[pre-commit] shellcheck found issues in staged scripts" >&2
+      echo "              run 'mise run shellcheck' to see all issues" >&2
+      echo "              fix issues or use 'git commit --no-verify' to bypass" >&2
+      exit 1
+    fi
   fi
 fi
