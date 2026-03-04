@@ -24,6 +24,7 @@ tests/
     ├── cmd.bats        # Command checking utilities tests
     ├── dryrun.bats     # Dry-run mode utilities tests
     ├── json.bats       # JSON manipulation utilities tests
+    ├── launchd.bats    # macOS service management tests
     └── pkg.bats        # Package manager detection tests
 ```
 
@@ -57,7 +58,7 @@ setup() {
 
 ## Coverage
 
-Current test coverage (82 tests total):
+Current test coverage (102 tests total):
 
 - ✅ `scripts/lib/cmd.sh` - 20 tests covering all functions
   - `has_cmd` - Silent command existence check
@@ -87,6 +88,15 @@ Current test coverage (82 tests total):
   - `detect_pkg_manager` - Auto-detect package manager
   - `ensure_homebrew` - Require zb or brew
   - `bundle_install` - Install from Brewfile
+
+- ✅ `scripts/lib/launchd.sh` - 20 tests covering all functions (macOS only)
+  - `launchd_is_loaded` - Check if service is loaded
+  - `launchd_uninstall` - Stop and remove service
+  - `launchd_status` - Print service status
+  - `launchd_logs` - Tail service logs
+  - `launchd_stop` - Stop service
+  - `launchd_start` - Start service from plist
+  - `launchd_restart` - Restart service
 
 ## Adding Tests
 
