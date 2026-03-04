@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="health"
 
 mode="${1:-summary}"
@@ -25,7 +26,7 @@ summary() {
 
   echo
   log "disk usage"
-  if command -v duf >/dev/null 2>&1; then
+  if has_cmd duf; then
     duf
   else
     df -h
@@ -33,7 +34,7 @@ summary() {
 
   echo
   log "largest directories (cwd)"
-  if command -v dust >/dev/null 2>&1; then
+  if has_cmd dust; then
     dust -r -d 2 .
   else
     du -h -d 2 . 2>/dev/null | sort -h | tail -n 20
@@ -41,7 +42,7 @@ summary() {
 
   echo
   log "top processes"
-  if command -v procs >/dev/null 2>&1; then
+  if has_cmd procs; then
     procs --sortd cpu | head -n 25
   else
     ps aux | head -n 25
@@ -50,9 +51,9 @@ summary() {
 
 live() {
   log "live monitor"
-  if command -v btm >/dev/null 2>&1; then
+  if has_cmd btm; then
     exec btm
-  elif command -v btop >/dev/null 2>&1; then
+  elif has_cmd btop; then
     exec btop
   else
     log_warn "install one of: bottom (btm) or btop"
@@ -61,14 +62,14 @@ live() {
 }
 
 procs_view() {
-  if command -v procs >/dev/null 2>&1; then
+  if has_cmd procs; then
     exec procs --sortd cpu
   fi
   exec ps aux
 }
 
 disk_view() {
-  if command -v duf >/dev/null 2>&1; then
+  if has_cmd duf; then
     exec duf
   fi
   exec df -h
