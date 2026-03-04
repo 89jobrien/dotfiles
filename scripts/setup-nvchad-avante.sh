@@ -3,13 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="nvim"
 
 NVIM_DIR="${HOME}/.config/nvim"
 NVIM_BAK_DIR="${HOME}/.config/nvim.backup.$(date +%Y%m%d-%H%M%S)"
 AVANTE_FILE="${NVIM_DIR}/lua/plugins/avante.lua"
 
-if ! command -v nvim >/dev/null 2>&1; then
+if ! has_cmd nvim; then
   log_skip "neovim not found"
   exit 0
 fi
