@@ -3,16 +3,17 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="compose"
 
 compose_cmd=()
 
 init_compose_cmd() {
-  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+  if has_cmd docker && docker compose version >/dev/null 2>&1; then
     compose_cmd=(docker compose)
     return 0
   fi
-  if command -v docker-compose >/dev/null 2>&1; then
+  if has_cmd docker-compose; then
     compose_cmd=(docker-compose)
     return 0
   fi
