@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
 source "${ROOT_DIR}/scripts/lib/cmd.sh"
+source "${ROOT_DIR}/scripts/lib/pkg.sh"
+source "${ROOT_DIR}/scripts/lib/json.sh"
 TAG="ai-tools"
 
 HOME_DIR="${HOME}"
@@ -31,32 +33,15 @@ GEMINI_CFG="${HOME_DIR}/.gemini/settings.json"
 # ---------------------------------------------------------------------------
 
 ensure_dirs() {
-  mkdir -p "${HANDOFF_DIR}" "${CHAT_DIR}" \
-    "$(dirname "${CLAUDE_DESKTOP_CFG}")" \
-    "$(dirname "${CLAUDE_CODE_CFG}")" \
-    "$(dirname "${CURSOR_CFG}")" \
-    "$(dirname "${ZED_CFG}")" \
-    "$(dirname "${OPENCODE_CFG}")" \
-    "$(dirname "${CODEX_CFG}")" \
-    "$(dirname "${GEMINI_CFG}")"
+  mkdir -p "${HANDOFF_DIR}" "${CHAT_DIR}"
+  ensure_json_dir "${CLAUDE_DESKTOP_CFG}"
+  ensure_json_dir "${CLAUDE_CODE_CFG}"
+  ensure_json_dir "${CURSOR_CFG}"
+  ensure_json_dir "${ZED_CFG}"
+  ensure_json_dir "${OPENCODE_CFG}"
+  ensure_json_dir "${CODEX_CFG}"
+  ensure_json_dir "${GEMINI_CFG}"
   log "ensured context dirs under ${CTX_DIR}"
-}
-
-# merge_json_config FILE JQ_FILTER [jq_args...]
-#   Read FILE (or start from {}), apply JQ_FILTER, write back.
-merge_json_config() {
-  local cfg="$1" filter="$2"
-  shift 2
-  local tmp
-  tmp="$(mktemp)"
-  if [[ -f "${cfg}" ]]; then
-    cp "${cfg}" "${tmp}"
-  else
-    printf '{}' > "${tmp}"
-  fi
-  jq "$@" "${filter}" "${tmp}" > "${tmp}.new"
-  mv "${tmp}.new" "${cfg}"
-  rm -f "${tmp}"
 }
 
 # ---------------------------------------------------------------------------
@@ -92,7 +77,7 @@ install_opencode_if_missing() {
     log_skip "opencode already installed: $(command -v opencode)"
     return 0
   fi
-  if has_cmd zb; then
+  if has_zerobrew; then
     log "installing opencode via zerobrew ..."
     zb install opencode || {
       log_warn "failed to install opencode via zerobrew; continuing"
@@ -101,7 +86,7 @@ install_opencode_if_missing() {
     log_ok "opencode installed: $(command -v opencode)"
     return 0
   fi
-  if has_cmd brew; then
+  if has_brew; then
     log "installing opencode via brew ..."
     brew install opencode || {
       log_warn "failed to install opencode via brew; continuing"
