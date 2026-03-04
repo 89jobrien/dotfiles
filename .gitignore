@@ -13,7 +13,6 @@
 .idea/
 
 # Sensitive files (if you add them)
-**/secrets/
 **/*.secret
 **/*.key
 **/*.pem

@@ -9,20 +9,32 @@
   "session": {
     "trust_all_worktrees": true
   },
-  "theme": "Catppuccin Espresso (Blur) [Heavy]",
+  "theme": "Catppuccin Macchiato - No Italics",
   "vim_mode": false,
   "format_on_save": "on",
-  "ui_font_size": 15,
-  "buffer_font_size": 14,
+  "ui_font_size": 16,
+  "buffer_font_size": 15,
   "tab_size": 2,
   "hard_tabs": false,
   "context_servers": {
+    "mcp-server-tavily": {
+      "enabled": true,
+      "settings": {
+        "tavily_api_key": "$TAVILY_API_KEY"
+      }
+    },
+    "mcp-server-context7": {
+      "enabled": true,
+      "settings": {
+        "context7_api_key": "$CONTEXT7_API_KEY"
+      }
+    },
     "personal": {
-      "command": "/Users/rentamac/.local/bin/personal-mcp",
+      "command": "$HOME/.local/bin/personal-mcp",
       "args": [],
       "env": {
-        "MCP_CTX_DIR": "/Users/rentamac/.ctx",
-        "MCP_ENV_FILE": "/Users/rentamac/.config/dev-bootstrap/secrets.env",
+        "MCP_CTX_DIR": "$HOME/.ctx",
+        "MCP_ENV_FILE": "$HOME/.config/dev-bootstrap/secrets.env",
         "BAML_LOG": "info",
         "BOUNDARY_MAX_LOG_CHUNK_CHARS": "3000"
       }
