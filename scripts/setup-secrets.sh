@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="secrets"
 
 ENC_FILE="${ROOT_DIR}/secrets/bootstrap.env.sops"
@@ -17,7 +18,7 @@ decrypt_secrets() {
     return 0
   fi
 
-  if ! command -v sops >/dev/null 2>&1; then
+  if ! has_cmd sops; then
     log_err "sops is required to decrypt secrets"
     return 1
   fi
