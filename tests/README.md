@@ -21,7 +21,10 @@ bats tests/lib/cmd.bats
 tests/
 ├── README.md           # This file
 └── lib/                # Tests for scripts/lib/* libraries
-    └── cmd.bats        # Command checking utilities tests
+    ├── cmd.bats        # Command checking utilities tests
+    ├── dryrun.bats     # Dry-run mode utilities tests
+    ├── json.bats       # JSON manipulation utilities tests
+    └── pkg.bats        # Package manager detection tests
 ```
 
 ## Writing Tests
@@ -54,7 +57,7 @@ setup() {
 
 ## Coverage
 
-Current test coverage:
+Current test coverage (82 tests total):
 
 - ✅ `scripts/lib/cmd.sh` - 20 tests covering all functions
   - `has_cmd` - Silent command existence check
@@ -62,6 +65,28 @@ Current test coverage:
   - `check_cmd` - Log-based validation
   - `check_optional_cmd` - Non-failing validation
   - `ensure_cmd` - Install if missing
+
+- ✅ `scripts/lib/dryrun.sh` - 19 tests covering all functions
+  - `set_dryrun_mode` - Enable/disable dry-run mode
+  - `is_dryrun` - Check if dry-run enabled
+  - `dryrun_exec` - Execute or log commands
+  - `parse_dryrun_args` - Parse --dry-run from args
+  - `parse_dryrun_flag` - Check single arg for --dry-run
+
+- ✅ `scripts/lib/json.sh` - 25 tests covering all functions
+  - `merge_json_config` - Read/modify/write JSON configs
+  - `read_json_value` - Read values from JSON
+  - `update_json_value` - Update single JSON value
+  - `validate_json` - Validate JSON syntax
+  - `ensure_json_dir` - Create parent directories
+
+- ✅ `scripts/lib/pkg.sh` - 18 tests covering all functions
+  - `has_zerobrew` - Check for zerobrew (zb)
+  - `has_brew` - Check for Homebrew
+  - `has_apt` - Check for apt
+  - `detect_pkg_manager` - Auto-detect package manager
+  - `ensure_homebrew` - Require zb or brew
+  - `bundle_install` - Install from Brewfile
 
 ## Adding Tests
 
