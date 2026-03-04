@@ -3,11 +3,12 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="git-config"
 
 get_gh_field() {
   local field="$1"
-  if ! command -v gh >/dev/null 2>&1; then
+  if ! has_cmd gh; then
     echo ""
     return 0
   fi
@@ -26,7 +27,7 @@ prompt_value() {
     return 0
   fi
 
-  if command -v gum >/dev/null 2>&1; then
+  if has_cmd gum; then
     value="$(gum input --placeholder "${label}" --prompt "> " || true)"
   else
     read -r -p "${label}: " value || true
@@ -86,7 +87,7 @@ main() {
   fi
 
   # Prefer GitHub CLI credential flow for github.com remotes.
-  if command -v gh >/dev/null 2>&1; then
+  if has_cmd gh; then
     if gh auth status >/dev/null 2>&1; then
       gh auth setup-git >/dev/null 2>&1 || true
       git config --global --unset-all credential.https://github.com.helper >/dev/null 2>&1 || true
