@@ -3,28 +3,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="doctor"
 
 status=0
-
-check_cmd() {
-  local cmd="$1"
-  if command -v "${cmd}" >/dev/null 2>&1; then
-    log_ok "${cmd} -> $(command -v "${cmd}")"
-  else
-    log_err "${cmd} missing"
-    status=1
-  fi
-}
-
-check_optional_cmd() {
-  local cmd="$1"
-  if command -v "${cmd}" >/dev/null 2>&1; then
-    log_ok "${cmd} -> $(command -v "${cmd}")"
-  else
-    log_skip "${cmd} (optional)"
-  fi
-}
 
 log "os=$(uname -s) arch=$(uname -m)"
 log "root=${ROOT_DIR}"
