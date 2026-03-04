@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="bootstrap"
 
 STOW_LIST_FILE="${ROOT_DIR}/config/stow-packages.txt"
@@ -92,11 +93,11 @@ done
 # ---------------------------------------------------------------------------
 
 ensure_homebrew() {
-  if command -v zb >/dev/null 2>&1; then
+  if has_cmd zb; then
     return 0
   fi
 
-  if command -v brew >/dev/null 2>&1; then
+  if has_cmd brew; then
     return 0
   fi
 
@@ -116,11 +117,11 @@ ensure_homebrew() {
 }
 
 check_homebrew_writable() {
-  if command -v zb >/dev/null 2>&1; then
+  if has_cmd zb; then
     return 0
   fi
 
-  if ! command -v brew >/dev/null 2>&1; then
+  if ! has_cmd brew; then
     return 0
   fi
 
@@ -139,23 +140,23 @@ check_homebrew_writable() {
 }
 
 ensure_stow() {
-  if command -v stow >/dev/null 2>&1; then
+  if has_cmd stow; then
     return 0
   fi
 
-  if command -v zb >/dev/null 2>&1; then
+  if has_cmd zb; then
     log "installing stow via zerobrew..."
     zb install stow
     return 0
   fi
 
-  if command -v brew >/dev/null 2>&1; then
+  if has_cmd brew; then
     log "installing stow via Homebrew..."
     brew install stow
     return 0
   fi
 
-  if [[ "$(uname -s)" == "Linux" ]] && command -v apt-get >/dev/null 2>&1; then
+  if [[ "$(uname -s)" == "Linux" ]] && has_cmd apt-get; then
     log "installing stow via apt..."
     sudo apt-get update
     sudo apt-get install -y stow
@@ -174,10 +175,10 @@ install_packages() {
 
   local brew_compat_cmd=""
   local brew_compat_name=""
-  if command -v zb >/dev/null 2>&1; then
+  if has_cmd zb; then
     brew_compat_cmd="zb"
     brew_compat_name="zerobrew"
-  elif command -v brew >/dev/null 2>&1; then
+  elif has_cmd brew; then
     brew_compat_cmd="brew"
     brew_compat_name="brew"
   fi
@@ -197,7 +198,7 @@ install_packages() {
     return 0
   fi
 
-  if [[ "$(uname -s)" == "Linux" ]] && command -v apt-get >/dev/null 2>&1; then
+  if [[ "$(uname -s)" == "Linux" ]] && has_cmd apt-get; then
     if [[ -f "${APT_LIST_FILE}" ]]; then
       log "installing fallback packages via apt..."
       # shellcheck disable=SC2046
@@ -214,7 +215,7 @@ install_packages() {
 }
 
 install_mise_toolchain() {
-  if ! command -v mise >/dev/null 2>&1; then
+  if ! has_cmd mise; then
     log_skip "mise not found; skipping mise-managed runtime install"
     return 0
   fi
@@ -316,7 +317,7 @@ run_post_hooks() {
   run_hook "Companion Repos" "${ROOT_DIR}/scripts/setup-companion-repos.sh"
 
   section "Dev Tools"
-  if command -v mise >/dev/null 2>&1 && [[ -f "${ROOT_DIR}/.mise.toml" ]]; then
+  if has_cmd mise && [[ -f "${ROOT_DIR}/.mise.toml" ]]; then
     run_hook "Dev Tools" sh -c "cd '${ROOT_DIR}' && mise run dev-tools"
   else
     run_hook "Dev Tools" "${ROOT_DIR}/scripts/setup-dev-tools.sh"
