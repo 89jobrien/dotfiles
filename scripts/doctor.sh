@@ -60,6 +60,9 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   check_cmd "duti"
 fi
 
+section "Nix"
+check_optional_cmd "nix"
+
 section "Environment"
 if [[ -f "${ROOT_DIR}/config/stow-packages.txt" ]]; then
   log_ok "stow package list present"

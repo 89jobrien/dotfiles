@@ -1,4 +1,7 @@
 {
+  "project_panel": {
+    "dock": "right"
+  },
   "telemetry": {
     "diagnostics": false,
     "metrics": false
@@ -6,7 +9,7 @@
   "session": {
     "trust_all_worktrees": true
   },
-  "theme": "One Dark",
+  "theme": "Catppuccin Espresso (Blur) [Heavy]",
   "vim_mode": false,
   "format_on_save": "on",
   "ui_font_size": 15,

@@ -58,6 +58,10 @@ scripts/post-bootstrap.local.sh
 __pycache__/
 *.pyc
 
+# Nix build output symlinks
+result
+result-*
+
 # Local Zed artifacts
 zed/.config/zed/prompts/
 zed/.config/zed/settings_backup.json

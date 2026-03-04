@@ -1,42 +1,42 @@
 # Core tooling
-brew "stow"
+brew "stow"              # [nix-batch-1]
 brew "git"
 brew "git-flow-next"
-brew "gh"
+brew "gh"                # [nix-batch-1]
 brew "opencode"
 brew "gemini-cli"
-brew "ripgrep"
-brew "fd"
-brew "fzf"
-brew "bat"
-brew "eza"
+brew "ripgrep"           # [nix-batch-1]
+brew "fd"                # [nix-batch-1]
+brew "fzf"               # [nix-batch-1]
+brew "bat"               # [nix-batch-1]
+brew "eza"               # [nix-batch-1]
 brew "btop"
-brew "bottom"
-brew "procs"
-brew "duf"
-brew "dust"
-brew "tokei"
-brew "jq"
-brew "yq"
-brew "age"
-brew "sops"
-brew "gum"
-brew "direnv"
-brew "zoxide"
-brew "just"
+brew "bottom"            # [nix-batch-1]
+brew "procs"             # [nix-batch-1]
+brew "duf"               # [nix-batch-1]
+brew "dust"              # [nix-batch-1]
+brew "tokei"             # [nix-batch-1]
+brew "jq"                # [nix-batch-1]
+brew "yq"                # [nix-batch-1]
+brew "age"               # [nix-batch-1]
+brew "sops"              # [nix-batch-1]
+brew "gum"               # [nix-batch-1]
+brew "direnv"            # [nix-batch-1]
+brew "zoxide"            # [nix-batch-1]
+brew "just"              # [nix-batch-1]
 brew "mise"
-brew "tmux"
-brew "neovim"
+brew "tmux"              # [nix-batch-1]
+brew "neovim"            # [nix-batch-1]
 brew "zsh-autosuggestions"
 brew "zsh-autopair"
-brew "kubectl"
-brew "kubectx"
-brew "helm"
-brew "k9s"
-brew "kind"
+brew "kubectl"           # [nix-batch-1]
+brew "kubectx"           # [nix-batch-1]
+brew "helm"              # [nix-batch-1]
+brew "k9s"               # [nix-batch-1]
+brew "kind"              # [nix-batch-1]
 brew "k3d"
 brew "tilt"
-brew "stern"
+brew "stern"             # [nix-batch-1]
 brew "duti"
 brew "bacon"
 brew "cargo-nextest"

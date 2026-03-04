@@ -114,6 +114,59 @@ just observe-k8s
 just maestro-doctor
 ```
 
+## Nix packages
+
+Declarative CLI tools layer using a Nix flake (`flake.nix`). Intended to eventually
+replace Homebrew for CLI tools, keeping Brew only for macOS casks and tools not in nixpkgs.
+
+```bash
+# First-time install (installs Nix + flake packages)
+mise run nix-install
+
+# Update nixpkgs pin and reinstall
+mise run nix-update
+
+# Verify installation
+mise run nix-check
+```
+
+### Managing packages
+
+The package list lives in `flake.nix` under `cliPackages`. To add a tool:
+
+1. Find the nixpkgs attribute name: `nix search nixpkgs <term>`
+2. Add it to the `cliPackages` list in `flake.nix`
+3. Apply: `mise run nix-install`
+
+To see what's currently installed:
+
+```bash
+# Show the profile entry
+nix profile list
+
+# List all individual tool binaries
+ls ~/.nix-profile/bin/
+```
+
+### What stays in Brew
+
+- GUI casks (Raycast, Zed, Warp, GitHub Desktop, Codex, Claude Code)
+- macOS container stack (colima, docker, docker-buildx, docker-compose)
+- macOS-only tools (duti)
+- Tools not in nixpkgs (opencode, gemini-cli, git-flow-next)
+- Rust devtools via cargo/mise (bacon, cargo-nextest, cargo-watch)
+- Language runtimes managed by mise
+
+Packages in both Brew and Nix during transition are safe because `~/.nix-profile/bin`
+is typically earlier in PATH. Brewfile entries tagged `# [nix-batch-1]` are the first
+migration wave.
+
+### Uninstalling Nix
+
+```bash
+/nix/nix-installer uninstall
+```
+
 ## Dev container
 
 This repo includes a VS Code/Cursor compatible dev container in `.devcontainer/`.

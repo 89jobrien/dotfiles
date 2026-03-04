@@ -42,6 +42,8 @@ if command -v cargo >/dev/null 2>&1; then
     ensure_cmd "cargo-machete" "mise exec -- cargo install --locked cargo-machete" || true
     ensure_cmd "cargo-criterion" "mise exec -- cargo install --locked cargo-criterion" || true
     ensure_cmd "hyperfine" "mise exec -- cargo install --locked hyperfine" || true
+    ensure_cmd "cargo-sweep" "mise exec -- cargo install --locked cargo-sweep" || true
+    ensure_cmd "cargo-clean-all" "mise exec -- cargo install --locked cargo-clean-all" || true
   else
     ensure_cmd "alacritty" "cargo install --locked alacritty" || true
     ensure_cmd "bacon" "cargo install --locked bacon" || true
@@ -57,6 +59,8 @@ if command -v cargo >/dev/null 2>&1; then
     ensure_cmd "cargo-machete" "cargo install --locked cargo-machete" || true
     ensure_cmd "cargo-criterion" "cargo install --locked cargo-criterion" || true
     ensure_cmd "hyperfine" "cargo install --locked hyperfine" || true
+    ensure_cmd "cargo-sweep" "cargo install --locked cargo-sweep" || true
+    ensure_cmd "cargo-clean-all" "cargo install --locked cargo-clean-all" || true
   fi
 fi
 

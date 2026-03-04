@@ -1,4 +1,4 @@
-.PHONY: install doctor drift stow post nvim up container-start container-stop container-status compose-up compose-down compose-status compose-logs k3d-up k3d-down kind-up kind-down tilt-up observe observe-k8s observe-logs observe-docker observe-docker-events observe-docker-stats health health-live health-procs health-disk raycast-scripts personal-mcp ai-config maestro-setup maestro-where maestro-doctor maestro-up maestro-up-quick maestro-up-api maestro-handoff secrets-sops-json secrets-check
+.PHONY: install doctor drift stow post nvim up container-start container-stop container-status compose-up compose-down compose-status compose-logs k3d-up k3d-down kind-up kind-down tilt-up observe observe-k8s observe-logs observe-docker observe-docker-events observe-docker-stats health health-live health-procs health-disk raycast-scripts personal-mcp mcp-build ai-config maestro-setup maestro-where maestro-doctor maestro-up maestro-up-quick maestro-up-api maestro-handoff companion-repos nix-install nix-update nix-check rust-clean rust-clean-dry rust-clean-service-install rust-clean-service-uninstall rust-clean-service-status rust-clean-service-run-now rust-clean-service-logs secrets-sops-json secrets-check
 
 install:
 	./install.sh
@@ -92,6 +92,9 @@ raycast-scripts:
 personal-mcp:
 	./scripts/setup-ai-tools.sh
 
+mcp-build:
+	KEEP_BUILD_ARTIFACTS=1 ./scripts/setup-ai-tools.sh
+
 ai-config:
 	./scripts/setup-ai-tools.sh
 
@@ -115,6 +118,39 @@ maestro-up-api:
 
 maestro-handoff:
 	./scripts/maestro-dev.sh handoff
+
+companion-repos:
+	./scripts/setup-companion-repos.sh
+
+nix-install:
+	./scripts/setup-nix.sh
+
+nix-update:
+	nix flake update && ./scripts/setup-nix.sh
+
+nix-check:
+	nix profile list && nix flake check
+
+rust-clean:
+	./scripts/rust-clean.sh
+
+rust-clean-dry:
+	./scripts/rust-clean.sh --dry-run
+
+rust-clean-service-install:
+	./scripts/rust-clean-service.sh install
+
+rust-clean-service-uninstall:
+	./scripts/rust-clean-service.sh uninstall
+
+rust-clean-service-status:
+	./scripts/rust-clean-service.sh status
+
+rust-clean-service-run-now:
+	./scripts/rust-clean-service.sh run-now
+
+rust-clean-service-logs:
+	./scripts/rust-clean-service.sh logs
 
 secrets-sops-json:
 	./scripts/secrets/make-sops-env-json.sh

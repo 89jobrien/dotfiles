@@ -298,6 +298,9 @@ run_post_hooks() {
   section "Secrets"
   run_hook "Secrets" "${ROOT_DIR}/scripts/setup-secrets.sh"
 
+  section "Nix"
+  run_hook "Nix" "${ROOT_DIR}/scripts/setup-nix.sh"
+
   if [[ "$(uname -s)" == "Darwin" ]]; then
     section "macOS"
     run_hook "macOS" "${ROOT_DIR}/scripts/setup-macos.sh"
@@ -308,6 +311,9 @@ run_post_hooks() {
 
   section "Maestro"
   run_hook "Maestro" "${ROOT_DIR}/scripts/setup-maestro.sh"
+
+  section "Companion Repos"
+  run_hook "Companion Repos" "${ROOT_DIR}/scripts/setup-companion-repos.sh"
 
   section "Dev Tools"
   if command -v mise >/dev/null 2>&1 && [[ -f "${ROOT_DIR}/.mise.toml" ]]; then

@@ -1,6 +1,12 @@
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
+# Nix: source daemon init (guard against double-sourcing when /etc/zshrc already ran it)
+if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ] && \
+   [ -z "${NIX_PROFILES:-}" ]; then
+  source '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
+fi
+
 # Path to your Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
@@ -131,25 +137,27 @@ if command -v zb >/dev/null 2>&1; then
   alias zbl='zb list'
   alias zbu='zb update'
 
-  # Route brew-compatible commands to Zerobrew when available.
+  # Route brew-compatible commands to Zerobrew, fall back to Homebrew on failure.
+  _brew_real() {
+    if command -v /opt/homebrew/bin/brew >/dev/null 2>&1; then
+      command /opt/homebrew/bin/brew "$@"
+    elif command -v /usr/local/bin/brew >/dev/null 2>&1; then
+      command /usr/local/bin/brew "$@"
+    fi
+  }
+
   brew() {
     local subcmd="${1:-}"
     case "${subcmd}" in
       install|bundle|uninstall|list|info)
-        command zb "$@"
+        command zb "$@" || _brew_real "$@"
         ;;
       cleanup)
         shift
-        command zb gc "$@"
+        command zb gc "$@" || _brew_real cleanup "$@"
         ;;
       *)
-        if command -v /opt/homebrew/bin/brew >/dev/null 2>&1; then
-          command /opt/homebrew/bin/brew "$@"
-        elif command -v /usr/local/bin/brew >/dev/null 2>&1; then
-          command /usr/local/bin/brew "$@"
-        else
-          command brew "$@"
-        fi
+        _brew_real "$@"
         ;;
     esac
   }
@@ -289,6 +297,38 @@ fi
 if [ -f /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]; then
   source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 fi
+
+# ── Maestro ─────────────────────────────────────────────────────────────────
+# Dev environment defaults (override in .zshrc.local for per-machine values)
+export MAESTRO_API_URL="https://api.maestro-staging.toptal.net"
+export MAESTRO_RESOURCE_PROFILE="development"
+
+# CLI aliases (guarded — only if maestro binary is available)
+if command -v maestro >/dev/null 2>&1; then
+  alias ms='maestro start'
+  alias mst='maestro stop'
+  alias ml='maestro list'
+  alias mlogs='maestro logs'
+  alias mwork='maestro work'
+  alias mcfg='maestro config show'
+  alias mpurge='maestro purge'
+  alias mauth='maestro auth login'
+fi
+
+# Use Colima dev profile (4 CPUs, 6GB) as default Docker socket
+export DOCKER_HOST="unix://${HOME}/.colima/dev/docker.sock"
+
+alias maestro-attach='docker exec -it -u vscode $(docker ps --filter name=maestro-maestro-dev --format "{{.ID}}" | head -1) tmux -S /tmp/tmux-shared/maestro.sock -u attach-session'
+
+# Kubernetes shortcuts scoped to the maestro GKE cluster
+alias kmpods='kubectl --context=gke_toptal-maestro_us-east1_main-0 -n team-maestro get pods'
+alias kmlogs='kubectl --context=gke_toptal-maestro_us-east1_main-0 -n team-maestro logs'
+alias kmexec='kubectl --context=gke_toptal-maestro_us-east1_main-0 -n team-maestro exec -it'
+
+# Real npm for maestro-ui (global npm alias points to bun; UI needs real npm)
+# Usage:  mnpm install   /   mnpm run dev   /   mnpm ci
+mnpm() { command npm "$@"; }
+# ────────────────────────────────────────────────────────────────────────────
 
 # Mutable local overrides (not managed by stow repo)
 [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"

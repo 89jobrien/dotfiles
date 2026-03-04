@@ -70,6 +70,10 @@ install_binary() {
   log "installing personal-mcp to ~/.local/bin ..."
   if cargo install --path "${MCP_REPO}" --root "${HOME_DIR}/.local" --force; then
     log_ok "installed ${MCP_BIN}"
+    if [[ "${KEEP_BUILD_ARTIFACTS:-0}" != "1" ]]; then
+      log "cleaning build artifacts..."
+      cargo clean --manifest-path "${MCP_REPO}/Cargo.toml" 2>/dev/null || true
+    fi
     return 0
   fi
 

@@ -98,6 +98,9 @@ raycast-scripts:
 personal-mcp:
     ./scripts/setup-ai-tools.sh
 
+mcp-build:
+    KEEP_BUILD_ARTIFACTS=1 ./scripts/setup-ai-tools.sh
+
 ai-config:
     ./scripts/setup-ai-tools.sh
 
@@ -121,6 +124,39 @@ maestro-up-api:
 
 maestro-handoff:
     ./scripts/maestro-dev.sh handoff
+
+companion-repos:
+    ./scripts/setup-companion-repos.sh
+
+nix-install:
+    ./scripts/setup-nix.sh
+
+nix-update:
+    nix flake update && ./scripts/setup-nix.sh
+
+nix-check:
+    nix profile list && nix flake check
+
+rust-clean:
+    ./scripts/rust-clean.sh
+
+rust-clean-dry:
+    ./scripts/rust-clean.sh --dry-run
+
+rust-clean-service-install:
+    ./scripts/rust-clean-service.sh install
+
+rust-clean-service-uninstall:
+    ./scripts/rust-clean-service.sh uninstall
+
+rust-clean-service-status:
+    ./scripts/rust-clean-service.sh status
+
+rust-clean-service-run-now:
+    ./scripts/rust-clean-service.sh run-now
+
+rust-clean-service-logs:
+    ./scripts/rust-clean-service.sh logs
 
 secrets-sops-json:
     ./scripts/secrets/make-sops-env-json.sh

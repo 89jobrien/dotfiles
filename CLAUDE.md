@@ -40,11 +40,15 @@ Three equivalent task runners: `mise run <task>` (interactive), `just <recipe>` 
 `install.sh` delegates to `pj dot install` when `pj` is available, otherwise runs `scripts/bootstrap.sh` directly. Bootstrap executes in order:
 
 1. `setup-zerobrew.sh` (pre-homebrew fast companion)
-2. `zerobrew` (`zb`) package install (`zb bundle` on `Brewfile.macos`/`Brewfile.linux`) with `brew` fallback, then `apt` fallback on Linux
+2. `zerobrew` (`zb`) package install (`zb bundle --file Brewfile.macos/Brewfile.linux`); falls back to `brew bundle`, then `apt` on Linux
 3. `mise install` (language runtimes from `.mise.toml`)
 4. Stow symlinks (packages from `config/stow-packages.txt`)
-5. Post-hooks in section order: Shell → Secrets → macOS → AI Tools → Maestro → Dev Tools → Editor
+5. Post-hooks in section order: Shell (git-config + oh-my-zsh) → Secrets → Nix → macOS → AI Tools → Maestro → Companion Repos → Dev Tools → Editor → Local (if `scripts/post-bootstrap.local.sh` exists)
 6. Summary table printed at end
+
+### `brew()` Shell Shim
+
+The `brew()` function in `.zshrc` routes `install|bundle|uninstall|list|info` to `zb` first, falling back to real Homebrew on failure. All other subcommands go directly to Homebrew. The `_brew_real()` helper resolves the Homebrew binary path (`/opt/homebrew/bin/brew` → `/usr/local/bin/brew`).
 
 ### Shared Logging Library
 
@@ -74,6 +78,42 @@ Encrypted with `sops + age`. Decrypted to `~/.config/dev-bootstrap/secrets.env` 
 ### AI Tool Configuration (`setup-ai-tools.sh`)
 
 Single script configures 7 tools: Claude Desktop, Claude Code, Cursor, Zed, OpenCode, Codex, Gemini. Uses `merge_json_config()` helper for JSON configs (jq-based read-modify-write). Codex uses TOML via awk strip+append. Builds `personal-mcp` binary from `~/dev/personal-mcp` if the repo exists.
+
+### Nix Flake (`flake.nix`)
+
+Declarative CLI tools layer that sits alongside Homebrew. Installs a single `buildEnv` profile
+entry bundling ~30 CLI tools via `nix profile install .#default`. The setup script
+(`scripts/setup-nix.sh`) installs Nix itself (Determinate Systems installer) then installs or
+upgrades the profile. Runs as a bootstrap post-hook after Secrets.
+
+```bash
+mise run nix-install     # install Nix + apply flake packages
+mise run nix-update      # update nixpkgs lock + reinstall
+mise run nix-check       # verify profile + flake
+```
+
+To add a package: find the nixpkgs attr name (`nix search nixpkgs <term>`), add to
+`cliPackages` in `flake.nix`, run `mise run nix-install`. To list installed binaries:
+`ls ~/.nix-profile/bin/`.
+
+Brewfile entries tagged `# [nix-batch-1]` are the first migration wave (kept in both during
+transition). What stays in Brew: casks, container stack, macOS-only tools, tools not in nixpkgs,
+and runtimes managed by mise.
+
+### Companion Projects
+
+These projects live outside the dotfiles repo but depend on tools the dotfiles provide:
+
+| Project | Path | Repo | Language | Tools from dotfiles |
+|---|---|---|---|---|
+| personal-mcp | `~/dev/personal-mcp` | `89jobrien/personal-mcp` | Rust | `cargo`/`rust` (mise), `baml-cli` (dev-tools), `jq`, `just` (nix) |
+| dumcp | `~/dev/dumcp` | `89jobrien/dumcp` | Go | `go` (mise) |
+| maestro-dev | `~/maestro-dev` | `89jobrien/maestro-dev` | Shell/Docker | `docker`/`colima` (brew), `tmux`, `just` (nix) |
+
+All three are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh`.
+
+Runtime runtimes (Go, Rust) are managed by mise. CLI tools (`tmux`, `just`, `jq`, etc.) come
+from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
 
 ## Tooling Preferences
 
