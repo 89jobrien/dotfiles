@@ -3,10 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="oh-my-zsh"
 
 main() {
-  if ! command -v zsh >/dev/null 2>&1; then
+  if ! has_cmd zsh; then
     log_skip "zsh not found"
     return 0
   fi
@@ -16,7 +17,7 @@ main() {
     return 0
   fi
 
-  if ! command -v curl >/dev/null 2>&1; then
+  if ! has_cmd curl; then
     log_err "curl not found; cannot install Oh My Zsh automatically"
     return 1
   fi
