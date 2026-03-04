@@ -3,7 +3,7 @@ bun = "latest"
 go = "1.25"
 node = "22"
 python = "3.13"
-rust = "1.88"
+rust = "1.91"
 uv = "latest"
 
 [env]
