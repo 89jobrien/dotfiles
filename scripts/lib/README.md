@@ -16,6 +16,7 @@ source "${ROOT_DIR}/scripts/lib/cmd.sh"
 source "${ROOT_DIR}/scripts/lib/pkg.sh"
 source "${ROOT_DIR}/scripts/lib/dryrun.sh"
 source "${ROOT_DIR}/scripts/lib/json.sh"
+source "${ROOT_DIR}/scripts/lib/launchd.sh"  # macOS only
 
 TAG="my-script"
 
@@ -165,6 +166,54 @@ if is_dryrun; then
 else
   find . -name '*.tmp' -delete
 fi
+```
+
+### launchd.sh - macOS Service Management
+
+LaunchDaemon/LaunchAgent utilities for macOS service management.
+
+**Functions:**
+- `launchd_is_loaded` - Check if service is loaded
+- `launchd_uninstall` - Stop service and remove plist
+- `launchd_status` - Print service status (exits 1 if not loaded)
+- `launchd_logs` - Tail stdout/stderr logs
+- `launchd_stop` - Stop service if running
+- `launchd_start [PLIST]` - Start service from plist
+- `launchd_restart` - Restart service (stop then start)
+
+**Required Variables:**
+- `LABEL` - Reverse DNS label (e.g., "com.user.service")
+- `PLIST_PATH` - Path to plist file
+- `DOMAIN` - launchd domain (e.g., "gui/${UID}")
+
+**Optional Variables (for launchd_logs):**
+- `STATE_DIR` - Directory for logs
+- `STDOUT_LOG` - Path to stdout log
+- `STDERR_LOG` - Path to stderr log
+
+**Examples:**
+```bash
+LABEL="com.user.myservice"
+DOMAIN="gui/${UID}"
+PLIST_PATH="${HOME}/Library/LaunchAgents/${LABEL}.plist"
+STATE_DIR="${HOME}/.local/state/myservice"
+STDOUT_LOG="${STATE_DIR}/stdout.log"
+STDERR_LOG="${STATE_DIR}/stderr.log"
+
+# Check if loaded
+if launchd_is_loaded; then
+  log "Service is running"
+fi
+
+# Manage service
+launchd_start
+launchd_stop
+launchd_restart
+launchd_status
+launchd_logs
+
+# Uninstall
+launchd_uninstall
 ```
 
 ### json.sh - JSON Manipulation

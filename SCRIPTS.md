@@ -29,6 +29,7 @@ Foundation layer providing reusable utilities for all scripts:
 | `pkg.sh` | Package managers | `detect_pkg_manager`, `ensure_homebrew`, `bundle_install` |
 | `dryrun.sh` | Dry-run mode | `set_dryrun_mode`, `is_dryrun`, `dryrun_exec` |
 | `json.sh` | JSON manipulation | `merge_json_config`, `read_json_value`, `validate_json` |
+| `launchd.sh` | macOS services (launchd) | `launchd_is_loaded`, `launchd_start`, `launchd_stop`, `launchd_status` |
 
 **Design Principles:**
 - Single responsibility per library
@@ -248,6 +249,7 @@ scripts/
 │   ├── cmd.sh                    # Command checking utilities
 │   ├── dryrun.sh                 # Dry-run mode handling
 │   ├── json.sh                   # JSON manipulation
+│   ├── launchd.sh                # macOS service management (launchd)
 │   ├── log.sh                    # Logging functions
 │   └── pkg.sh                    # Package manager detection
 │
