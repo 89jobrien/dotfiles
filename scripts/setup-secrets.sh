@@ -49,8 +49,9 @@ install_hygiene_hook() {
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 "${ROOT_DIR}/scripts/secrets/check-no-plaintext.sh"
-if command -v pj >/dev/null 2>&1; then
+if has_cmd pj; then
   if ! pj secret scan --staged; then
     echo "warning: pj secret scan flagged potential issues (see above)" >&2
     echo "         the primary check (check-no-plaintext.sh) passed — continuing" >&2

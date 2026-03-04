@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Package manager detection and utilities for dotfiles bootstrap scripts.
-# Source this file after log.sh.
+# Source this file after log.sh and cmd.sh.
 #
 # Usage:
 #   source "${ROOT_DIR}/scripts/lib/log.sh"
+#   source "${ROOT_DIR}/scripts/lib/cmd.sh"
 #   source "${ROOT_DIR}/scripts/lib/pkg.sh"
 #   TAG="my-script"
 #
@@ -15,19 +16,19 @@
 # has_zerobrew
 #   Returns 0 if zerobrew (zb) is available
 has_zerobrew() {
-  command -v zb >/dev/null 2>&1
+  has_cmd zb
 }
 
 # has_brew
 #   Returns 0 if Homebrew is available
 has_brew() {
-  command -v brew >/dev/null 2>&1
+  has_cmd brew
 }
 
 # has_apt
 #   Returns 0 if apt (Debian/Ubuntu) is available
 has_apt() {
-  command -v apt >/dev/null 2>&1
+  has_cmd apt
 }
 
 # detect_pkg_manager

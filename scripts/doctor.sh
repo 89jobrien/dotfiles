@@ -23,7 +23,7 @@ done
 check_optional_cmd "claude"
 check_optional_cmd "codex"
 if git flow version >/dev/null 2>&1; then
-  log_ok "git-flow -> $(command -v git)"
+  log_ok "git-flow -> $(find_cmd git)"
 else
   log_err "git-flow (git flow)"
   status=1
@@ -75,7 +75,7 @@ else
   log "run ./scripts/setup-git-config.sh"
 fi
 
-if command -v gh >/dev/null 2>&1; then
+if has_cmd gh; then
   if gh auth status -h github.com >/dev/null 2>&1; then
     log_ok "gh auth OK"
   else

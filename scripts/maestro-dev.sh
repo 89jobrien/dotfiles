@@ -65,7 +65,7 @@ cmd_doctor() {
 
   for c in make cargo docker kubectl k3d tilt; do
     if has_cmd "${c}"; then
-      log_ok "${c} -> $(command -v "${c}")"
+      log_ok "${c} -> $(find_cmd "${c}")"
     else
       log_err "${c} missing"
       status=1

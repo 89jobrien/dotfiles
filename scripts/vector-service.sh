@@ -39,7 +39,7 @@ EOF
 
 require_vector() {
   require_cmd vector "brew tap vectordotdev/brew && brew install vector"
-  VECTOR_BIN="$(command -v vector)"
+  VECTOR_BIN="$(find_cmd vector)"
 }
 
 require_config() {

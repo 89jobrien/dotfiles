@@ -24,10 +24,7 @@ merge_json_config() {
   shift 2
 
   # Ensure jq is available
-  if ! command -v jq >/dev/null 2>&1; then
-    log_err "jq is required for JSON manipulation"
-    exit 1
-  fi
+  require_cmd jq
 
   local tmp
   tmp="$(mktemp)"

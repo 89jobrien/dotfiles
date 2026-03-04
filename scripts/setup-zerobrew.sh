@@ -7,7 +7,7 @@ source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="zerobrew"
 
 if has_cmd zb; then
-  log_skip "zb already installed at $(command -v zb)"
+  log_skip "zb already installed at $(find_cmd zb)"
   exit 0
 fi
 
@@ -28,7 +28,7 @@ log "the installer may prompt for your macOS password"
 curl -fsSL https://zerobrew.rs/install | bash
 
 if has_cmd zb; then
-  log_ok "installed zb at $(command -v zb)"
+  log_ok "installed zb at $(find_cmd zb)"
   exit 0
 fi
 

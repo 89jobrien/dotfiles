@@ -2,18 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
+TAG="sops-env"
+
 INPUT_FILE="${1:-${ROOT_DIR}/secrets/.env.json}"
 OUTPUT_FILE="${2:-${ROOT_DIR}/secrets/.env.sops.json}"
 KEY_FILE="${SOPS_AGE_KEY_FILE:-${MISE_SOPS_AGE_KEY_FILE:-${HOME}/.config/sops/age/keys.txt}}"
 
-log() {
-  printf '[sops-env] %s\n' "$*"
-}
-
-if ! command -v sops >/dev/null 2>&1; then
-  log "sops is required."
-  exit 1
-fi
+require_cmd sops
 
 if [[ ! -f "${INPUT_FILE}" ]]; then
   log "Input JSON not found: ${INPUT_FILE}"
@@ -21,10 +18,7 @@ if [[ ! -f "${INPUT_FILE}" ]]; then
   exit 1
 fi
 
-if ! command -v jq >/dev/null 2>&1; then
-  log "jq is required to validate JSON."
-  exit 1
-fi
+require_cmd jq
 
 jq empty "${INPUT_FILE}" >/dev/null
 

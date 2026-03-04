@@ -18,6 +18,12 @@ has_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
+# find_cmd CMD
+#   Return the path to CMD if it exists, empty string otherwise
+find_cmd() {
+  command -v "$1" 2>/dev/null || true
+}
+
 # require_cmd CMD [INSTALL_HINT]
 #   Exit with error if CMD is not found. Optional hint for installation.
 require_cmd() {

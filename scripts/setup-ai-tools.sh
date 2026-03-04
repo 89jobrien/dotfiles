@@ -74,7 +74,7 @@ install_binary() {
 
 install_opencode_if_missing() {
   if has_cmd opencode; then
-    log_skip "opencode already installed: $(command -v opencode)"
+    log_skip "opencode already installed: $(find_cmd opencode)"
     return 0
   fi
 
@@ -88,7 +88,7 @@ install_opencode_if_missing() {
         log_warn "failed to install opencode via zerobrew; continuing"
         return 0
       }
-      log_ok "opencode installed: $(command -v opencode)"
+      log_ok "opencode installed: $(find_cmd opencode)"
       ;;
     homebrew)
       log "installing opencode via brew ..."
@@ -96,7 +96,7 @@ install_opencode_if_missing() {
         log_warn "failed to install opencode via brew; continuing"
         return 0
       }
-      log_ok "opencode installed: $(command -v opencode)"
+      log_ok "opencode installed: $(find_cmd opencode)"
       ;;
     *)
       log_skip "opencode not found and no package manager available"

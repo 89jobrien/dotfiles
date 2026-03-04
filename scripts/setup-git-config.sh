@@ -92,8 +92,8 @@ main() {
       gh auth setup-git >/dev/null 2>&1 || true
       git config --global --unset-all credential.https://github.com.helper >/dev/null 2>&1 || true
       git config --global --unset-all credential.https://gist.github.com.helper >/dev/null 2>&1 || true
-      git config --global --add credential.https://github.com.helper "!$(command -v gh) auth git-credential"
-      git config --global --add credential.https://gist.github.com.helper "!$(command -v gh) auth git-credential"
+      git config --global --add credential.https://github.com.helper "!$(find_cmd gh) auth git-credential"
+      git config --global --add credential.https://gist.github.com.helper "!$(find_cmd gh) auth git-credential"
       log_ok "configured git to use gh credentials for github.com remotes"
     else
       log_warn "gh is installed but not authenticated; skipping git credential helper setup"
