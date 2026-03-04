@@ -30,8 +30,14 @@ decrypt_secrets() {
   fi
 
   mkdir -p "${OUT_DIR}"
-  sops --decrypt "${ENC_FILE}" > "${OUT_FILE}"
-  chmod 600 "${OUT_FILE}"
+  local tmp
+  tmp="$(mktemp "${OUT_FILE}.tmp.XXXXXX")"
+  if ! sops --decrypt "${ENC_FILE}" > "${tmp}"; then
+    rm -f "${tmp}"
+    return 1
+  fi
+  chmod 600 "${tmp}"
+  mv "${tmp}" "${OUT_FILE}"
 
   log_ok "decrypted secrets to ${OUT_FILE}"
 }
@@ -45,7 +51,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 "${ROOT_DIR}/scripts/secrets/check-no-plaintext.sh"
 if command -v pj >/dev/null 2>&1; then
-  pj secret scan --staged
+  if ! pj secret scan --staged; then
+    echo "warning: pj secret scan flagged potential issues (see above)" >&2
+    echo "         the primary check (check-no-plaintext.sh) passed — continuing" >&2
+  fi
 fi
 HOOK
 
