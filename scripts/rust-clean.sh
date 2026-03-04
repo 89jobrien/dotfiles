@@ -3,11 +3,12 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
+source "${ROOT_DIR}/scripts/lib/dryrun.sh"
 TAG="rust-clean"
 
 SCAN_DIR="${RUST_CLEAN_DIR:-${HOME}/dev}"
 KEEP_DAYS="${RUST_CLEAN_DAYS:-14}"
-DRY_RUN="${RUST_CLEAN_DRY_RUN:-0}"
 
 usage() {
   cat <<'EOF'
@@ -24,13 +25,13 @@ Options:
 Environment overrides:
   RUST_CLEAN_DIR  (default: ~/dev)
   RUST_CLEAN_DAYS (default: 14)
-  RUST_CLEAN_DRY_RUN=1
+  DRY_RUN=1
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --dry-run) DRY_RUN=1 ;;
+    --dry-run) set_dryrun_mode 1 ;;
     --dir)     shift; SCAN_DIR="${1:?--dir requires a path}" ;;
     --days)    shift; KEEP_DAYS="${1:?--days requires a number}" ;;
     -h|--help) usage; exit 0 ;;
@@ -39,17 +40,14 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-if ! command -v cargo-sweep >/dev/null 2>&1; then
-  log_err "cargo-sweep not found; run: mise run dev-tools"
-  exit 1
-fi
+require_cmd cargo-sweep "mise run dev-tools"
 
 if [[ ! -d "${SCAN_DIR}" ]]; then
   log_skip "scan dir not found: ${SCAN_DIR}"
   exit 0
 fi
 
-if [[ "${DRY_RUN}" == "1" ]]; then
+if is_dryrun; then
   log "dry-run: artifacts older than ${KEEP_DAYS} days under ${SCAN_DIR}"
   cargo sweep --time "${KEEP_DAYS}" --recursive --dry-run "${SCAN_DIR}"
 else
