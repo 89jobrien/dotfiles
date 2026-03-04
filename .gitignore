@@ -64,3 +64,4 @@ result-*
 # Local Zed artifacts
 zed/.config/zed/prompts/
 zed/.config/zed/settings_backup.json
+.beads/
