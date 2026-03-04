@@ -3,14 +3,15 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="zerobrew"
 
-if command -v zb >/dev/null 2>&1; then
+if has_cmd zb; then
   log_skip "zb already installed at $(command -v zb)"
   exit 0
 fi
 
-if ! command -v curl >/dev/null 2>&1; then
+if ! has_cmd curl; then
   log_err "curl is required to install zerobrew"
   exit 1
 fi
@@ -26,7 +27,7 @@ log "installing zerobrew..."
 log "the installer may prompt for your macOS password"
 curl -fsSL https://zerobrew.rs/install | bash
 
-if command -v zb >/dev/null 2>&1; then
+if has_cmd zb; then
   log_ok "installed zb at $(command -v zb)"
   exit 0
 fi
