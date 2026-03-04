@@ -299,20 +299,43 @@ Vector service: `scripts/vector-service.sh install`
 
 ## Testing
 
-Run `mise run doctor` to check that all expected commands are available.
+### Automated Tests
 
-Individual library testing:
+All libraries have comprehensive bats test suites (82 tests total):
+
 ```bash
-# Test cmd.sh
+# Run all library tests
+bats tests/lib/*.bats
+
+# Run specific library tests
+bats tests/lib/cmd.bats      # 20 tests - command checking
+bats tests/lib/dryrun.bats   # 19 tests - dry-run mode
+bats tests/lib/json.bats     # 25 tests - JSON manipulation
+bats tests/lib/pkg.bats      # 18 tests - package manager detection
+
+# Run via mise
+mise run test          # All tests
+mise run test-lib      # Just library tests
+```
+
+**Test Coverage:**
+- ✅ `cmd.sh` - 20 tests covering all functions and edge cases
+- ✅ `dryrun.sh` - 19 tests covering mode control, execution, and arg parsing
+- ✅ `json.sh` - 25 tests covering config merging, validation, and real-world scenarios
+- ✅ `pkg.sh` - 18 tests covering package manager detection and installation
+
+See `tests/README.md` for detailed test documentation.
+
+### Manual Verification
+
+```bash
+# Check system health
+mise run doctor
+
+# Individual library smoke tests
 bash -c 'source scripts/lib/log.sh; source scripts/lib/cmd.sh; TAG="test"; has_cmd bash && echo PASS'
-
-# Test pkg.sh
 bash -c 'source scripts/lib/log.sh; source scripts/lib/pkg.sh; TAG="test"; detect_pkg_manager'
-
-# Test dryrun.sh
 bash -c 'source scripts/lib/log.sh; source scripts/lib/dryrun.sh; TAG="test"; set_dryrun_mode 1; dryrun_exec echo test'
-
-# Test json.sh
 bash -c 'source scripts/lib/log.sh; source scripts/lib/cmd.sh; source scripts/lib/json.sh; TAG="test"; echo "{}" | jq . > /tmp/test.json; merge_json_config /tmp/test.json ".foo = \"bar\""; cat /tmp/test.json'
 ```
 
