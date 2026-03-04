@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="vector-service"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -13,7 +14,7 @@ fi
 LABEL="com.rentamac.vector"
 PLIST_DIR="${HOME}/Library/LaunchAgents"
 PLIST_PATH="${PLIST_DIR}/${LABEL}.plist"
-VECTOR_BIN="$(command -v vector || true)"
+VECTOR_BIN=""
 CONFIG_PATH="${ROOT_DIR}/vector/.config/vector/vector.yaml"
 STATE_DIR="${HOME}/.local/state/vector"
 STDOUT_LOG="${STATE_DIR}/launchd.stdout.log"
@@ -36,11 +37,8 @@ EOF
 }
 
 require_vector() {
-  if [[ -z "${VECTOR_BIN}" ]]; then
-    log_err "vector binary not found on PATH"
-    log "install: brew tap vectordotdev/brew && brew install vector"
-    exit 1
-  fi
+  require_cmd vector "brew tap vectordotdev/brew && brew install vector"
+  VECTOR_BIN="$(command -v vector)"
 }
 
 require_config() {
