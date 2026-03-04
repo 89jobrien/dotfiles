@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="companion-repos"
 
 # ---------------------------------------------------------------------------
@@ -31,7 +32,7 @@ clone_repo() {
     return 0
   fi
 
-  if ! command -v gh >/dev/null 2>&1; then
+  if ! has_cmd gh; then
     log_err "gh CLI not found; cannot clone ${repo}"
     return 1
   fi
