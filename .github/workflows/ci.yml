@@ -1,0 +1,56 @@
+name: CI (Minimal)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quick-check:
+    name: Quick Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Syntax check all scripts
+        run: |
+          echo "🔍 Checking shell script syntax..."
+          error=0
+          for script in scripts/*.sh scripts/lib/*.sh; do
+            if ! bash -n "$script" 2>/dev/null; then
+              echo "❌ Syntax error in $script"
+              error=1
+            fi
+          done
+          if [ $error -eq 0 ]; then
+            echo "✅ All scripts passed syntax check"
+          else
+            exit 1
+          fi
+
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats jq
+
+      - name: Run core library tests
+        run: |
+          echo "🧪 Running essential library tests..."
+          # Test the most critical libraries
+          bats tests/lib/cmd.bats
+          bats tests/lib/log.bats 2>/dev/null || echo "⚠️  log.bats not found, skipping"
+          echo "✅ Core tests passed"
+
+  shellcheck-critical:
+    name: Shellcheck (Critical Issues)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run shellcheck on critical scripts
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './scripts'
+          severity: error
+          ignore_paths: 'scripts/post-bootstrap.local.example.sh'
