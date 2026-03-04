@@ -163,3 +163,9 @@ secrets-sops-json:
 
 secrets-check:
     ./scripts/secrets/check-no-plaintext.sh
+
+toolz-install:
+    cargo install --path toolz --root "${HOME}/.local" --force
+
+toolz-dev:
+    cd toolz && cargo build
