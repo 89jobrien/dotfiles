@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="${AI_LOG_ROOT:-${HOME}/logs/ai}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/dryrun.sh"
+TAG="claude-log-retention"
+
+AI_LOG_ROOT="${AI_LOG_ROOT:-${HOME}/logs/ai}"
 RETENTION_DAYS="${AI_LOG_RETENTION_DAYS:-180}"
 COMPRESS_AFTER_DAYS="${AI_LOG_COMPRESS_AFTER_DAYS:-14}"
-DRY_RUN=0
 
 usage() {
   cat <<'EOF'
@@ -28,18 +33,10 @@ is_non_negative_int() {
   [[ "$1" =~ ^[0-9]+$ ]]
 }
 
-run() {
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    printf '[dry-run] %s\n' "$*"
-  else
-    "$@"
-  fi
-}
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --root)
-      ROOT_DIR="$2"
+      AI_LOG_ROOT="$2"
       shift 2
       ;;
     --retention-days)
@@ -51,7 +48,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --dry-run)
-      DRY_RUN=1
+      set_dryrun_mode 1
       shift
       ;;
     -h|--help)
@@ -59,7 +56,7 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     *)
-      printf 'Unknown argument: %s\n' "$1" >&2
+      log_err "unknown argument: $1"
       usage >&2
       exit 1
       ;;
@@ -67,23 +64,32 @@ while [[ $# -gt 0 ]]; do
 done
 
 if ! is_non_negative_int "$RETENTION_DAYS"; then
-  printf 'Invalid retention days: %s\n' "$RETENTION_DAYS" >&2
+  log_err "invalid retention days: $RETENTION_DAYS"
   exit 1
 fi
 
 if ! is_non_negative_int "$COMPRESS_AFTER_DAYS"; then
-  printf 'Invalid compress-after days: %s\n' "$COMPRESS_AFTER_DAYS" >&2
+  log_err "invalid compress-after days: $COMPRESS_AFTER_DAYS"
   exit 1
 fi
 
-if [[ ! -d "$ROOT_DIR" ]]; then
-  printf 'Log root does not exist, nothing to do: %s\n' "$ROOT_DIR"
+if [[ ! -d "$AI_LOG_ROOT" ]]; then
+  log_skip "log root does not exist: $AI_LOG_ROOT"
   exit 0
 fi
 
-NOW_EPOCH="$(date +%s)"
+if is_dryrun; then
+  log "dry-run mode enabled"
+fi
 
-for day_dir in "$ROOT_DIR"/*; do
+log "processing log directory: $AI_LOG_ROOT"
+log "retention: ${RETENTION_DAYS} days, compress after: ${COMPRESS_AFTER_DAYS} days"
+
+NOW_EPOCH="$(date +%s)"
+compressed_count=0
+deleted_count=0
+
+for day_dir in "$AI_LOG_ROOT"/*; do
   [[ -d "$day_dir" ]] || continue
 
   day_name="$(basename "$day_dir")"
@@ -96,11 +102,25 @@ for day_dir in "$ROOT_DIR"/*; do
 
   if (( age_days >= COMPRESS_AFTER_DAYS )); then
     while IFS= read -r file; do
-      run gzip -f "$file"
+      dryrun_exec gzip -f "$file"
+      ((compressed_count++))
     done < <(find "$day_dir" -type f -name 'events.jsonl')
   fi
 
   if (( age_days >= RETENTION_DAYS )); then
-    run rm -rf "$day_dir"
+    dryrun_exec rm -rf "$day_dir"
+    ((deleted_count++))
   fi
 done
+
+if [[ $compressed_count -gt 0 ]]; then
+  log_ok "compressed $compressed_count file(s)"
+fi
+
+if [[ $deleted_count -gt 0 ]]; then
+  log_ok "deleted $deleted_count directory(ies)"
+fi
+
+if [[ $compressed_count -eq 0 && $deleted_count -eq 0 ]]; then
+  log_skip "no files to compress or delete"
+fi
