@@ -24,8 +24,9 @@ if printf '%s\n' "${staged_paths}" | rg -n "${forbidden_paths}" >/dev/null 2>&1;
 fi
 
 # 2) Block plaintext-looking secret assignments in staged diff.
+# Skip `*.example` files so placeholder templates can be committed.
 # Catch both env-style (`KEY=value`) and JSON/YAML-style (`"KEY": "value"`).
-staged_diff="$(git diff --cached --text --unified=0 || true)"
+staged_diff="$(git diff --cached --text --unified=0 -- . ':(exclude)*.example' || true)"
 added_lines="$(printf '%s\n' "${staged_diff}" | rg '^\+' | rg -v '^\+\+\+' || true)"
 content_pattern_primary='["'"'"']?(openai[_-]?api[_-]?key|anthropic[_-]?api[_-]?key|gemini[_-]?api[_-]?key|tavily[_-]?api[_-]?key|context7[_-]?api[_-]?key|boundary[_-]?api[_-]?key|github[_-]?token|gh[_-]?token|aws[_-]?access[_-]?key[_-]?id|aws[_-]?secret[_-]?access[_-]?key|database[_-]?url|redis[_-]?url)["'"'"']?\s*[:=]\s*["'"'"']?[^\s,"'"'"']+'
 content_pattern_generic='["'"'"']?[a-z0-9_]*(api[_-]?key|token|password|passwd|secret(_access)?_key)[a-z0-9_]*["'"'"']?\s*[:=]\s*["'"'"']?[^\s,"'"'"']+'
