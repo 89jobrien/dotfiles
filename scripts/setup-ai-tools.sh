@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="ai-tools"
 
 HOME_DIR="${HOME}"
@@ -87,11 +88,11 @@ install_binary() {
 }
 
 install_opencode_if_missing() {
-  if command -v opencode >/dev/null 2>&1; then
+  if has_cmd opencode; then
     log_skip "opencode already installed: $(command -v opencode)"
     return 0
   fi
-  if command -v zb >/dev/null 2>&1; then
+  if has_cmd zb; then
     log "installing opencode via zerobrew ..."
     zb install opencode || {
       log_warn "failed to install opencode via zerobrew; continuing"
@@ -100,7 +101,7 @@ install_opencode_if_missing() {
     log_ok "opencode installed: $(command -v opencode)"
     return 0
   fi
-  if command -v brew >/dev/null 2>&1; then
+  if has_cmd brew; then
     log "installing opencode via brew ..."
     brew install opencode || {
       log_warn "failed to install opencode via brew; continuing"
@@ -295,7 +296,7 @@ main() {
   ensure_dirs
   install_binary
   install_opencode_if_missing
-  command -v jq >/dev/null 2>&1 || { log_err "jq required"; exit 1; }
+  require_cmd jq
   configure_claude_desktop
   configure_claude_code
   configure_cursor
