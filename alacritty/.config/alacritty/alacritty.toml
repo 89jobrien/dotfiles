@@ -1,6 +1,8 @@
+# Window settings
 [window]
 option_as_alt = "Both"
 
+# Font configuration
 [font]
 size = 13.0
 
@@ -8,10 +10,12 @@ size = 13.0
 family = "Menlo"
 style = "Regular"
 
+# Shell
 [shell]
 program = "/bin/zsh"
 args = ["-l"]
 
+# Catppuccin Mocha color theme
 [colors.primary]
 background = "#1E1E2E"
 foreground = "#CDD6F4"
@@ -43,3 +47,54 @@ blue = "#89B4FA"
 magenta = "#F5C2E7"
 cyan = "#94E2D5"
 white = "#A6ADC8"
+
+# Keyboard bindings
+[[keyboard.bindings]]
+key = "Return"
+mods = "Shift"
+chars = "\x1b\r"
+
+# Cmd+C/V for copy/paste
+[[keyboard.bindings]]
+key = "C"
+mods = "Command"
+action = "Copy"
+
+[[keyboard.bindings]]
+key = "V"
+mods = "Command"
+action = "Paste"
+
+# Cmd+K to clear screen
+[[keyboard.bindings]]
+key = "K"
+mods = "Command"
+chars = "\x0c"
+
+# Cmd+Left/Right for beginning/end of line
+[[keyboard.bindings]]
+key = "Left"
+mods = "Command"
+chars = "\x1bOH"
+
+[[keyboard.bindings]]
+key = "Right"
+mods = "Command"
+chars = "\x1bOF"
+
+# Option+Left/Right for word navigation
+[[keyboard.bindings]]
+key = "Left"
+mods = "Alt"
+chars = "\x1bb"
+
+[[keyboard.bindings]]
+key = "Right"
+mods = "Alt"
+chars = "\x1bf"
+
+# Cmd+Backspace to delete to beginning of line
+[[keyboard.bindings]]
+key = "Back"
+mods = "Command"
+chars = "\x15"
