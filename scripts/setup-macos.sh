@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="macos"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -12,7 +13,7 @@ fi
 
 set_file_handlers() {
   if [[ ! -d "/Applications/Alacritty.app" ]]; then
-    if command -v alacritty >/dev/null 2>&1; then
+    if has_cmd alacritty; then
       log_skip "Alacritty installed from source (no .app bundle); skipping duti setup"
     else
       log_skip "Alacritty not found; skipping handler setup"
@@ -20,7 +21,7 @@ set_file_handlers() {
     return 0
   fi
 
-  if ! command -v duti >/dev/null 2>&1; then
+  if ! has_cmd duti; then
     log_skip "duti not installed; cannot set file handlers"
     return 0
   fi
