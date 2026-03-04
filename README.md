@@ -1,5 +1,7 @@
 # Dotfiles
 
+[![CI](https://github.com/89jobrien/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/89jobrien/dotfiles/actions/workflows/ci.yml)
+
 Reproducible dev environment bootstrap with a managed (immutable) core and local (mutable) overrides.
 
 ## Quick start
