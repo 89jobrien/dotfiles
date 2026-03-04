@@ -1,0 +1,110 @@
+# Vector configuration for centralized logging
+# Collects logs from Claude Code, AI tools, and dotfiles scripts
+# Managed by: scripts/vector-service.sh
+#
+# Sources:
+#   - claude_code_logs: Claude Code session logs
+#   - script_logs: Dotfiles bootstrap/maintenance scripts (JSON format)
+#
+# Sinks:
+#   - file_sink: Write to ~/logs/ai/vector/ with rotation and compression
+#
+# Documentation: https://vector.dev/docs/
+
+# Data directory for Vector state
+data_dir: "${HOME}/.local/state/vector"
+
+# ============================================================================
+# Sources - Log Collection
+# ============================================================================
+
+sources:
+  # Claude Code logs from ~/.claude/logs/
+  claude_code_logs:
+    type: file
+    include:
+      - "${HOME}/.claude/logs/**/*.jsonl"
+    read_from: beginning
+    max_line_bytes: 1048576  # 1MB max line size for large events
+
+  # Dotfiles script logs (JSON format from scripts/lib/log.sh)
+  # Scripts must set LOG_FORMAT=json to output to this file
+  script_logs:
+    type: file
+    include:
+      - "${HOME}/logs/ai/scripts/*.jsonl"
+    read_from: end
+    max_line_bytes: 102400  # 100KB
+
+# ============================================================================
+# Transforms - Parsing and Enrichment
+# ============================================================================
+
+transforms:
+  # Parse Claude Code JSONL events
+  parse_claude_logs:
+    type: remap
+    inputs:
+      - claude_code_logs
+    source: |
+      . = parse_json!(string!(.message))
+      .source = "claude-code"
+      .host = get_hostname!()
+
+  # Parse script logs
+  parse_script_logs:
+    type: remap
+    inputs:
+      - script_logs
+    source: |
+      . = parse_json!(string!(.message))
+      .source = "dotfiles-scripts"
+      .host = get_hostname!()
+
+  # Add retention metadata for cleanup
+  add_retention:
+    type: remap
+    inputs:
+      - parse_claude_logs
+      - parse_script_logs
+    source: |
+      .retention_days = 180
+      .compress_after_days = 14
+
+# ============================================================================
+# Sinks - Log Storage
+# ============================================================================
+
+sinks:
+  # File sink: Write to ~/logs/ai/vector/ with daily rotation
+  file_sink:
+    type: file
+    inputs:
+      - add_retention
+    path: "${HOME}/logs/ai/vector/%Y-%m-%d.jsonl"
+    encoding:
+      codec: json
+    compression: none  # Compression handled by vector-retention-service.sh
+
+  # Console sink for debugging (disabled by default)
+  # Uncomment to see logs in vector-service.sh logs output
+  # console_debug:
+  #   type: console
+  #   inputs:
+  #     - add_retention
+  #   encoding:
+  #     codec: json
+
+# ============================================================================
+# Vector Internal Telemetry
+# ============================================================================
+
+# Disable telemetry data collection
+telemetry:
+  enabled: false
+
+# Internal metrics (available on http://localhost:9598/metrics)
+api:
+  enabled: true
+  address: "127.0.0.1:9598"
+  playground: false

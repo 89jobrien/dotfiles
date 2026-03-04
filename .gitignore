@@ -42,6 +42,8 @@ mise.local.toml
 /raycast/
 /mcpm/
 /vector/
+!vector/.config/
+!vector/.config/**
 
 # Local build/runtime artifacts
 /.venv/

@@ -12,29 +12,62 @@
 #   log_err "broken"             # [my-script] err: broken
 #   spin "compiling" make build  # gum spinner or inline fallback
 #   section "Section Name"       # === Section Name ===
+#
+# Environment Variables:
+#   LOG_FORMAT=json              # Enable JSON output for Vector ingestion
+#   LOG_FILE=path                # Write logs to file (in addition to stdout)
+#   TAG=name                     # Script identifier (required)
 
 _LOG_HAS_GUM=0
 if command -v gum >/dev/null 2>&1 && [[ -t 1 ]]; then
   _LOG_HAS_GUM=1
 fi
 
+# Log format: text (default) or json
+LOG_FORMAT="${LOG_FORMAT:-text}"
+LOG_FILE="${LOG_FILE:-}"
+
 _log_fmt() {
   local color="$1" prefix="$2"
   shift 2
   local tag="${TAG:-log}"
-  if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
-    local msg
-    if [[ -n "${prefix}" ]]; then
-      msg="[${tag}] ${prefix}: $*"
-    else
-      msg="[${tag}] $*"
+  local level="${prefix:-info}"
+  local message="$*"
+
+  # Determine output based on format
+  if [[ "${LOG_FORMAT}" == "json" ]]; then
+    # JSON structured output for Vector
+    local timestamp
+    timestamp="$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")"
+    local hostname
+    hostname="$(hostname)"
+    local json_line
+    json_line="$(printf '{"timestamp":"%s","hostname":"%s","tag":"%s","level":"%s","message":"%s"}' \
+      "${timestamp}" "${hostname}" "${tag}" "${level}" "${message}")"
+
+    # Output to stdout
+    printf '%s\n' "${json_line}"
+
+    # Optionally write to file
+    if [[ -n "${LOG_FILE}" ]]; then
+      printf '%s\n' "${json_line}" >> "${LOG_FILE}"
     fi
-    gum style --foreground "${color}" "${msg}"
   else
-    if [[ -n "${prefix}" ]]; then
-      printf '[%s] %s: %s\n' "${tag}" "${prefix}" "$*"
+    # Text output (existing behavior)
+    if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
+      local msg
+      if [[ -n "${prefix}" ]]; then
+        msg="[${tag}] ${prefix}: ${message}"
+      else
+        msg="[${tag}] ${message}"
+      fi
+      gum style --foreground "${color}" "${msg}"
     else
-      printf '[%s] %s\n' "${tag}" "$*"
+      if [[ -n "${prefix}" ]]; then
+        printf '[%s] %s: %s\n' "${tag}" "${prefix}" "${message}"
+      else
+        printf '[%s] %s\n' "${tag}" "${message}"
+      fi
     fi
   fi
 }
@@ -59,10 +92,28 @@ spin() {
 
 section() {
   local name="$1"
-  if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
-    printf '\n'
-    gum style --bold --foreground 99 "=== ${name} ==="
+  if [[ "${LOG_FORMAT}" == "json" ]]; then
+    # In JSON mode, section is just a special log message
+    _log_fmt 99 "section" "${name}"
   else
-    printf '\n=== %s ===\n' "${name}"
+    if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
+      printf '\n'
+      gum style --bold --foreground 99 "=== ${name} ==="
+    else
+      printf '\n=== %s ===\n' "${name}"
+    fi
   fi
+}
+
+# init_log_file PATH
+#   Initialize log file for JSON output. Creates parent directory if needed.
+#   Call this if you want to write logs to a file.
+init_log_file() {
+  local path="$1"
+  local dir
+  dir="$(dirname "${path}")"
+  mkdir -p "${dir}"
+  LOG_FILE="${path}"
+  # Create or truncate the file
+  : > "${LOG_FILE}"
 }
