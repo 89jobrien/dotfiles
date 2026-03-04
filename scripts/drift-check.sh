@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="drift"
 
 STOW_LIST_FILE="${ROOT_DIR}/config/stow-packages.txt"
@@ -16,7 +17,7 @@ if ! git -C "${ROOT_DIR}" diff --quiet || ! git -C "${ROOT_DIR}" diff --cached -
   status=1
 fi
 
-if command -v stow >/dev/null 2>&1 && [[ -f "${STOW_LIST_FILE}" ]]; then
+if has_cmd stow && [[ -f "${STOW_LIST_FILE}" ]]; then
   while IFS= read -r pkg; do
     [[ -z "${pkg}" || "${pkg}" =~ ^[[:space:]]*# ]] && continue
     if stow -d "${ROOT_DIR}" -t "${HOME}" -n "${pkg}" 2>&1 | grep -Eq 'would cause conflicts|cannot stow|existing target is not owned by stow|ERROR'; then
