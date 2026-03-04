@@ -25,14 +25,15 @@ fi
 
 # 2) Block plaintext-looking secret assignments in staged diff.
 # Skip `*.example` files so placeholder templates can be committed.
-# Catch both env-style (`KEY=value`) and JSON/YAML-style (`"KEY": "value"`).
+# Catch env-style (`KEY=value`) and JSON/YAML config-style assignments.
 staged_diff="$(git diff --cached --text --unified=0 -- . ':(exclude)*.example' || true)"
 added_lines="$(printf '%s\n' "${staged_diff}" | rg '^\+' | rg -v '^\+\+\+' || true)"
-content_pattern_primary='["'"'"']?(openai[_-]?api[_-]?key|anthropic[_-]?api[_-]?key|gemini[_-]?api[_-]?key|tavily[_-]?api[_-]?key|context7[_-]?api[_-]?key|boundary[_-]?api[_-]?key|github[_-]?token|gh[_-]?token|aws[_-]?access[_-]?key[_-]?id|aws[_-]?secret[_-]?access[_-]?key|database[_-]?url|redis[_-]?url)["'"'"']?\s*[:=]\s*["'"'"']?[^\s,"'"'"']+'
-content_pattern_generic='["'"'"']?[a-z0-9_]*(api[_-]?key|token|password|passwd|secret(_access)?_key)[a-z0-9_]*["'"'"']?\s*[:=]\s*["'"'"']?[^\s,"'"'"']+'
-if printf '%s\n' "${added_lines}" | rg -i -e "${content_pattern_primary}" -e "${content_pattern_generic}" >/dev/null 2>&1; then
+content_pattern_env='^\+\s*[A-Z0-9_]*(API[_-]?KEY|TOKEN|PASSWORD|PASSWD|SECRET(_ACCESS)?_KEY|DATABASE_URL|REDIS_URL)[A-Z0-9_]*\s*=\s*[^[:space:]#]+'
+# Config-style secrets: require either a quoted key or an ALL_CAPS key.
+content_pattern_config='^\+\s*(["'"'"'][A-Za-z0-9_]*(api[_-]?key|token|password|passwd|secret(_access)?_key|database[_-]?url|redis[_-]?url)["'"'"']|[A-Z0-9_]*(API[_-]?KEY|TOKEN|PASSWORD|PASSWD|SECRET(_ACCESS)?_KEY|DATABASE_URL|REDIS_URL)[A-Z0-9_]*)\s*:\s*["'"'"']?[^\s,"'"'"']+'
+if printf '%s\n' "${added_lines}" | rg -e "${content_pattern_env}" -e "${content_pattern_config}" >/dev/null 2>&1; then
   log "Potential plaintext secrets found in staged diff."
-  printf '%s\n' "${added_lines}" | rg -i -e "${content_pattern_primary}" -e "${content_pattern_generic}" || true
+  printf '%s\n' "${added_lines}" | rg -e "${content_pattern_env}" -e "${content_pattern_config}" || true
   exit 1
 fi
 

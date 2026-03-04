@@ -156,6 +156,8 @@ mise run nix-check         # verify Nix profile + flake
 ### Development Tools
 ```bash
 mise run dev-tools         # install Rust/Python CLI tooling
+mise run toolz-install     # install local toolz CLI to ~/.local/bin/toolz
+mise run toolz-dev         # build toolz in-place for iteration
 mise run nvim              # rerun NvChad + Avante setup
 mise run secrets-check     # verify no plaintext secrets staged
 mise run companion-repos   # clone personal-mcp, dumcp
@@ -423,8 +425,20 @@ This generates `secrets/.env.sops.json` from your local age key and can be safel
   - Build/test: `bacon`, `cargo-nextest`, `cargo-watch`, `trunk`
   - Performance: `sccache`, `cargo-chef`, `cargo-llvm-cov`, `hyperfine`
   - Quality: `cargo-deny`, `cargo-audit`, `cargo-expand`, `cargo-machete`, `cargo-criterion`, `rust-script`
+- Local Rust crate `toolz` (in `toolz/`) installs to `~/.local/bin/toolz` via `mise run dev-tools` or `mise run toolz-install`
 - Python via `uv` (replaces pip/venv workflows)
 - Bun-first JS/TS (`bun`, `bunx`) with Node for compatibility
+
+### toolz CLI
+`toolz` is a local personal utility binary included in this repo (`toolz/`).
+
+- CLI mode:
+  - `toolz sys --dry-run`
+  - `toolz log analyze <file>`
+  - `toolz ai chat --provider ollama`
+  - `toolz db list`
+- TUI mode:
+  - `toolz` (no arguments)
 
 ### Container & K8s
 - Local runtime: `colima` (not Docker Desktop)
