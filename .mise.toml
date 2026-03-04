@@ -365,3 +365,11 @@ run = """
 find scripts -name '*.sh' -type f -print0 | \
   xargs -0 shellcheck --color=always --shell=bash
 """
+
+[tasks.test]
+description = "Run all unit tests (bats)"
+run = "bats tests/**/*.bats"
+
+[tasks.test-lib]
+description = "Run library tests only"
+run = "bats tests/lib/*.bats"
