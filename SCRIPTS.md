@@ -236,7 +236,8 @@ All shared libraries have comprehensive bats test coverage:
 - ✅ dryrun.sh - 19 tests
 - ✅ json.sh - 25 tests
 - ✅ pkg.sh - 18 tests
-- **Total: 82 passing tests**
+- ✅ launchd.sh - 20 tests
+- **Total: 102 passing tests**
 
 Run tests: `bats tests/lib/*.bats` or `mise run test-lib`
 

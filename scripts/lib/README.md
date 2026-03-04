@@ -350,7 +350,7 @@ Vector service: `scripts/vector-service.sh install`
 
 ### Automated Tests
 
-All libraries have comprehensive bats test suites (82 tests total):
+All libraries have comprehensive bats test suites (102 tests total):
 
 ```bash
 # Run all library tests
@@ -361,6 +361,7 @@ bats tests/lib/cmd.bats      # 20 tests - command checking
 bats tests/lib/dryrun.bats   # 19 tests - dry-run mode
 bats tests/lib/json.bats     # 25 tests - JSON manipulation
 bats tests/lib/pkg.bats      # 18 tests - package manager detection
+bats tests/lib/launchd.bats  # 20 tests - macOS service management
 
 # Run via mise
 mise run test          # All tests
@@ -372,6 +373,7 @@ mise run test-lib      # Just library tests
 - ✅ `dryrun.sh` - 19 tests covering mode control, execution, and arg parsing
 - ✅ `json.sh` - 25 tests covering config merging, validation, and real-world scenarios
 - ✅ `pkg.sh` - 18 tests covering package manager detection and installation
+- ✅ `launchd.sh` - 20 tests covering macOS service management and control
 
 See `tests/README.md` for detailed test documentation.
 

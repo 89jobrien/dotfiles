@@ -32,8 +32,29 @@ Three equivalent interfaces for day-2 operations:
 
 All task definitions live in `.mise.toml`, `Justfile`, and `Makefile` respectively.
 
-### Recent Runs
-- `docs/2026-02-27-bootstrap-runbook.md` - Last bootstrap execution log
+### Testing & Validation
+
+```bash
+mise run test              # run all tests
+mise run test-lib          # run library tests only
+mise run doctor            # validate required tools
+mise run drift             # detect uncommitted changes
+```
+
+### Project Status
+
+**Testing Infrastructure:**
+- 102 automated tests across 5 library test suites (bats framework)
+- Continuous integration via GitHub Actions (minimal + comprehensive workflows)
+- Cross-platform testing (Ubuntu, macOS)
+- Comprehensive test coverage for all shared script libraries
+
+**Recent Activity:**
+- Phase 2 script migrations completed (command checking, dry-run standardization)
+- launchd.sh library extracted and tested (macOS service management)
+- Comprehensive library documentation added (`scripts/lib/README.md`, `SCRIPTS.md`)
+- CI/CD workflows established with fast and comprehensive testing pipelines
+- See `docs/2026-02-27-bootstrap-runbook.md` for last bootstrap execution log
 
 ## What bootstrap does
 
@@ -46,7 +67,7 @@ Bootstrap (`install.sh` → `scripts/bootstrap.sh`) executes in order:
    - Falls back to `apt` on Linux if Homebrew unavailable (`config/apt-packages.txt`)
 3. `mise install` - Language runtimes (`node`, `bun`, `python`, `uv`, `go`, `rust@1.91`) to avoid version drift
 4. Stow symlinks - Default managed packages from `config/stow-packages.txt`
-5. Post-setup hooks (in section order):
+5. Post-setup hooks (ordered by section):
    - **Shell**: `setup-git-config.sh`, `setup-oh-my-zsh.sh`
    - **Secrets**: `setup-secrets.sh` (decrypt + pre-commit policy)
    - **Nix**: `setup-nix.sh` (install Nix + flake packages)
@@ -90,6 +111,8 @@ mise run doctor            # validate required tools
 mise run drift             # detect uncommitted changes + stow conflicts
 mise run stow              # restow managed config only
 mise run post              # rerun post-setup hooks only
+mise run test              # run all tests
+mise run test-lib          # run library tests only
 ```
 
 ### Container & K8s
@@ -151,6 +174,70 @@ just doctor
 just observe-k8s
 ```
 
+## Script Architecture
+
+The dotfiles use a layered architecture with shared libraries and consistent conventions:
+
+### Shared Libraries (`scripts/lib/`)
+
+Foundation layer providing reusable utilities for all scripts:
+
+| Library | Purpose | Key Functions | Adoption |
+|---------|---------|---------------|----------|
+| `log.sh` | Logging & output | `log`, `log_ok`, `log_warn`, `log_err`, `section`, `spin` | 100% (all scripts) |
+| `cmd.sh` | Command checking | `has_cmd`, `require_cmd`, `check_cmd`, `ensure_cmd` | 21 scripts |
+| `pkg.sh` | Package managers | `detect_pkg_manager`, `ensure_homebrew`, `bundle_install` | Core scripts |
+| `dryrun.sh` | Dry-run mode | `set_dryrun_mode`, `is_dryrun`, `dryrun_exec` | 3 scripts |
+| `json.sh` | JSON manipulation | `merge_json_config`, `read_json_value`, `validate_json` | AI tools |
+| `launchd.sh` | macOS services | `launchd_start`, `launchd_stop`, `launchd_status`, `launchd_logs` | 3 service scripts |
+
+**Design Principles:**
+- Single responsibility per library
+- No interdependencies (except log.sh)
+- Comprehensive test coverage (102 tests)
+- Clear function naming conventions
+
+**Script Conventions:**
+- Standard header with `set -euo pipefail`
+- Source libraries in dependency order (log.sh first)
+- Set `TAG` variable for logging context
+- Use library functions instead of inline code
+
+See `scripts/lib/README.md` and `SCRIPTS.md` for comprehensive documentation.
+
+### Testing Infrastructure
+
+Comprehensive test coverage using bats framework:
+
+```bash
+# Run all tests
+mise run test
+
+# Run only library tests
+mise run test-lib
+
+# Run specific test suite
+bats tests/lib/cmd.bats      # 20 tests - command checking
+bats tests/lib/dryrun.bats   # 19 tests - dry-run mode
+bats tests/lib/json.bats     # 25 tests - JSON manipulation
+bats tests/lib/pkg.bats      # 18 tests - package manager detection
+bats tests/lib/launchd.bats  # 20 tests - macOS service management
+```
+
+**Test Coverage:**
+- 102 total tests across 5 library test suites
+- 100% coverage of all shared script libraries
+- Multi-platform support (Linux + macOS)
+- Platform-aware tests (macOS-specific tests skip on Linux)
+
+**CI/CD Workflows:**
+- Minimal CI (`.github/workflows/ci.yml`) - Fast syntax checks and core tests on every push/PR
+- Comprehensive tests (`.github/workflows/comprehensive.yml`) - Full test suite on schedule/manual trigger
+- Cross-platform testing (Ubuntu + macOS)
+- Shellcheck integration and coverage analysis
+
+See `tests/README.md` for testing documentation and `.github/workflows/README.md` for CI/CD details.
+
 ## Companion projects
 
 These projects live outside the dotfiles repo but depend on tools the dotfiles provide:
@@ -159,10 +246,11 @@ These projects live outside the dotfiles repo but depend on tools the dotfiles p
 |---------|------|------|----------|---------------------|
 | personal-mcp | `~/dev/personal-mcp` | `89jobrien/personal-mcp` | Rust | `cargo`/`rust` (mise), `baml-cli` (dev-tools), `jq`, `just` (nix) |
 | dumcp | `~/dev/dumcp` | `89jobrien/dumcp` | Go | `go` (mise) |
+| maestro-dev | `~/maestro-dev` | `89jobrien/maestro-dev` | Shell/Docker | `docker`/`colima` (brew), `tmux`, `just` (nix) |
 
-Both are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh` during the Companion Repos post-hook phase.
+All three are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh` during the Companion Repos post-hook phase.
 
-Runtime toolchains (Go, Rust) are managed by mise. CLI tools (`just`, `jq`, etc.) come from the Nix flake.
+Runtime toolchains (Go, Rust) are managed by mise. CLI tools (`just`, `jq`, `tmux`, etc.) come from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
 
 ## Nix packages
 
@@ -367,6 +455,7 @@ Personal MCP + multi-AI config wiring via `scripts/setup-ai-tools.sh`:
 ### Companion Projects
 - `personal-mcp` (Rust): MCP server with BAML tools
 - `dumcp` (Go): Utility tooling
+- `maestro-dev` (Shell/Docker): Development workflow orchestration
 
 ## Tooling policy
 
@@ -426,15 +515,46 @@ Explicit and minimal:
   - `AI_LOG_ROOT` (default: `~/logs/ai`)
   - Scheduler time vars: `VECTOR_RETENTION_HOUR` and `VECTOR_RETENTION_MINUTE`
 
+## Documentation
+
+The dotfiles repository has comprehensive documentation covering all aspects of the system:
+
+**Core Documentation:**
+- `README.md` - This file (getting started, overview)
+- `CLAUDE.md` - Project instructions for Claude Code (AI assistant guidance)
+- `AGENTS.md` - Agent workflow instructions (bd/beads task management)
+
+**Technical Documentation:**
+- `SCRIPTS.md` - Comprehensive script architecture and conventions
+- `scripts/lib/README.md` - Shared library API reference and migration guide
+- `tests/README.md` - Testing infrastructure and coverage documentation
+- `.github/workflows/README.md` - CI/CD pipeline documentation and strategy
+
 ## Notes
 
-- Raycast is macOS-only and requires a supported macOS version.
-- Zed, Warp, and GitHub Desktop are installed only on environments that support Homebrew casks.
-- Enable optional VSCode/Cursor managed configs by adding `vscode` and `cursor` to `config/stow-packages.local.txt`.
-- Avante defaults to OpenAI; set `OPENAI_API_KEY` before use.
-- `raycast`, `mcpm`, and `vector` are local-only by default; enable via `config/stow-packages.local.txt` when needed.
-- On macOS, run containers with `colima` (lighter than Docker Desktop). Use `scripts/container-dev.sh` or `make container-start`.
-- For non-interactive bootstrap, set `GIT_USER_NAME` and `GIT_USER_EMAIL` to avoid git identity prompts.
+**Platform Support:**
+- Primary focus on macOS, with Linux support for core functionality
+- Platform-aware testing (macOS-specific tests skip gracefully on Linux)
+
+**Testing & Quality:**
+- All shared libraries have comprehensive test coverage (102 bats tests)
+- Automated testing on every push/PR with fast minimal CI
+- Comprehensive weekly tests (all platforms, all checks)
+- All scripts follow consistent conventions and pass shellcheck
+- Continuous integration via GitHub Actions (minimal + comprehensive workflows)
+
+**Script Architecture:**
+- Shared libraries provide reusable utilities (log, cmd, pkg, dryrun, json, launchd)
+- Consistent conventions across all scripts (set -euo pipefail, standard header, error handling)
+- Phase 2 migrations completed (command checking, dry-run standardization)
+- See `SCRIPTS.md` for comprehensive architecture documentation
+- Raycast is macOS-only and requires a supported macOS version
+- Zed, Warp, and GitHub Desktop are installed only on environments that support Homebrew casks
+- Enable optional VSCode/Cursor managed configs by adding `vscode` and `cursor` to `config/stow-packages.local.txt`
+- Avante defaults to OpenAI; set `OPENAI_API_KEY` before use
+- `raycast`, `mcpm`, and `vector` are local-only by default; enable via `config/stow-packages.local.txt` when needed
+- On macOS, run containers with `colima` (lighter than Docker Desktop). Use `scripts/container-dev.sh` or `make container-start`
+- For non-interactive bootstrap, set `GIT_USER_NAME` and `GIT_USER_EMAIL` to avoid git identity prompts
 - Shell git shortcuts default to GitHub CLI credential flow:
   - `gp` => push with `gh auth git-credential`
   - `gl` => pull `--ff-only` with `gh auth git-credential`
