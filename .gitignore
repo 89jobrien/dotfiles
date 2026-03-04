@@ -69,5 +69,10 @@ toolz/target/
 # Local Zed artifacts
 zed/.config/zed/prompts/
 zed/.config/zed/settings_backup.json
+
+# Claude Code local artifacts
+.claude/review-loop.log
+
+# Beads and local markdown
 .beads/
 *.local.md
