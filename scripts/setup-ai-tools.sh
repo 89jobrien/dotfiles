@@ -77,25 +77,31 @@ install_opencode_if_missing() {
     log_skip "opencode already installed: $(command -v opencode)"
     return 0
   fi
-  if has_zerobrew; then
-    log "installing opencode via zerobrew ..."
-    zb install opencode || {
-      log_warn "failed to install opencode via zerobrew; continuing"
-      return 0
-    }
-    log_ok "opencode installed: $(command -v opencode)"
-    return 0
-  fi
-  if has_brew; then
-    log "installing opencode via brew ..."
-    brew install opencode || {
-      log_warn "failed to install opencode via brew; continuing"
-      return 0
-    }
-    log_ok "opencode installed: $(command -v opencode)"
-    return 0
-  fi
-  log_skip "opencode not found and no brew-compatible installer (zb/brew) is available"
+
+  local pkg_mgr
+  pkg_mgr="$(detect_pkg_manager)"
+
+  case "${pkg_mgr}" in
+    zerobrew)
+      log "installing opencode via zerobrew ..."
+      zb install opencode || {
+        log_warn "failed to install opencode via zerobrew; continuing"
+        return 0
+      }
+      log_ok "opencode installed: $(command -v opencode)"
+      ;;
+    homebrew)
+      log "installing opencode via brew ..."
+      brew install opencode || {
+        log_warn "failed to install opencode via brew; continuing"
+        return 0
+      }
+      log_ok "opencode installed: $(command -v opencode)"
+      ;;
+    *)
+      log_skip "opencode not found and no package manager available"
+      ;;
+  esac
 }
 
 # ---------------------------------------------------------------------------
@@ -278,10 +284,10 @@ configure_gemini() {
 # ---------------------------------------------------------------------------
 
 main() {
+  require_cmd jq
   ensure_dirs
   install_binary
   install_opencode_if_missing
-  require_cmd jq
   configure_claude_desktop
   configure_claude_code
   configure_cursor
