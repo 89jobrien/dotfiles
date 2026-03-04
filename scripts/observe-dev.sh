@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="observe"
 
 usage() {
@@ -17,13 +18,6 @@ Modes:
   docker-events  Stream docker events
   docker-stats   Stream docker stats
 EOF
-}
-
-need_cmd() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    log_err "missing command: $1"
-    exit 1
-  fi
 }
 
 summary() {
@@ -54,28 +48,28 @@ pattern="${2:-.}"
 
 case "${mode}" in
   summary)
-    need_cmd docker
-    need_cmd kubectl
+    require_cmd docker
+    require_cmd kubectl
     summary
     ;;
   k8s)
-    need_cmd k9s
+    require_cmd k9s
     exec k9s
     ;;
   logs)
-    need_cmd stern
+    require_cmd stern
     exec stern "${pattern}" -A
     ;;
   docker)
-    need_cmd docker
+    require_cmd docker
     live_docker
     ;;
   docker-events)
-    need_cmd docker
+    require_cmd docker
     exec docker events
     ;;
   docker-stats)
-    need_cmd docker
+    require_cmd docker
     exec docker stats
     ;;
   *)
