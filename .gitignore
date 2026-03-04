@@ -68,3 +68,4 @@ toolz/target/
 zed/.config/zed/prompts/
 zed/.config/zed/settings_backup.json
 .beads/
+*.local.md
