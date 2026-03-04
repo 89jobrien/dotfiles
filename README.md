@@ -9,115 +9,162 @@ cd ~/dotfiles
 pj dot install
 ```
 
-Equivalent:
+Or from anywhere:
 
 ```bash
 pj dot install
 ```
 
-From anywhere (for example from `~`), use:
+Without `pj`:
 
 ```bash
-pj dot install
+ALLOW_DIRECT_DOTFILES_INSTALL=1 ./install.sh
 ```
 
-Recent run log:
-- `docs/2026-02-27-bootstrap-runbook.md`
+### Task Runners
 
-Preferred interfaces:
-- Human workflow: `mise run <task>`
-- AI/automation workflow: `just <recipe>`
-- `make` remains as compatibility wrapper.
-- Bootstrap entrypoint: `pj dot install` (includes stow conflict prompts + backup flow).
+Three equivalent interfaces for day-2 operations:
+- **Human workflow**: `mise run <task>` (interactive, colored output)
+- **AI/automation**: `just <recipe>` (scriptable, agent-friendly)
+- **Compatibility**: `make <target>` (legacy wrapper)
+
+All task definitions live in `.mise.toml`, `Justfile`, and `Makefile` respectively.
+
+### Recent Runs
+- `docs/2026-02-27-bootstrap-runbook.md` - Last bootstrap execution log
 
 ## What bootstrap does
 
-- Installs packages via `zerobrew` (`zb bundle`) when available, with `brew bundle` fallback (`Brewfile.macos` on macOS, `Brewfile.linux` on Linux, fallback `Brewfile`).
-- Installs language runtimes via `mise` (`node`, `bun`, `python`, `uv`, `go`, `rust`) to avoid Brew/runtime version drift.
-- Installs `zerobrew` (`zb`) first (when available) as a fast companion tool for Homebrew workflows.
-- Falls back to `apt` on Linux if Homebrew is unavailable (`config/apt-packages.txt`).
-- Stows default managed packages from `config/stow-packages.txt`.
-- Runs post-setup hooks:
-  - `scripts/setup-git-config.sh` (configure global git identity + `gh` credential helper + sane push defaults)
-  - `scripts/setup-oh-my-zsh.sh` (installs Oh My Zsh unattended, keeps managed `.zshrc`)
-  - `scripts/setup-secrets.sh` (decrypt secrets + install pre-commit secret policy)
-  - `scripts/setup-macos.sh` (Alacritty file handlers + Raycast script linking on macOS)
-  - `scripts/setup-ai-tools.sh` (install personal MCP + seed/merge AI tool configs)
-  - `scripts/setup-maestro.sh` (clone/update Maestro repo and run bootstrap mode)
-  - `scripts/setup-dev-tools.sh` (Rust/Python CLI tooling)
-  - `scripts/setup-nvchad-avante.sh` (Neovim + NvChad + Avante)
-  - optional `scripts/post-bootstrap.local.sh` (local only)
+Bootstrap (`install.sh` → `scripts/bootstrap.sh`) executes in order:
+
+1. `setup-zerobrew.sh` - Install zerobrew (`zb`) as a fast companion to Homebrew
+2. Package installation:
+   - `zerobrew` (`zb bundle`) when available, fallback to `brew bundle`
+   - Platform-specific Brewfiles: `Brewfile.macos` on macOS, `Brewfile.linux` on Linux
+   - Falls back to `apt` on Linux if Homebrew unavailable (`config/apt-packages.txt`)
+3. `mise install` - Language runtimes (`node`, `bun`, `python`, `uv`, `go`, `rust@1.91`) to avoid version drift
+4. Stow symlinks - Default managed packages from `config/stow-packages.txt`
+5. Post-setup hooks (in section order):
+   - **Shell**: `setup-git-config.sh`, `setup-oh-my-zsh.sh`
+   - **Secrets**: `setup-secrets.sh` (decrypt + pre-commit policy)
+   - **Nix**: `setup-nix.sh` (install Nix + flake packages)
+   - **macOS**: `setup-macos.sh` (Alacritty handlers + Raycast scripts)
+   - **AI Tools**: `setup-ai-tools.sh` (personal-mcp + all AI tool configs)
+   - **Companion Repos**: `setup-companion-repos.sh` (clone personal-mcp, dumcp)
+   - **Dev Tools**: `setup-dev-tools.sh` (Rust/Python CLI tooling via cargo/bunx)
+   - **Editor**: `setup-nvchad-avante.sh` (Neovim + NvChad + Avante)
+   - **Local**: `post-bootstrap.local.sh` (optional, gitignored)
+6. Summary table - Shows success/skip/fail status for each phase
 
 ## Managed vs local
 
-Managed (commit to repo):
-- `config/stow-packages.txt`
-- `Brewfile.macos`, `Brewfile.linux`
-- dotfile package directories (`git`, `zsh`, `fish`, `alacritty`, `zed`, ...)
+### Managed (committed, immutable)
+Core configuration tracked in git:
+- `config/stow-packages.txt` - Default stow packages
+- `Brewfile.macos`, `Brewfile.linux` - Platform-specific packages
+- `.mise.toml` - Language runtimes + task definitions
+- Dotfile package directories: `git/`, `zsh/`, `fish/`, `alacritty/`, `zed/`, etc.
+- Bootstrap scripts in `scripts/`
 
-Local mutable (not committed):
-- `config/stow-packages.local.txt` (copy from `config/stow-packages.local.example.txt`)
-- `config/apt-packages.local.txt` (copy from `config/apt-packages.local.example.txt`)
-- `scripts/post-bootstrap.local.sh` (copy from `scripts/post-bootstrap.local.example.sh`)
-- `~/.zshrc.local` (already sourced by `zsh/.zshrc`)
-- local app state packages (`raycast`, `mcpm`, `vector`)
+### Local (gitignored, mutable)
+Machine-specific overrides and secrets:
+- `config/stow-packages.local.txt` - Additional stow packages (copy from `.example`)
+- `config/apt-packages.local.txt` - Additional apt packages (copy from `.example`)
+- `mise.local.toml` - Local env vars + runtime overrides (copy from `.example`)
+- `scripts/post-bootstrap.local.sh` - Custom post-hook (copy from `.example`)
+- `~/.zshrc.local` - Shell customizations (auto-sourced by `zsh/.zshrc`)
+- Local app state packages: `raycast/`, `mcpm/`, `vector/` (opt-in via local stow list)
 
 ## Day-2 commands
 
+Three equivalent task runners:
+- `mise run <task>` - Interactive human workflow (preferred)
+- `just <recipe>` - Automation/agent workflow
+- `make <target>` - Compatibility wrapper
+
+### Core Operations
 ```bash
-mise run up                # start container runtime + k3d + doctor
 mise run doctor            # validate required tools
-mise run drift             # detect repo and stow drift
+mise run drift             # detect uncommitted changes + stow conflicts
 mise run stow              # restow managed config only
 mise run post              # rerun post-setup hooks only
-mise run nvim              # rerun NvChad + Avante setup
-mise run container-start
-mise run container-status
-mise run compose-up
-mise run compose-status
-mise run k3d-up            # or: mise run kind-up
-mise run tilt-up
-mise run observe               # one-shot summary of runtime + pods + containers
-mise run observe-k8s           # open k9s UI
-mise run observe-logs          # tail all k8s logs with stern
-mise run observe-docker        # live-refresh docker ps
-mise run observe-docker-events # stream docker events
-mise run observe-docker-stats  # stream docker stats
-mise run health                # system summary (cpu/mem/disk/procs)
-mise run health-live           # interactive monitor
-mise run raycast-scripts       # link managed raycast script commands
-mise run personal-mcp          # install + wire personal MCP into Claude/Cursor/Zed
-mise run ai-config             # seed/merge Claude/OpenCode/Codex/Gemini configs
-mise run maestro-setup         # clone/update Maestro + run setup mode
-mise run maestro-doctor        # verify Maestro repo + prerequisites
-mise run maestro-up            # run Maestro dev setup + ci
-mise run maestro-up-quick      # run Maestro dev setup only
-mise run maestro-up-api        # run setup + ci + api-run
-mise run maestro-handoff       # write private handoff context
 ```
 
-From `~`, for manual commands:
-
+### Container & K8s
 ```bash
+mise run up                     # start container runtime + k3d + doctor
+mise run container-start        # start colima
+mise run container-status       # check colima status
+mise run compose-up            # start dev container
+mise run compose-status        # check compose services
+mise run k3d-up                # start k3d cluster (or: kind-up)
+mise run tilt-up               # start Tilt dev environment
+```
+
+### Observability
+```bash
+mise run observe                # one-shot summary (runtime + pods + containers)
+mise run observe-k8s            # open k9s UI
+mise run observe-logs           # tail all k8s logs with stern
+mise run observe-docker         # live-refresh docker ps
+mise run observe-docker-events  # stream docker events
+mise run observe-docker-stats   # stream docker stats
+mise run health                 # system summary (cpu/mem/disk/procs)
+mise run health-live            # interactive monitor
+```
+
+### AI Tools & Integrations
+```bash
+mise run ai-tools          # full AI tools setup (personal-mcp + configs)
+mise run personal-mcp      # install + wire personal MCP
+mise run ai-config         # seed/merge Claude/OpenCode/Codex/Gemini configs
+mise run raycast-scripts   # link managed raycast script commands (macOS)
+```
+
+### Nix & Package Management
+```bash
+mise run nix-install       # install Nix + flake packages
+mise run nix-update        # update nixpkgs lock + reinstall
+mise run nix-check         # verify Nix profile + flake
+```
+
+### Development Tools
+```bash
+mise run dev-tools         # install Rust/Python CLI tooling
+mise run nvim              # rerun NvChad + Avante setup
+mise run secrets-check     # verify no plaintext secrets staged
+mise run companion-repos   # clone personal-mcp, dumcp
+```
+
+### From Outside Repo
+```bash
+# Manual commands from ~
 make -C ~/dotfiles observe
 make -C ~/dotfiles observe-k8s
-make -C ~/dotfiles observe-logs
-```
+make -C ~/dotfiles doctor
 
-For automation/agents in repo:
-
-```bash
+# Automation/agents (in repo)
 just up
 just doctor
-just compose-up
 just observe-k8s
-just maestro-doctor
 ```
+
+## Companion projects
+
+These projects live outside the dotfiles repo but depend on tools the dotfiles provide:
+
+| Project | Path | Repo | Language | Tools from dotfiles |
+|---------|------|------|----------|---------------------|
+| personal-mcp | `~/dev/personal-mcp` | `89jobrien/personal-mcp` | Rust | `cargo`/`rust` (mise), `baml-cli` (dev-tools), `jq`, `just` (nix) |
+| dumcp | `~/dev/dumcp` | `89jobrien/dumcp` | Go | `go` (mise) |
+
+Both are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh` during the Companion Repos post-hook phase.
+
+Runtime toolchains (Go, Rust) are managed by mise. CLI tools (`just`, `jq`, etc.) come from the Nix flake.
 
 ## Nix packages
 
-Declarative CLI tools layer using a Nix flake (`flake.nix`). Intended to eventually
-replace Homebrew for CLI tools, keeping Brew only for macOS casks and tools not in nixpkgs.
+Declarative CLI tools layer using a Nix flake (`flake.nix`). Installs a single `buildEnv` profile entry bundling ~30 CLI tools via `nix profile install .#default`. The setup script (`scripts/setup-nix.sh`) installs Nix itself (Determinate Systems installer) then installs or upgrades the profile. Runs as a bootstrap post-hook after Secrets.
 
 ```bash
 # First-time install (installs Nix + flake packages)
@@ -231,34 +278,39 @@ mise run secrets-check
 
 ## Mise env + secrets pattern
 
-`mise` is configured to load local env files without committing secrets:
+`mise` manages both environment variables and language runtimes without committing secrets:
 
-- Committed config: `.mise.toml`
-  - loads `[".env", ".env.local", "secrets/.env.json", "secrets/.env.sops.json"]`
-  - extends PATH for common project bins
-  - auto-creates `.venv` for Python workflows
-  - sets `pj` TUI defaults (`PJ_TUI_EVENT_STREAM=app`, `PJ_TUI_EVENT_MAX_CHARS=140`)
-- Local-only overrides: `mise.local.toml` (gitignored)
-  - copy from `mise.local.toml.example`
-  - use `__SECRET_*` keys for masked `mise env` output
-  - override `PJ_TUI_EVENT_STREAM` with:
-    - `off`
-    - `app`
-    - `file:/absolute/path/to/events.log`
-    - a static text message
-- Encrypted option:
-  - store secrets as `secrets/.env.sops.json` (committable encrypted file)
-  - `MISE_SOPS_AGE_KEY_FILE` is auto-set to `~/.config/sops/age/keys.txt` when present
+### Configuration Layers
+- **Committed config** (`.mise.toml`):
+  - Language runtimes: `node`, `bun`, `python`, `uv`, `go`, `rust@1.91`
+  - Env file loading: `[".env", ".env.local", "secrets/.env.json", "secrets/.env.sops.json"]`
+  - PATH extensions for project bins
+  - Auto-creates `.venv` for Python workflows
+  - Sets `pj` TUI defaults (`PJ_TUI_EVENT_STREAM=app`, `PJ_TUI_EVENT_MAX_CHARS=140`)
+  - Task definitions for the entire workflow (50+ tasks)
 
-Example setup:
+- **Local overrides** (`mise.local.toml`, gitignored):
+  - Copy from `mise.local.toml.example`
+  - Use `__SECRET_*` keys for masked `mise env` output
+  - Override `PJ_TUI_EVENT_STREAM`:
+    - `off` - disable event streaming
+    - `app` - stream to application
+    - `file:/absolute/path/to/events.log` - stream to file
+    - Static text message
 
+- **Encrypted secrets** (`secrets/.env.sops.json`, committable):
+  - `MISE_SOPS_AGE_KEY_FILE` auto-set to `~/.config/sops/age/keys.txt` when present
+  - Decrypted on-demand by mise when loading env
+
+### Setup Examples
+
+Local overrides:
 ```bash
 cp mise.local.toml.example mise.local.toml
 # edit with local values
 ```
 
-Sops JSON flow:
-
+Encrypted secrets:
 ```bash
 cp secrets/.env.json.example secrets/.env.json
 # edit secrets/.env.json with real values (gitignored)
@@ -269,52 +321,79 @@ This generates `secrets/.env.sops.json` from your local age key and can be safel
 
 ## Defaults included
 
-- Alacritty with Catppuccin dark (mocha) theme.
-- Alacritty installed from source (cargo build/install), not Homebrew cask.
-- Default IDE preference: Zed (`ide` shell alias points to `zed .` when available).
-- Desktop macOS apps via casks: Raycast, Zed, Warp, GitHub Desktop, Codex, Claude Code.
-- Managed editor configs for Zed, with VSCode/Cursor configs available as optional stow packages.
-- Neovim with NvChad + Avante plugin scaffold.
-- Rust-focused tooling (`mise`, `bacon`, `cargo-nextest`, `cargo-watch`, `trunk`) and Python `uv`.
-- Bun-first JS/TS tooling (`bun`, `bunx`) with Node kept for compatibility.
-- Extended Rust devtools (`sccache`, `cargo-chef`, `cargo-llvm-cov`, `cargo-deny`, `cargo-audit`, `cargo-expand`, `cargo-machete`, `cargo-criterion`, `hyperfine`, `rust-script`).
-- Container + local K8s stack (`colima`, Docker CLI, `kubectl`, `helm`, `k9s`, `tilt`, `k3d`, `kind`, `stern`).
-- System health stack (`bottom`, `btop`, `procs`, `duf`, `dust`) plus `scripts/system-health.sh`.
-- Raycast script commands wired via `scripts/setup-macos.sh` from `raycast-scripts/`.
-- Personal MCP + AI config wiring via `scripts/setup-ai-tools.sh`:
-  - installs `~/dev/personal-mcp` to `~/.local/bin/personal-mcp`
-  - ensures `~/.ctx/handoffs` and `~/.ctx/chats`
-  - configures MCP server entry for Claude Desktop, Cursor, Zed, Codex, OpenCode, and Gemini
-  - includes BAML MCP tools (`baml_init`, `baml_generate`, `baml_test`) with `baml-cli`/`bunx` fallback
-- AI config seeding (also in `scripts/setup-ai-tools.sh`):
+### Terminal & Editor
+- Alacritty with Catppuccin dark (mocha) theme (installed from source via cargo)
+- Default IDE: Zed (`ide` shell alias → `zed .` when available)
+- Desktop macOS apps via casks: Raycast, Zed, Warp, GitHub Desktop, Codex, Claude Code
+- Managed editor configs for Zed; VSCode/Cursor available as optional stow packages
+- Neovim with NvChad + Avante plugin scaffold
+
+### Language Tooling
+- Rust 1.91 via mise with extended devtools:
+  - Build/test: `bacon`, `cargo-nextest`, `cargo-watch`, `trunk`
+  - Performance: `sccache`, `cargo-chef`, `cargo-llvm-cov`, `hyperfine`
+  - Quality: `cargo-deny`, `cargo-audit`, `cargo-expand`, `cargo-machete`, `cargo-criterion`, `rust-script`
+- Python via `uv` (replaces pip/venv workflows)
+- Bun-first JS/TS (`bun`, `bunx`) with Node for compatibility
+
+### Container & K8s
+- Local runtime: `colima` (not Docker Desktop)
+- K8s stack: `kubectl`, `helm`, `k9s`, `tilt`, `k3d`, `kind`, `stern`
+- Docker CLI + compose
+
+### System Utilities
+- Health monitoring: `bottom`, `btop`, `procs`, `duf`, `dust`, `scripts/system-health.sh`
+- Raycast script commands (macOS) via `scripts/setup-macos.sh` from `raycast-scripts/`
+
+### AI Tools Integration
+Personal MCP + multi-AI config wiring via `scripts/setup-ai-tools.sh`:
+- Builds/installs `~/dev/personal-mcp` → `~/.local/bin/personal-mcp`
+- Ensures `~/.ctx/handoffs` and `~/.ctx/chats` directories
+- Configures MCP server entries for: Claude Desktop, Claude Code, Cursor, Zed, Codex, OpenCode, Gemini
+- BAML MCP tools: `baml_init`, `baml_generate`, `baml_test` (via `baml-cli`/`bunx` fallback)
+- Seeds AI tool configs (merge-only, no overwrites):
   - `~/.claude/settings.json`
   - `~/.config/opencode/opencode.json`
   - `~/.codex/config.toml` (seed only if missing)
   - `~/.gemini/settings.json`
-  - standard MCP/BAML env defaults:
-    - `MCP_ENV_FILE=~/.config/dev-bootstrap/secrets.env`
-    - `BAML_LOG=info`
-    - `BOUNDARY_MAX_LOG_CHUNK_CHARS=3000`
-  - no API keys written by this script
-- Maestro helper workflow via `scripts/maestro-dev.sh`:
-  - path from `DOT_MAESTRO_DIR` (fallback `PJ_MAESTRO_DIR`, then `~/Documents/GitHub/maestro`)
-  - handoff path from `DOT_PRIVATE_CTX_DIR` (fallback `PJ_PRIVATE_CTX_DIR`, then `~/.ctx/handoffs`)
-  - commands: `where`, `doctor`, `up [--quick] [--api-run]`, `handoff`
-- Maestro bootstrap hook via `scripts/setup-maestro.sh`:
-  - `DOT_MAESTRO_DIR` (fallback `PJ_MAESTRO_DIR`, then `~/Documents/GitHub/maestro`)
-  - `DOT_MAESTRO_REPO` for first-time clone (accepts `owner/repo` with `gh`, or git URL)
-  - `DOT_MAESTRO_MODE`: `quick` (default), `full`, `api`, `none`
+- Standard MCP/BAML env defaults:
+  - `MCP_ENV_FILE=~/.config/dev-bootstrap/secrets.env`
+  - `BAML_LOG=info`
+  - `BOUNDARY_MAX_LOG_CHUNK_CHARS=3000`
+- No API keys written (use secrets.env or mise.local.toml)
+
+### Companion Projects
+- `personal-mcp` (Rust): MCP server with BAML tools
+- `dumcp` (Go): Utility tooling
 
 ## Tooling policy
 
-- Prefer open-source CLI tools by default.
-- Prefer Rust-native tools where practical (`ripgrep`, `fd`, `bat`, `eza`, `bacon`, `cargo-nextest`, `cargo-watch`, `trunk`).
-- Prefer `uv` over raw `python`/`pip` for Python workflows (`uv run`, `uv pip`, `uv venv`, `uvx`).
-- Prefer `bun`/`bunx` over `npm`/`npx`/`pnpm`/`yarn` for JS workflows where compatible.
-- Prefer `zerobrew` (`zb`) for Homebrew-compatible commands (`install`, `bundle`, `list`, `info`) and fall back to `brew` for non-parity operations.
-- Keep proprietary exceptions explicit and minimal:
-  - Raycast (required UX workflow on macOS)
-  - Any local security tooling you explicitly choose (for example password managers)
+### General Principles
+- Prefer open-source CLI tools by default
+- Rust-native tools where practical (`rg`, `fd`, `bat`, `eza`, `bacon`, `cargo-nextest`, `cargo-watch`, `trunk`)
+- Declarative package management via Nix flake for CLI tools
+- Version-managed runtimes via mise (not nvm/pyenv/rustup directly)
+
+### Language Workflows
+- Python: `uv` over raw `python`/`pip` (`uv run`, `uv pip`, `uv venv`, `uvx`)
+- JavaScript/TypeScript: `bun`/`bunx` over `npm`/`npx`/`pnpm`/`yarn` where compatible
+- Rust: mise-managed toolchain (currently 1.91) + cargo for builds
+
+### Package Management
+- CLI tools: Nix flake (declarative, reproducible)
+- Homebrew: Casks + macOS-specific tools + container stack
+- `zerobrew` (`zb`): Fast companion for Homebrew-compatible commands (`install`, `bundle`, `list`, `info`)
+- `mise`: Language runtime version management
+
+### Container Runtime
+- `colima` for local development (not Docker Desktop)
+- Docker CLI + compose via Homebrew
+
+### Proprietary Exceptions
+Explicit and minimal:
+- Raycast (macOS UX workflow requirement)
+- AI developer tools (Claude Code, Codex, OpenCode, Gemini CLI)
+- Security tooling as explicitly chosen (e.g., password managers)
 
 ## Centralized AI logs (Vector)
 
