@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
 source "${ROOT_DIR}/scripts/lib/cmd.sh"
+source "${ROOT_DIR}/scripts/lib/launchd.sh"
 TAG="vector-service"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -84,10 +85,6 @@ write_plist() {
 EOF
 }
 
-is_loaded() {
-  launchctl print "${DOMAIN}/${LABEL}" >/dev/null 2>&1
-}
-
 do_install() {
   require_vector
   require_config
@@ -99,7 +96,7 @@ do_install() {
 
   write_plist
 
-  if is_loaded; then
+  if launchd_is_loaded; then
     launchctl bootout "${DOMAIN}/${LABEL}" >/dev/null 2>&1 || true
   fi
 
@@ -110,61 +107,27 @@ do_install() {
 }
 
 do_uninstall() {
-  if is_loaded; then
-    launchctl bootout "${DOMAIN}/${LABEL}" >/dev/null 2>&1 || true
-  fi
-  if [[ -f "${PLIST_PATH}" ]]; then
-    rm -f "${PLIST_PATH}"
-  fi
-  log_ok "uninstalled ${LABEL}"
+  launchd_uninstall
 }
 
 do_start() {
-  if [[ ! -f "${PLIST_PATH}" ]]; then
-    log_err "plist not found: ${PLIST_PATH}; run install first"
-    exit 1
-  fi
-  if ! is_loaded; then
-    launchctl bootstrap "${DOMAIN}" "${PLIST_PATH}"
-  fi
-  launchctl enable "${DOMAIN}/${LABEL}"
-  launchctl kickstart -k "${DOMAIN}/${LABEL}"
-  log_ok "started ${LABEL}"
+  launchd_start
 }
 
 do_stop() {
-  if is_loaded; then
-    launchctl bootout "${DOMAIN}/${LABEL}" >/dev/null 2>&1 || true
-    log_ok "stopped ${LABEL}"
-  else
-    log_skip "${LABEL} is not loaded"
-  fi
+  launchd_stop
 }
 
 do_restart() {
-  do_stop
-  do_start
+  launchd_restart
 }
 
 do_status() {
-  if is_loaded; then
-    launchctl print "${DOMAIN}/${LABEL}"
-  else
-    log_warn "${LABEL} is not loaded"
-    if [[ -f "${PLIST_PATH}" ]]; then
-      log "plist present: ${PLIST_PATH}"
-    else
-      log "plist missing: ${PLIST_PATH}"
-    fi
-    exit 1
-  fi
+  launchd_status
 }
 
 do_logs() {
-  mkdir -p "${STATE_DIR}"
-  touch "${STDOUT_LOG}" "${STDERR_LOG}"
-  log "tailing logs (ctrl-c to exit)"
-  tail -n 100 -f "${STDOUT_LOG}" "${STDERR_LOG}"
+  launchd_logs
 }
 
 cmd="${1:-}"

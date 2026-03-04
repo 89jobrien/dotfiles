@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/launchd.sh"
 TAG="vector-retention-service"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -37,10 +38,6 @@ Environment overrides:
   VECTOR_RETENTION_HOUR (default: 3)
   VECTOR_RETENTION_MINUTE (default: 15)
 EOF
-}
-
-is_loaded() {
-  launchctl print "${DOMAIN}/${LABEL}" >/dev/null 2>&1
 }
 
 write_plist() {
@@ -85,7 +82,7 @@ do_install() {
 
   write_plist
 
-  if is_loaded; then
+  if launchd_is_loaded; then
     launchctl bootout "${DOMAIN}/${LABEL}" >/dev/null 2>&1 || true
   fi
 
@@ -95,27 +92,11 @@ do_install() {
 }
 
 do_uninstall() {
-  if is_loaded; then
-    launchctl bootout "${DOMAIN}/${LABEL}" >/dev/null 2>&1 || true
-  fi
-  if [[ -f "${PLIST_PATH}" ]]; then
-    rm -f "${PLIST_PATH}"
-  fi
-  log_ok "uninstalled ${LABEL}"
+  launchd_uninstall
 }
 
 do_status() {
-  if is_loaded; then
-    launchctl print "${DOMAIN}/${LABEL}"
-  else
-    log_warn "${LABEL} is not loaded"
-    if [[ -f "${PLIST_PATH}" ]]; then
-      log "plist present: ${PLIST_PATH}"
-    else
-      log "plist missing: ${PLIST_PATH}"
-    fi
-    exit 1
-  fi
+  launchd_status
 }
 
 do_run_now() {
@@ -123,7 +104,7 @@ do_run_now() {
     log_err "plist not found: ${PLIST_PATH}; run install first"
     exit 1
   fi
-  if ! is_loaded; then
+  if ! launchd_is_loaded; then
     launchctl bootstrap "${DOMAIN}" "${PLIST_PATH}"
   fi
   launchctl kickstart -k "${DOMAIN}/${LABEL}"
@@ -131,10 +112,7 @@ do_run_now() {
 }
 
 do_logs() {
-  mkdir -p "${STATE_DIR}"
-  touch "${STDOUT_LOG}" "${STDERR_LOG}"
-  log "tailing logs (ctrl-c to exit)"
-  tail -n 100 -f "${STDOUT_LOG}" "${STDERR_LOG}"
+  launchd_logs
 }
 
 cmd="${1:-}"
