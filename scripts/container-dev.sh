@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 TAG="containers"
 
 PROFILE="${COLIMA_PROFILE:-dev}"
@@ -12,15 +13,8 @@ DISK_GB="${COLIMA_DISK_GB:-60}"
 K3D_CLUSTER="${K3D_CLUSTER_NAME:-dev}"
 KIND_CLUSTER="${KIND_CLUSTER_NAME:-dev}"
 
-need_cmd() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    log_err "missing required command: $1"
-    exit 1
-  fi
-}
-
 colima_start() {
-  need_cmd colima
+  require_cmd colima
   if colima status --profile "${PROFILE}" >/dev/null 2>&1; then
     log_skip "Colima profile '${PROFILE}' already running"
     return 0
@@ -43,7 +37,7 @@ colima_start() {
 }
 
 colima_stop() {
-  need_cmd colima
+  require_cmd colima
   if ! colima status --profile "${PROFILE}" >/dev/null 2>&1; then
     log_skip "Colima profile '${PROFILE}' is not running"
     return 0
@@ -54,19 +48,19 @@ colima_stop() {
 
 status() {
   log "runtime status"
-  if command -v colima >/dev/null 2>&1; then
+  if has_cmd colima; then
     colima status --profile "${PROFILE}" || true
   fi
-  if command -v docker >/dev/null 2>&1; then
+  if has_cmd docker; then
     docker version --format '{{.Server.Version}}' 2>/dev/null | awk '{print "[containers] docker server " $0}' || log_warn "docker server unavailable"
   fi
-  if command -v kubectl >/dev/null 2>&1; then
+  if has_cmd kubectl; then
     kubectl config current-context 2>/dev/null | awk '{print "[containers] kube context " $0}' || log_warn "kubectl context unavailable"
   fi
 }
 
 k3d_up() {
-  need_cmd k3d
+  require_cmd k3d
   colima_start
   if k3d cluster list | awk 'NR>1 {print $1}' | grep -qx "${K3D_CLUSTER}"; then
     log_skip "k3d cluster '${K3D_CLUSTER}' already exists"
@@ -77,7 +71,7 @@ k3d_up() {
 }
 
 k3d_down() {
-  need_cmd k3d
+  require_cmd k3d
   if ! k3d cluster list | awk 'NR>1 {print $1}' | grep -qx "${K3D_CLUSTER}"; then
     log_skip "k3d cluster '${K3D_CLUSTER}' not found"
     return 0
@@ -87,7 +81,7 @@ k3d_down() {
 }
 
 kind_up() {
-  need_cmd kind
+  require_cmd kind
   colima_start
   if kind get clusters | grep -qx "${KIND_CLUSTER}"; then
     log_skip "kind cluster '${KIND_CLUSTER}' already exists"
@@ -98,7 +92,7 @@ kind_up() {
 }
 
 kind_down() {
-  need_cmd kind
+  require_cmd kind
   if ! kind get clusters | grep -qx "${KIND_CLUSTER}"; then
     log_skip "kind cluster '${KIND_CLUSTER}' not found"
     return 0
@@ -108,7 +102,7 @@ kind_down() {
 }
 
 tilt_up() {
-  need_cmd tilt
+  require_cmd tilt
   log "starting Tilt..."
   tilt up
 }
