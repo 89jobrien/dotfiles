@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
 source "${ROOT_DIR}/scripts/lib/cmd.sh"
+source "${ROOT_DIR}/scripts/lib/common.sh"
 TAG="git-config"
 
 get_gh_field() {
@@ -17,22 +18,6 @@ get_gh_field() {
     return 0
   fi
   gh api user -q "${field}" 2>/dev/null || echo ""
-}
-
-prompt_value() {
-  local label="$1"
-  local value=""
-  if [[ ! -t 0 ]]; then
-    echo ""
-    return 0
-  fi
-
-  if has_cmd gum; then
-    value="$(gum input --placeholder "${label}" --prompt "> " || true)"
-  else
-    read -r -p "${label}: " value || true
-  fi
-  echo "${value}"
 }
 
 main() {

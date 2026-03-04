@@ -4,7 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
+source "${ROOT_DIR}/scripts/lib/cmd.sh"
 source "${ROOT_DIR}/scripts/lib/dryrun.sh"
+source "${ROOT_DIR}/scripts/lib/common.sh"
 TAG="claude-log-retention"
 
 AI_LOG_ROOT="${AI_LOG_ROOT:-${HOME}/logs/ai}"
@@ -27,10 +29,6 @@ Environment overrides:
   AI_LOG_RETENTION_DAYS
   AI_LOG_COMPRESS_AFTER_DAYS
 EOF
-}
-
-is_non_negative_int() {
-  [[ "$1" =~ ^[0-9]+$ ]]
 }
 
 while [[ $# -gt 0 ]]; do
