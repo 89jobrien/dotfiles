@@ -25,7 +25,19 @@ fi
 
 log "installing zerobrew..."
 log "the installer may prompt for your macOS password"
-curl -fsSL https://zerobrew.rs/install | bash
+tmp_installer="$(mktemp "${TMPDIR:-/tmp}/zerobrew-install.XXXXXX.sh")"
+cleanup() {
+  rm -f "${tmp_installer}"
+}
+trap cleanup EXIT
+
+curl --proto '=https' --tlsv1.2 -fsSL "https://zerobrew.rs/install" -o "${tmp_installer}"
+if ! grep -Eiq 'zerobrew|zero ?brew' "${tmp_installer}"; then
+  log_err "downloaded installer did not look like zerobrew script; aborting"
+  exit 1
+fi
+
+bash "${tmp_installer}"
 
 if has_cmd zb; then
   log_ok "installed zb at $(find_cmd zb)"

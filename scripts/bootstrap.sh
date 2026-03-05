@@ -193,7 +193,18 @@ install_packages() {
 
     if [[ -f "${brewfile}" ]]; then
       log "installing packages via ${brew_compat_name} bundle (${brewfile##*/})..."
-      "${brew_compat_cmd}" bundle --file "${brewfile}"
+      if [[ "${brew_compat_cmd}" == "zb" ]]; then
+        if ! "${brew_compat_cmd}" bundle install --file "${brewfile}"; then
+          if has_cmd brew; then
+            log_warn "zerobrew bundle failed; falling back to brew bundle"
+            brew bundle --file "${brewfile}"
+          else
+            return 1
+          fi
+        fi
+      else
+        "${brew_compat_cmd}" bundle --file "${brewfile}"
+      fi
     fi
     return 0
   fi
