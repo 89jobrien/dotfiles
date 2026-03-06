@@ -104,6 +104,9 @@ mcp-build:
 ai-config:
     ./scripts/setup-ai-tools.sh
 
+hooks-install:
+    ./scripts/setup-hooks.sh
+
 maestro-setup:
     ./scripts/setup-maestro.sh
 

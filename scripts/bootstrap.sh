@@ -320,6 +320,7 @@ run_post_hooks() {
 
   section "AI Tools"
   run_hook "AI Tools" "${ROOT_DIR}/scripts/setup-ai-tools.sh"
+  run_hook "Hooks" "${ROOT_DIR}/scripts/setup-hooks.sh"
 
   section "Maestro"
   run_hook "Maestro" "${ROOT_DIR}/scripts/setup-maestro.sh"

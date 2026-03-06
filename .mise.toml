@@ -104,6 +104,10 @@ run = "KEEP_BUILD_ARTIFACTS=1 ./scripts/setup-ai-tools.sh"
 description = "Configure AI CLI configs (alias for ai-tools)"
 run = "./scripts/setup-ai-tools.sh"
 
+[tasks.hooks-install]
+description = "Build hook binaries and generate ~/.claude/hooks/hooks.json"
+run = "./scripts/setup-hooks.sh"
+
 # ---------------------------------------------------------------------------
 # Maestro
 # ---------------------------------------------------------------------------
