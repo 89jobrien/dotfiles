@@ -3,7 +3,7 @@ brew "stow"              # [nix-batch-1]
 brew "git"
 brew "git-flow-next"
 brew "gh"                # [nix-batch-1]
-brew "opencode"
+# opencode: npm-based tool installed separately to avoid zerobrew conflicts
 brew "gemini-cli"
 brew "ripgrep"           # [nix-batch-1]
 brew "fd"                # [nix-batch-1]

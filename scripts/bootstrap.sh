@@ -355,6 +355,7 @@ main() {
   ensure_homebrew || true
   check_homebrew_writable
   install_packages
+  "${ROOT_DIR}/scripts/setup-npm-tools.sh" || true
   install_mise_toolchain
   stow_packages
   run_post_hooks
