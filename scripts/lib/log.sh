@@ -91,14 +91,47 @@ spin() {
 }
 
 # spin_with_msg MSG CMD [ARGS...]
-#   Run command with a message prefix
-#   Shows what's being done without suppressing output
+#   Run command silently; suppress verbose output, show only last 5 lines
+#   No scrolling: captures output and displays compact tail summary
+#   Uses gum styling when available for nice visual appearance
 spin_with_msg() {
   local msg="$1"
   shift
   local tag="${TAG:-log}"
-  log "${msg}"
-  "$@"
+
+  # Always suppress verbose output and show only tail (no full output scroll)
+  local tmpfile
+  tmpfile="$(mktemp)"
+  trap "rm -f '${tmpfile}'" RETURN
+
+  # Show status message with styling
+  if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
+    gum style --foreground 220 "[${tag}] ${msg}"
+  else
+    printf '[%s] %s\n' "${tag}" "${msg}"
+  fi
+
+  # Run command silently, capture to temp file
+  local rc=0
+  "$@" >"${tmpfile}" 2>&1 || rc=$?
+
+  # Show tail of output (last 5 lines) if there was any
+  if [[ -s "${tmpfile}" ]]; then
+    if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
+      tail -5 "${tmpfile}" | sed 's/^/  /' | gum style --foreground 243
+    else
+      tail -5 "${tmpfile}" | sed 's/^/  /'
+    fi
+  fi
+
+  # Show final status
+  if [[ $rc -eq 0 ]]; then
+    log_ok "${msg}"
+  else
+    log_err "${msg} (exit code: ${rc})"
+  fi
+
+  return $rc
 }
 
 section() {
@@ -109,7 +142,7 @@ section() {
   else
     if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
       printf '\n'
-      gum style --bold --foreground 99 "=== ${name} ==="
+      gum style --bold --foreground 35 "=== ${name} ==="
     else
       printf '\n=== %s ===\n' "${name}"
     fi
