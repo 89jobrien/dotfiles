@@ -32,6 +32,26 @@ Three equivalent interfaces for day-2 operations:
 
 All task definitions live in `.mise.toml`, `Justfile`, and `Makefile` respectively.
 
+### Interactive Menu
+
+Quick-access TUI for exploring and running dotfiles commands:
+
+```bash
+mise run menu      # Start interactive menu
+just menu          # Alternative via Just
+make menu          # Alternative via Make
+```
+
+The menu provides guided navigation to:
+- **Scripts** - Run bootstrap, setup tools, configuration scripts
+- **Tasks** - Execute any mise task (doctor, drift, deploy, etc.)
+- **Documentation** - View CLAUDE.md, README, setup guides
+- **Repository** - Explore structure, list scripts, file statistics
+- **Git Operations** - Status, commits, branch management, create new branches
+- **Utilities** - Run doctor checks, drift detection, secret validation, hook verification
+
+Ideal for interactive exploration and quick task execution without memorizing commands.
+
 ### Testing & Validation
 
 ```bash
