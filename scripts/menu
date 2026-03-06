@@ -1,0 +1,261 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib/log.sh"
+
+TAG="menu"
+
+main_menu() {
+  local choice
+  choice=$(gum choose \
+    "🚀 Run Scripts" \
+    "⚙️  Run Tasks (mise)" \
+    "📖 View Documentation" \
+    "🔍 Explore Repository" \
+    "📊 Git Status" \
+    "🛠️  Utilities" \
+    "❌ Exit" \
+    --header "📦 Dotfiles Menu")
+
+  case "$choice" in
+    "🚀 Run Scripts") scripts_menu ;;
+    "⚙️  Run Tasks (mise)") tasks_menu ;;
+    "📖 View Documentation") docs_menu ;;
+    "🔍 Explore Repository") explore_menu ;;
+    "📊 Git Status") git_menu ;;
+    "🛠️  Utilities") utils_menu ;;
+    "❌ Exit") log "Goodbye!"; exit 0 ;;
+    *) log_err "Invalid choice"; main_menu ;;
+  esac
+}
+
+scripts_menu() {
+  local choice
+  local scripts=(
+    "scripts/bootstrap.sh:Full bootstrap"
+    "scripts/setup-git-config.sh:Git configuration"
+    "scripts/setup-oh-my-zsh.sh:Oh My Zsh setup"
+    "scripts/setup-nix.sh:Nix flake setup"
+    "scripts/setup-ai-tools.sh:AI tools config"
+    "scripts/setup-zerobrew.sh:Zerobrew setup"
+    "scripts/setup-companion-repos.sh:Companion repos"
+    "scripts/setup-dev-tools.sh:Dev tools install"
+    "scripts/setup-secrets-interactive.sh:Secrets setup"
+  )
+
+  local script_names=()
+  for script in "${scripts[@]}"; do
+    script_names+=("${script#*:}")
+  done
+  script_names+=("« Back")
+
+  choice=$(gum choose "${script_names[@]}" --header "Select a script to run")
+
+  if [[ "$choice" == "« Back" ]]; then
+    main_menu
+    return
+  fi
+
+  for script in "${scripts[@]}"; do
+    if [[ "${script#*:}" == "$choice" ]]; then
+      local script_path="${script%%:*}"
+      log "Running $script_path..."
+      bash "$ROOT_DIR/$script_path"
+      log_ok "Script completed"
+      read -p "Press enter to continue..."
+      scripts_menu
+      return
+    fi
+  done
+}
+
+tasks_menu() {
+  local choice
+  local tasks=()
+
+  # Get available tasks from .mise.toml
+  if command -v mise &> /dev/null; then
+    while IFS= read -r task; do
+      tasks+=("$task")
+    done < <(mise tasks --no-header 2>/dev/null | awk '{print $1}' | sort | uniq)
+  fi
+
+  if [[ ${#tasks[@]} -eq 0 ]]; then
+    log_warn "No tasks found. Make sure mise is installed."
+    read -p "Press enter to continue..."
+    main_menu
+    return
+  fi
+
+  tasks+=("« Back")
+
+  choice=$(gum choose "${tasks[@]}" --header "Select a task to run")
+
+  if [[ "$choice" == "« Back" ]]; then
+    main_menu
+    return
+  fi
+
+  log "Running task: $choice..."
+  mise run "$choice"
+  log_ok "Task completed"
+  read -p "Press enter to continue..."
+  tasks_menu
+}
+
+docs_menu() {
+  local choice
+  local docs=(
+    "CLAUDE.md:Project guidelines"
+    "README.md:Main README"
+    "scripts/lib/README.md:Scripts library"
+    "colima/README.md:Colima configuration"
+    "tailscale/README.md:Tailscale setup"
+  )
+
+  local doc_names=()
+  for doc in "${docs[@]}"; do
+    if [[ -f "$ROOT_DIR/${doc%%:*}" ]]; then
+      doc_names+=("${doc#*:}")
+    fi
+  done
+  doc_names+=("« Back")
+
+  choice=$(gum choose "${doc_names[@]}" --header "Select documentation to view")
+
+  if [[ "$choice" == "« Back" ]]; then
+    main_menu
+    return
+  fi
+
+  for doc in "${docs[@]}"; do
+    if [[ "${doc#*:}" == "$choice" ]]; then
+      local doc_path="${doc%%:*}"
+      less "$ROOT_DIR/$doc_path"
+      docs_menu
+      return
+    fi
+  done
+}
+
+explore_menu() {
+  local choice
+  choice=$(gum choose \
+    "📁 List top-level directories" \
+    "📜 List all scripts" \
+    "📋 List all stow packages" \
+    "📊 Show file counts by type" \
+    "« Back" \
+    --header "Explore Repository")
+
+  case "$choice" in
+    "📁 List top-level directories")
+      ls -la "$ROOT_DIR" | grep "^d" | awk '{print $NF}' | sort
+      read -p "Press enter to continue..."
+      explore_menu
+      ;;
+    "📜 List all scripts")
+      find "$ROOT_DIR/scripts" -type f -executable | sort | xargs -I {} basename {}
+      read -p "Press enter to continue..."
+      explore_menu
+      ;;
+    "📋 List all stow packages")
+      ls -1 "$ROOT_DIR" | grep -v "^\." | grep -v "^scripts$" | sort
+      read -p "Press enter to continue..."
+      explore_menu
+      ;;
+    "📊 Show file counts by type")
+      echo "=== File counts by extension ==="
+      find "$ROOT_DIR" -type f ! -path '*/\.*' ! -path '*/.git/*' | sed 's/.*\.//' | sort | uniq -c | sort -rn | head -20
+      read -p "Press enter to continue..."
+      explore_menu
+      ;;
+    "« Back") main_menu ;;
+  esac
+}
+
+git_menu() {
+  local choice
+  choice=$(gum choose \
+    "📊 Status" \
+    "📝 Last 10 commits" \
+    "🔀 Current branch info" \
+    "🆕 Create new branch" \
+    "« Back" \
+    --header "Git Operations")
+
+  case "$choice" in
+    "📊 Status")
+      git -C "$ROOT_DIR" status
+      read -p "Press enter to continue..."
+      git_menu
+      ;;
+    "📝 Last 10 commits")
+      git -C "$ROOT_DIR" log --oneline -10
+      read -p "Press enter to continue..."
+      git_menu
+      ;;
+    "🔀 Current branch info")
+      echo "Current branch: $(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
+      echo "Tracking: $(git -C "$ROOT_DIR" rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo 'none')"
+      git -C "$ROOT_DIR" log --oneline -1
+      read -p "Press enter to continue..."
+      git_menu
+      ;;
+    "🆕 Create new branch")
+      local branch_name
+      branch_name=$(gum input --placeholder "Branch name (e.g., feature/my-feature)")
+      if [[ -n "$branch_name" ]]; then
+        git -C "$ROOT_DIR" checkout -b "$branch_name"
+        log_ok "Created branch: $branch_name"
+      fi
+      read -p "Press enter to continue..."
+      git_menu
+      ;;
+    "« Back") main_menu ;;
+  esac
+}
+
+utils_menu() {
+  local choice
+  choice=$(gum choose \
+    "🏥 Run doctor check" \
+    "🚨 Check for drift" \
+    "🔐 Check secrets" \
+    "🔄 Validate hooks" \
+    "« Back" \
+    --header "Utility Commands")
+
+  case "$choice" in
+    "🏥 Run doctor check")
+      mise run doctor || true
+      read -p "Press enter to continue..."
+      utils_menu
+      ;;
+    "🚨 Check for drift")
+      mise run drift || true
+      read -p "Press enter to continue..."
+      utils_menu
+      ;;
+    "🔐 Check secrets")
+      mise run secrets-check || true
+      read -p "Press enter to continue..."
+      utils_menu
+      ;;
+    "🔄 Validate hooks")
+      if [[ -f "$ROOT_DIR/scripts/setup-hooks.sh" ]]; then
+        bash "$ROOT_DIR/scripts/setup-hooks.sh"
+        log_ok "Hooks validation complete"
+      else
+        log_warn "Hooks setup script not found"
+      fi
+      read -p "Press enter to continue..."
+      utils_menu
+      ;;
+    "« Back") main_menu ;;
+  esac
+}
+
+# Start the menu
+main_menu

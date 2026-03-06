@@ -409,3 +409,11 @@ run = "bats tests/**/*.bats"
 [tasks.test-lib]
 description = "Run library tests only"
 run = "bats tests/lib/*.bats"
+
+# ---------------------------------------------------------------------------
+# Interactive
+# ---------------------------------------------------------------------------
+
+[tasks.menu]
+description = "Open interactive menu to explore and run dotfiles commands"
+run = "./scripts/menu"

@@ -1,4 +1,4 @@
-.PHONY: install doctor drift stow post nvim up container-start container-stop container-status compose-up compose-down compose-status compose-logs k3d-up k3d-down kind-up kind-down tilt-up observe observe-k8s observe-logs observe-docker observe-docker-events observe-docker-stats health health-live health-procs health-disk raycast-scripts personal-mcp mcp-build ai-config hooks-install maestro-setup maestro-where maestro-doctor maestro-up maestro-up-quick maestro-up-api maestro-handoff companion-repos nix-install nix-update nix-check rust-clean rust-clean-dry rust-clean-service-install rust-clean-service-uninstall rust-clean-service-status rust-clean-service-run-now rust-clean-service-logs secrets-sops-json secrets-check toolz-install toolz-dev
+.PHONY: install doctor drift stow post nvim up container-start container-stop container-status compose-up compose-down compose-status compose-logs k3d-up k3d-down kind-up kind-down tilt-up observe observe-k8s observe-logs observe-docker observe-docker-events observe-docker-stats health health-live health-procs health-disk raycast-scripts personal-mcp mcp-build ai-config hooks-install maestro-setup maestro-where maestro-doctor maestro-up maestro-up-quick maestro-up-api maestro-handoff companion-repos nix-install nix-update nix-check rust-clean rust-clean-dry rust-clean-service-install rust-clean-service-uninstall rust-clean-service-status rust-clean-service-run-now rust-clean-service-logs secrets-sops-json secrets-check toolz-install toolz-dev menu
 
 install:
 	./install.sh
@@ -169,3 +169,6 @@ toolz-install:
 
 toolz-dev:
 	cd toolz && cargo build
+
+menu:
+	./scripts/menu

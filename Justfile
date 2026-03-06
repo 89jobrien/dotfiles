@@ -193,3 +193,6 @@ toolz-install:
 
 toolz-dev:
     cd toolz && cargo build
+
+menu:
+    ./scripts/menu
