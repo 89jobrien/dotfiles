@@ -149,6 +149,26 @@ description = "Clone companion project repos (personal-mcp, dumcp, maestro-dev)"
 run = "./scripts/setup-companion-repos.sh"
 
 # ---------------------------------------------------------------------------
+# Tailscale
+# ---------------------------------------------------------------------------
+
+[tasks.ts-devices]
+description = "List Tailscale devices with IPs and expiry"
+run = "./tailscale/scripts/parse-devices.sh list"
+
+[tasks.ts-ssh]
+description = "Generate SSH config for Tailscale devices"
+run = "./tailscale/scripts/generate-ssh-config.sh"
+
+[tasks.ts-expiry]
+description = "Check Tailscale device key expiry dates"
+run = "./tailscale/scripts/check-expiry.sh"
+
+[tasks.ts-refresh]
+description = "Import new Tailscale device export CSV"
+run = "./tailscale/scripts/refresh-devices.sh"
+
+# ---------------------------------------------------------------------------
 # Containers / Kubernetes
 # ---------------------------------------------------------------------------
 
@@ -167,6 +187,14 @@ run = "./scripts/container-dev.sh stop"
 [tasks.container-status]
 description = "Show local container and kube status"
 run = "./scripts/container-dev.sh status"
+
+[tasks.colima-autostart-enable]
+description = "Enable Colima auto-start on login"
+run = "./colima/scripts/enable-autostart.sh"
+
+[tasks.colima-autostart-disable]
+description = "Disable Colima auto-start on login"
+run = "./colima/scripts/disable-autostart.sh"
 
 [tasks.compose-up]
 description = "Build and start local docker compose stack"
