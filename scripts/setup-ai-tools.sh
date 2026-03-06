@@ -53,23 +53,20 @@ install_binary() {
     log_skip "repo not found at ${MCP_REPO}; skipping binary install"
     return 0
   fi
-  log "installing personal-mcp to ~/.local/bin ..."
-  if cargo install --path "${MCP_REPO}" --root "${HOME_DIR}/.local" --force; then
-    log_ok "installed ${MCP_BIN}"
-    if [[ "${KEEP_BUILD_ARTIFACTS:-0}" != "1" ]]; then
-      log "cleaning build artifacts..."
-      cargo clean --manifest-path "${MCP_REPO}/Cargo.toml" 2>/dev/null || true
+  spin_silent "installing personal-mcp to ~/.local/bin" cargo install --path "${MCP_REPO}" --root "${HOME_DIR}/.local" --force || {
+    if [[ -x "${MCP_BIN}" ]]; then
+      log_warn "cargo install failed; using existing binary at ${MCP_BIN}"
+      return 0
     fi
-    return 0
+    log_err "cargo install failed and no existing binary found at ${MCP_BIN}"
+    return 1
+  }
+  log_ok "installed ${MCP_BIN}"
+  if [[ "${KEEP_BUILD_ARTIFACTS:-0}" != "1" ]]; then
+    log "cleaning build artifacts..."
+    cargo clean --manifest-path "${MCP_REPO}/Cargo.toml" 2>/dev/null || true
   fi
-
-  if [[ -x "${MCP_BIN}" ]]; then
-    log_warn "cargo install failed; using existing binary at ${MCP_BIN}"
-    return 0
-  fi
-
-  log_err "cargo install failed and no existing binary found at ${MCP_BIN}"
-  return 1
+  return 0
 }
 
 install_opencode_if_missing() {

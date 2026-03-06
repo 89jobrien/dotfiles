@@ -90,6 +90,21 @@ spin() {
   fi
 }
 
+# spin_silent MSG CMD [ARGS...]
+#   Run command with spinner, suppressing all output
+#   Useful for long operations (brew bundle, nvim plugin sync, etc.)
+spin_silent() {
+  local msg="$1"
+  shift
+  local tag="${TAG:-log}"
+  if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
+    gum spin --title "[${tag}] ${msg}" -- "$@" >/dev/null 2>&1
+  else
+    log "${msg}"
+    "$@" >/dev/null 2>&1
+  fi
+}
+
 section() {
   local name="$1"
   if [[ "${LOG_FORMAT}" == "json" ]]; then
@@ -116,4 +131,24 @@ init_log_file() {
   LOG_FILE="${path}"
   # Create or truncate the file
   : > "${LOG_FILE}"
+}
+
+# Timing helpers
+_BOOTSTRAP_START_TIME=""
+
+record_start_time() {
+  _BOOTSTRAP_START_TIME="$(date +%s)"
+}
+
+get_elapsed_time() {
+  if [[ -z "${_BOOTSTRAP_START_TIME}" ]]; then
+    echo "0"
+    return
+  fi
+  local end_time
+  end_time="$(date +%s)"
+  local elapsed=$((end_time - _BOOTSTRAP_START_TIME))
+  local mins=$((elapsed / 60))
+  local secs=$((elapsed % 60))
+  printf '%dm %ds' "${mins}" "${secs}"
 }

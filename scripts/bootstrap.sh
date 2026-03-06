@@ -31,22 +31,30 @@ _record() {
 }
 
 print_summary() {
+  local elapsed="$(get_elapsed_time)"
+  local os_name="$(uname -s)"
   local divider="========================================"
   printf '\n%s\n' "${divider}"
-  printf ' Bootstrap Summary\n'
+  printf ' Bootstrap Summary (%s) on %s\n' "${elapsed}" "${os_name}"
   printf '%s\n' "${divider}"
 
   local any_fail=0
   for name in "${_SUMMARY_SECTIONS[@]}"; do
     local st="${_SUMMARY_STATUS[${name}]}"
     local note="${_SUMMARY_NOTE[${name}]:-}"
-    local label="${st}"
-    if [[ -n "${note}" ]]; then
-      label="${st} (${note})"
-    fi
-    printf ' %-16s %s\n' "${name}" "${label}"
+
+    # Use checkmark for ok, X for fail
+    local symbol="✓"
     if [[ "${st}" == "FAIL" ]]; then
+      symbol="✗"
       any_fail=1
+    fi
+
+    # Format: symbol name (note)
+    if [[ -n "${note}" ]]; then
+      printf ' %s %-22s %s\n' "${symbol}" "${name}" "(${note})"
+    else
+      printf ' %s %s\n' "${symbol}" "${name}"
     fi
   done
   printf '%s\n' "${divider}"
@@ -192,32 +200,37 @@ install_packages() {
     fi
 
     if [[ -f "${brewfile}" ]]; then
-      log "installing packages via ${brew_compat_name} bundle (${brewfile##*/})..."
+      # Count packages (lines that don't start with # or are empty)
+      local pkg_count
+      pkg_count="$(grep -Ev '^\s*(#|$)' "${brewfile}" | wc -l | tr -d ' ')"
+
       if [[ "${brew_compat_cmd}" == "zb" ]]; then
-        if ! "${brew_compat_cmd}" bundle install --file "${brewfile}"; then
+        spin_silent "Installing packages ($pkg_count)..." "${brew_compat_cmd}" bundle install --file "${brewfile}" || {
           if has_cmd brew; then
-            log_warn "zerobrew bundle failed; falling back to brew bundle"
-            brew bundle --file "${brewfile}"
+            log_warn "zerobrew bundle failed; falling back to brew"
+            spin_silent "Installing packages via brew..." brew bundle --file "${brewfile}"
           else
             return 1
           fi
-        fi
+        }
       else
-        "${brew_compat_cmd}" bundle --file "${brewfile}"
+        spin_silent "Installing packages ($pkg_count)..." "${brew_compat_cmd}" bundle --file "${brewfile}"
       fi
+      _record "Packages" "ok" "${pkg_count}"
     fi
     return 0
   fi
 
   if [[ "$(uname -s)" == "Linux" ]] && has_cmd apt-get; then
     if [[ -f "${APT_LIST_FILE}" ]]; then
-      log "installing fallback packages via apt..."
-      # shellcheck disable=SC2046
-      sudo apt-get update && sudo apt-get install -y $(grep -Ev '^\s*(#|$)' "${APT_LIST_FILE}")
+      local pkg_count
+      pkg_count="$(grep -Ev '^\s*(#|$)' "${APT_LIST_FILE}" | wc -l | tr -d ' ')"
+      spin_silent "Installing packages ($pkg_count)..." sh -c "apt-get update && apt-get install -y $(grep -Ev '^\s*(#|$)' "${APT_LIST_FILE}")"
       if [[ -f "${APT_LIST_LOCAL_FILE}" ]]; then
-        # shellcheck disable=SC2046
-        sudo apt-get install -y $(grep -Ev '^\s*(#|$)' "${APT_LIST_LOCAL_FILE}")
+        pkg_count="$((pkg_count + $(grep -Ev '^\s*(#|$)' "${APT_LIST_LOCAL_FILE}" | wc -l | tr -d ' ')))"
+        spin_silent "Installing local packages..." sudo apt-get install -y $(grep -Ev '^\s*(#|$)' "${APT_LIST_LOCAL_FILE}")
       fi
+      _record "Packages" "ok" "${pkg_count}"
     fi
     return 0
   fi
@@ -232,27 +245,27 @@ install_mise_toolchain() {
   fi
 
   if [[ -f "${ROOT_DIR}/.mise.toml" ]]; then
-    log "installing runtimes/tools via mise..."
-    (cd "${ROOT_DIR}" && mise install)
+    # Count tools (approximate: grep for [tools.xxx] sections)
+    local tool_count
+    tool_count="$(grep '^\[tools\.' "${ROOT_DIR}/.mise.toml" 2>/dev/null | wc -l | tr -d ' ')"
+    spin_silent "Installing runtimes ($tool_count)..." sh -c "cd '${ROOT_DIR}' && mise install"
+    _record "Runtimes" "ok" "${tool_count}"
   fi
 }
 
 stow_package() {
   local package="$1"
   if [[ ! -d "${ROOT_DIR}/${package}" ]]; then
-    log_skip "package '${package}' not found"
     return 0
   fi
 
   local dry_run_output
   dry_run_output="$(stow -d "${ROOT_DIR}" -t "${HOME}" -n "${package}" 2>&1 || true)"
   if printf '%s\n' "${dry_run_output}" | grep -Eq 'would cause conflicts|cannot stow|existing target is not owned by stow|ERROR'; then
-    log_warn "conflict detected in '${package}'; run 'pj dot adopt' and rerun"
     return 0
   fi
 
-  log "stowing ${package}..."
-  stow -d "${ROOT_DIR}" -t "${HOME}" -R "${package}"
+  stow -d "${ROOT_DIR}" -t "${HOME}" -R "${package}" >/dev/null 2>&1
 }
 
 stow_packages() {
@@ -267,17 +280,24 @@ stow_packages() {
   fi
 
   ensure_stow
+
+  local stow_count=0
   while IFS= read -r pkg; do
     [[ -z "${pkg}" || "${pkg}" =~ ^[[:space:]]*# ]] && continue
     stow_package "${pkg}"
+    ((stow_count++)) || true
   done < "${STOW_LIST_FILE}"
 
   if [[ -f "${STOW_LIST_LOCAL_FILE}" ]]; then
     while IFS= read -r pkg; do
       [[ -z "${pkg}" || "${pkg}" =~ ^[[:space:]]*# ]] && continue
       stow_package "${pkg}"
+      ((stow_count++)) || true
     done < "${STOW_LIST_LOCAL_FILE}"
   fi
+
+  log_ok "stowed ($stow_count packages)"
+  _record "Stow" "ok" "${stow_count}"
 }
 
 # ---------------------------------------------------------------------------
@@ -350,12 +370,13 @@ run_post_hooks() {
 
 main() {
   cd "${ROOT_DIR}"
+  record_start_time
   log "starting bootstrap on $(uname -s)"
-  "${ROOT_DIR}/scripts/setup-zerobrew.sh" || true
+  spin_silent "Setting up zerobrew..." "${ROOT_DIR}/scripts/setup-zerobrew.sh" || true
   ensure_homebrew || true
   check_homebrew_writable
   install_packages
-  "${ROOT_DIR}/scripts/setup-npm-tools.sh" || true
+  spin_silent "Installing npm tools..." "${ROOT_DIR}/scripts/setup-npm-tools.sh" || true
   install_mise_toolchain
   stow_packages
   run_post_hooks

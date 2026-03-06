@@ -64,8 +64,17 @@ return {
 }
 EOF
 
-log "syncing plugins via Lazy..."
-nvim --headless "+Lazy! sync" +qa || true
+# Count plugins from lazy-lock.json (approximate)
+local plugin_count=0
+if [[ -f "${NVIM_DIR}/lazy-lock.json" ]]; then
+  plugin_count="$(grep -c '"' "${NVIM_DIR}/lazy-lock.json" 2>/dev/null || echo 0)"
+fi
+
+if [[ "${plugin_count}" -gt 0 ]]; then
+  spin_silent "Syncing plugins ($plugin_count)..." nvim --headless "+Lazy! sync" +qa || true
+else
+  spin_silent "Syncing plugins..." nvim --headless "+Lazy! sync" +qa || true
+fi
 
 log_ok "NvChad + avante setup complete"
 log "set your LLM provider API key before using Avante"
