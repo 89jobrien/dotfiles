@@ -35,6 +35,12 @@ container-stop:
 container-status:
     ./scripts/container-dev.sh status
 
+colima-autostart-enable:
+    ./colima/scripts/enable-autostart.sh
+
+colima-autostart-disable:
+    ./colima/scripts/disable-autostart.sh
+
 compose-up:
     ./scripts/compose-dev.sh up
 

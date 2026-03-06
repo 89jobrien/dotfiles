@@ -315,8 +315,65 @@ if command -v maestro >/dev/null 2>&1; then
   alias mauth='maestro auth login'
 fi
 
-# Use Colima dev profile (4 CPUs, 6GB) as default Docker socket
-export DOCKER_HOST="unix://${HOME}/.colima/dev/docker.sock"
+# ============================================================================
+# Colima: No-fuss Docker alternative
+# ============================================================================
+
+# Auto-start Colima when needed
+_colima_ensure_running() {
+  if ! command -v colima >/dev/null 2>&1; then
+    return 1
+  fi
+
+  local profile="${COLIMA_PROFILE:-dev}"
+
+  # Check if already running
+  if colima status --profile "$profile" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  # Auto-start with sensible defaults
+  echo "[colima] Starting profile '$profile' (4 CPU, 6GB RAM, 60GB disk)..." >&2
+  colima start --profile "$profile" --cpu 4 --memory 6 --disk 60 --runtime docker >/dev/null 2>&1
+}
+
+# Smart socket detection (works across multiple machines)
+_colima_set_socket() {
+  if [ -S "${HOME}/.colima/dev/docker.sock" ]; then
+    export DOCKER_HOST="unix://${HOME}/.colima/dev/docker.sock"
+  elif [ -S "${HOME}/.config/colima/default/docker.sock" ]; then
+    export DOCKER_HOST="unix://${HOME}/.config/colima/default/docker.sock"
+  fi
+}
+
+_colima_set_socket
+
+# Docker wrapper that auto-starts Colima
+docker() {
+  _colima_ensure_running
+  _colima_set_socket
+  command docker "$@"
+}
+
+# Docker Compose wrapper
+docker-compose() {
+  _colima_ensure_running
+  _colima_set_socket
+  command docker-compose "$@"
+}
+
+# Helpful aliases
+alias colima-start='colima start --profile dev --cpu 4 --memory 6 --disk 60 --runtime docker'
+alias colima-stop='colima stop --profile dev'
+alias colima-restart='colima-stop && colima-start'
+alias colima-status='colima status --profile dev'
+alias dps='docker ps'
+alias dpsa='docker ps -a'
+alias di='docker images'
+alias drmi='docker rmi'
+alias drmif='docker rmi -f'
+alias dstop='docker stop'
+alias drm='docker rm'
 
 alias maestro-attach='docker exec -it -u vscode $(docker ps --filter name=maestro-maestro-dev --format "{{.ID}}" | head -1) tmux -S /tmp/tmux-shared/maestro.sock -u attach-session'
 

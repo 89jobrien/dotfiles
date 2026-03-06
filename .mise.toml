@@ -180,6 +180,14 @@ run = "./scripts/container-dev.sh stop"
 description = "Show local container and kube status"
 run = "./scripts/container-dev.sh status"
 
+[tasks.colima-autostart-enable]
+description = "Enable Colima auto-start on login"
+run = "./colima/scripts/enable-autostart.sh"
+
+[tasks.colima-autostart-disable]
+description = "Disable Colima auto-start on login"
+run = "./colima/scripts/disable-autostart.sh"
+
 [tasks.compose-up]
 description = "Build and start local docker compose stack"
 run = "./scripts/compose-dev.sh up"
