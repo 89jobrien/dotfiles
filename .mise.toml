@@ -141,6 +141,26 @@ description = "Clone companion project repos (personal-mcp, dumcp, maestro-dev)"
 run = "./scripts/setup-companion-repos.sh"
 
 # ---------------------------------------------------------------------------
+# Tailscale
+# ---------------------------------------------------------------------------
+
+[tasks.ts-devices]
+description = "List Tailscale devices with IPs and expiry"
+run = "./tailscale/scripts/parse-devices.sh list"
+
+[tasks.ts-ssh]
+description = "Generate SSH config for Tailscale devices"
+run = "./tailscale/scripts/generate-ssh-config.sh"
+
+[tasks.ts-expiry]
+description = "Check Tailscale device key expiry dates"
+run = "./tailscale/scripts/check-expiry.sh"
+
+[tasks.ts-refresh]
+description = "Import new Tailscale device export CSV"
+run = "./tailscale/scripts/refresh-devices.sh"
+
+# ---------------------------------------------------------------------------
 # Containers / Kubernetes
 # ---------------------------------------------------------------------------
 

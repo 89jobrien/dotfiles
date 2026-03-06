@@ -76,3 +76,7 @@ zed/.config/zed/settings_backup.json
 # Beads and local markdown
 .beads/
 *.local.md
+
+# Tailscale device exports (contain network topology)
+tailscale/backups/
+tailscale/ssh-config.generated

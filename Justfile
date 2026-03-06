@@ -128,6 +128,18 @@ maestro-handoff:
 companion-repos:
     ./scripts/setup-companion-repos.sh
 
+ts-devices:
+    ./tailscale/scripts/parse-devices.sh list
+
+ts-ssh:
+    ./tailscale/scripts/generate-ssh-config.sh
+
+ts-expiry:
+    ./tailscale/scripts/check-expiry.sh
+
+ts-refresh CSV:
+    ./tailscale/scripts/refresh-devices.sh {{CSV}}
+
 nix-install:
     ./scripts/setup-nix.sh
 
