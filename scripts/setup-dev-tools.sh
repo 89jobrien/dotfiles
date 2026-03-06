@@ -78,6 +78,17 @@ else
   log_warn "cargo not found; skipping toolz install"
 fi
 
+# Obfsck — secret redaction and obfuscation lib/binary (companion repo at ~/dev/obfsck).
+if [[ -d "${HOME}/dev/obfsck" ]] && has_cmd cargo; then
+  log "building obfsck..."
+  if cargo install --path "${HOME}/dev/obfsck" --root "${HOME}/.local" --force >/dev/null 2>&1; then
+    log_ok "obfsck installed to ~/.local/bin/obfsck"
+  else
+    log_warn "obfsck build failed — skipping"
+    failed_optional+=("obfsck")
+  fi
+fi
+
 if [[ ${#failed_optional[@]} -gt 0 ]]; then
   log_warn "optional tool installs failed: ${failed_optional[*]}"
 fi

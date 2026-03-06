@@ -150,11 +150,11 @@ if command -v zb >/dev/null 2>&1; then
     local subcmd="${1:-}"
     case "${subcmd}" in
       install|bundle|uninstall|list|info)
-        command zb "$@" || _brew_real "$@"
+        command zb "$@" 2>/dev/null || _brew_real "$@"
         ;;
       cleanup)
         shift
-        command zb gc "$@" || _brew_real cleanup "$@"
+        command zb gc "$@" 2>/dev/null || _brew_real cleanup "$@"
         ;;
       *)
         _brew_real "$@"

@@ -108,6 +108,7 @@ These projects live outside the dotfiles repo but depend on tools the dotfiles p
 |---|---|---|---|---|
 | personal-mcp | `~/dev/personal-mcp` | `89jobrien/personal-mcp` | Rust | `cargo`/`rust` (mise), `baml-cli` (dev-tools), `jq`, `just` (nix) |
 | dumcp | `~/dev/dumcp` | `89jobrien/dumcp` | Go | `go` (mise) |
+| obfsck | `~/dev/obfsck` | `89jobrien/obfsck` | Rust | `cargo`/`rust` (mise) |
 | maestro-dev | `~/maestro-dev` | `89jobrien/maestro-dev` | Shell/Docker | `docker`/`colima` (brew), `tmux`, `just` (nix) |
 
 All three are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh`.
@@ -122,6 +123,7 @@ from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
 - `colima` for containers (not Docker Desktop)
 - `mise` for runtime version management (not nvm/pyenv/rustup directly)
 - `gum` for interactive TUI elements in scripts
+- `obfsck` for secret redaction and identifier obfuscation in logs (installed from `~/dev/obfsck` during bootstrap)
 
 ## Modifying Scripts
 

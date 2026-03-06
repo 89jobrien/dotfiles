@@ -84,6 +84,10 @@ run = "./scripts/secrets/check-no-plaintext.sh"
 description = "Generate encrypted secrets/.env.sops.json from local secrets/.env.json"
 run = "./scripts/secrets/make-sops-env-json.sh"
 
+[tasks.secrets-setup]
+description = "Interactive secrets setup (prompts for API keys and credentials)"
+run = "./scripts/setup-secrets-interactive.sh"
+
 # ---------------------------------------------------------------------------
 # AI Tools
 # ---------------------------------------------------------------------------

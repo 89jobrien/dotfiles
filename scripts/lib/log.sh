@@ -117,10 +117,20 @@ spin_with_msg() {
 
   # Show tail of output (last 5 lines) if there was any
   if [[ -s "${tmpfile}" ]]; then
+    local tail_output
+    tail_output="$(tail -5 "${tmpfile}")"
+
+    # Obfuscate secrets in tail output if available
+    if declare -f obfuscate_text >/dev/null 2>&1; then
+      tail_output="$(printf '%s\n' "$tail_output" | while IFS= read -r line; do
+        obfuscate_text "$line"
+      done)"
+    fi
+
     if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
-      tail -5 "${tmpfile}" | sed 's/^/  /' | gum style --foreground 243
+      printf '%s\n' "$tail_output" | sed 's/^/  /' | gum style --foreground 243
     else
-      tail -5 "${tmpfile}" | sed 's/^/  /'
+      printf '%s\n' "$tail_output" | sed 's/^/  /'
     fi
   fi
 
@@ -180,4 +190,20 @@ get_elapsed_time() {
   local mins=$((elapsed / 60))
   local secs=$((elapsed % 60))
   printf '%dm %ds' "${mins}" "${secs}"
+}
+
+# Obfuscation helpers
+# Source the obfuscate library (provides obfuscate_text, obfuscate_file, obfuscate_lines)
+if [[ -f "${BASH_SOURCE%/*}/obfuscate.sh" ]]; then
+  # shellcheck source=obfuscate.sh
+  source "${BASH_SOURCE%/*}/obfuscate.sh"
+fi
+
+# log_redacted MESSAGE
+#   Log a message with secrets redacted
+log_redacted() {
+  local message="$*"
+  local redacted
+  redacted="$(obfuscate_text "${message}")"
+  log "${redacted}"
 }

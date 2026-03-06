@@ -365,6 +365,25 @@ run_post_hooks() {
 }
 
 # ---------------------------------------------------------------------------
+# Environment checks
+# ---------------------------------------------------------------------------
+
+check_env() {
+  local age_key="${HOME}/.config/sops/age/keys.txt"
+  local secrets_file="${HOME}/.config/dev-bootstrap/secrets.env"
+
+  if [[ ! -f "${age_key}" ]]; then
+    log_warn "age key not found at ${age_key}"
+    log_warn "secrets decryption will fail; ensure age key is set up"
+  fi
+
+  if [[ ! -f "${secrets_file}" ]]; then
+    log_warn "secrets file not found at ${secrets_file}"
+    log_warn "run 'mise run secrets-decrypt' to decrypt secrets"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -372,6 +391,7 @@ main() {
   cd "${ROOT_DIR}"
   record_start_time
   log "starting bootstrap on $(uname -s)"
+  check_env
   spin_with_msg "Setting up zerobrew..." "${ROOT_DIR}/scripts/setup-zerobrew.sh" || true
   ensure_homebrew || true
   check_homebrew_writable

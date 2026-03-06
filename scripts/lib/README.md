@@ -30,7 +30,7 @@ log_ok "Ready to go!"
 
 ### log.sh - Logging Functions
 
-Core logging with gum integration and JSON support for Vector.
+Core logging with gum integration and JSON support for Vector. Includes secret redaction via `obfuscate.sh`.
 
 **Functions:**
 - `log "message"` - Info message
@@ -41,6 +41,7 @@ Core logging with gum integration and JSON support for Vector.
 - `spin "label" command args` - Run command with spinner
 - `section "name"` - Print section header
 - `init_log_file PATH` - Initialize JSON log file
+- `log_redacted "message"` - Log with secrets redacted
 
 **Environment Variables:**
 - `TAG` (required) - Script identifier
@@ -64,6 +65,46 @@ export LOG_FILE="${HOME}/logs/ai/scripts/deploy.jsonl"
 init_log_file "${LOG_FILE}"
 log "deployment started"
 # Output: {"timestamp":"2026-03-04T06:51:00.000Z","hostname":"...","tag":"deploy","level":"info","message":"deployment started"}
+```
+
+### obfuscate.sh - Secret Redaction
+
+Redact secrets and obfuscate sensitive identifiers in text, files, or logs.
+
+**Functions:**
+- `obfuscate_text TEXT` - Redact secrets in text string
+- `obfuscate_file INPUT [OUTPUT]` - Redact secrets in file (prints to stdout if no output file)
+- `obfuscate_lines [LINES...]` - Redact secrets from multiple lines (reads from stdin or args)
+- `log_redacted "message"` - Log with secrets redacted (via log.sh)
+
+**Redacts:**
+- API Keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, generic *API_KEY)
+- GitHub tokens (ghp_*, github_pat_*)
+- AWS credentials (AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID)
+- Bearer tokens and Authorization headers
+- SSH public keys
+- Private IP addresses (10.x, 172.16-31.x, 192.168.x)
+
+**Usage Examples:**
+```bash
+# As library
+source scripts/lib/obfuscate.sh
+redacted=$(obfuscate_text "My API key is sk-ant-12345")
+echo "$redacted"  # My API key is [REDACTED-ANTHROPIC-KEY]
+
+# With log.sh
+source scripts/lib/log.sh
+log_redacted "Connecting with token=$MY_SECRET_TOKEN"  # token=[REDACTED-TOKEN]
+
+# Standalone script
+./scripts/lib/obfuscate.sh "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG"
+# AWS_SECRET_ACCESS_KEY=[REDACTED-AWS-SECRET]
+
+# Redact file
+./scripts/lib/obfuscate.sh --file logs/bootstrap.log logs/bootstrap.log.redacted
+
+# Pipe through
+docker logs mycontainer | ./scripts/lib/obfuscate.sh
 ```
 
 ### cmd.sh - Command Checking

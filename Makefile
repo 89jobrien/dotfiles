@@ -161,6 +161,9 @@ secrets-sops-json:
 secrets-check:
 	./scripts/secrets/check-no-plaintext.sh
 
+secrets-setup:
+	./scripts/setup-secrets-interactive.sh
+
 toolz-install:
 	cargo install --path toolz --root "$(HOME)/.local" --force
 

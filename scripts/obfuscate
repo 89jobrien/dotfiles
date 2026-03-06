@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Secret redaction and obfuscation wrapper
+# Convenience CLI for redacting secrets in text, files, or stdin
+#
+# Usage:
+#   ./scripts/obfuscate "text with secret=value"
+#   ./scripts/obfuscate --file input.log [output.log]
+#   docker logs container | ./scripts/obfuscate
+#   cat file.log | ./scripts/obfuscate
+#
+# Examples:
+#   # Redact command output in real-time
+#   env | ./scripts/obfuscate
+#
+#   # Redact and save to new file
+#   ./scripts/obfuscate --file bootstrap.log bootstrap.log.safe
+#
+#   # Simple text redaction
+#   ./scripts/obfuscate "OPENAI_API_KEY=sk-proj-secret123"
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/obfuscate.sh"
+
+# Show usage
+usage() {
+  cat <<'EOF'
+obfuscate - Redact secrets and obfuscate sensitive identifiers
+
+USAGE:
+  obfuscate TEXT              Redact secrets in text string
+  obfuscate --file FILE [OUT] Redact secrets in file
+  obfuscate --stdin           Read from stdin (default if no args)
+  obfuscate --help            Show this help
+
+EXAMPLES:
+  # Redact API key in text
+  obfuscate "OPENAI_API_KEY=sk-proj-abc123xyz"
+  # Output: OPENAI_API_KEY=[REDACTED-OPENAI-KEY]
+
+  # Redact entire file
+  obfuscate --file bootstrap.log bootstrap.log.redacted
+
+  # Pipe command output through redaction
+  env | obfuscate
+  docker logs myapp | obfuscate
+
+  # Redact AWS credentials
+  obfuscate "aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/xyz"
+  # Output: aws_secret_access_key = [REDACTED-AWS-SECRET]
+
+REDACTS:
+  - API Keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, AWS_*, etc.)
+  - GitHub tokens (ghp_*, github_pat_*)
+  - AWS credentials and keys
+  - Bearer tokens and auth headers
+  - SSH public keys
+  - Private IP addresses (10.x, 172.16-31.x, 192.168.x)
+
+EOF
+}
+
+# Parse arguments
+case "${1:-}" in
+  --help|-h)
+    usage
+    exit 0
+    ;;
+  --file)
+    if [[ $# -lt 2 ]]; then
+      printf 'error: --file requires FILE argument\n' >&2
+      exit 1
+    fi
+    obfuscate_file "$2" "${3:-}"
+    ;;
+  --stdin)
+    # Read from stdin
+    while IFS= read -r line; do
+      obfuscate_text "$line"
+    done
+    ;;
+  "")
+    # No arguments: read from stdin
+    while IFS= read -r line; do
+      obfuscate_text "$line"
+    done
+    ;;
+  *)
+    # Treat all arguments as text to obfuscate
+    obfuscate_text "$*"
+    ;;
+esac
