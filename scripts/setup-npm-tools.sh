@@ -13,6 +13,12 @@ if ! command -v brew &> /dev/null; then
 fi
 
 log "installing npm-based tools via brew..."
-brew install --quiet opencode
+
+# Check if opencode is already installed
+if command -v opencode &>/dev/null; then
+  log_skip "opencode already installed"
+else
+  brew install --quiet opencode || log_warn "failed to install opencode"
+fi
 
 log_ok "npm-based tools installed"

@@ -53,7 +53,7 @@ install_binary() {
     log_skip "repo not found at ${MCP_REPO}; skipping binary install"
     return 0
   fi
-  spin_silent "installing personal-mcp to ~/.local/bin" cargo install --path "${MCP_REPO}" --root "${HOME_DIR}/.local" --force || {
+  spin_with_msg "installing personal-mcp to ~/.local/bin" cargo install --path "${MCP_REPO}" --root "${HOME_DIR}/.local" --force || {
     if [[ -x "${MCP_BIN}" ]]; then
       log_warn "cargo install failed; using existing binary at ${MCP_BIN}"
       return 0

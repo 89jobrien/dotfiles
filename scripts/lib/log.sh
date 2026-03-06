@@ -90,19 +90,15 @@ spin() {
   fi
 }
 
-# spin_silent MSG CMD [ARGS...]
-#   Run command with spinner, suppressing all output
-#   Useful for long operations (brew bundle, nvim plugin sync, etc.)
-spin_silent() {
+# spin_with_msg MSG CMD [ARGS...]
+#   Run command with a message prefix
+#   Shows what's being done without suppressing output
+spin_with_msg() {
   local msg="$1"
   shift
   local tag="${TAG:-log}"
-  if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
-    gum spin --title "[${tag}] ${msg}" -- "$@" >/dev/null 2>&1
-  else
-    log "${msg}"
-    "$@" >/dev/null 2>&1
-  fi
+  log "${msg}"
+  "$@"
 }
 
 section() {
