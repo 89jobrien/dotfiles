@@ -111,7 +111,7 @@ These projects live outside the dotfiles repo but depend on tools the dotfiles p
 | obfsck | `~/dev/obfsck` | `89jobrien/obfsck` | Rust | `cargo`/`rust` (mise) |
 | maestro-dev | `~/maestro-dev` | `89jobrien/maestro-dev` | Shell/Docker | `docker`/`colima` (brew), `tmux`, `just` (nix) |
 
-All three are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh`.
+All four are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh`.
 
 Runtime runtimes (Go, Rust) are managed by mise. CLI tools (`tmux`, `just`, `jq`, etc.) come
 from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
