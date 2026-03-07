@@ -377,6 +377,23 @@ alias drm='docker rm'
 
 alias maestro-attach='docker exec -it -u vscode $(docker ps --filter name=maestro-maestro-dev --format "{{.ID}}" | head -1) tmux -S /tmp/tmux-shared/maestro.sock -u attach-session'
 
+# ============================================================================
+# Dotfiles Management
+# ============================================================================
+
+# Interactive task discovery
+alias tasks='~/.dotfiles/scripts/tasks-interactive.sh'
+
+# Dotfiles updates
+alias dotfiles-update='~/.dotfiles/scripts/update-dotfiles.sh'
+alias dotfiles-check='~/.dotfiles/scripts/check-updates.sh'
+
+# Auto-check for dotfiles updates on shell startup (cached, non-blocking)
+# Runs in background every hour, shows notification if updates available
+if [[ -x ~/.dotfiles/scripts/check-updates.sh ]]; then
+  ~/.dotfiles/scripts/check-updates.sh --quiet &
+fi
+
 # Kubernetes shortcuts scoped to the maestro GKE cluster
 alias kmpods='kubectl --context=gke_toptal-maestro_us-east1_main-0 -n team-maestro get pods'
 alias kmlogs='kubectl --context=gke_toptal-maestro_us-east1_main-0 -n team-maestro logs'

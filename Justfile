@@ -149,6 +149,21 @@ ts-expiry:
 ts-refresh CSV:
     ./tailscale/scripts/refresh-devices.sh {{CSV}}
 
+ssh-sync:
+    ./ssh-tools/scripts/sync-keys.sh
+
+ssh-sync-dry-run:
+    DRY_RUN=1 ./ssh-tools/scripts/sync-keys.sh
+
+tasks:
+    ./scripts/tasks-interactive.sh
+
+update-check:
+    ./scripts/check-updates.sh
+
+update:
+    ./scripts/update-dotfiles.sh
+
 nix-install:
     ./scripts/setup-nix.sh
 

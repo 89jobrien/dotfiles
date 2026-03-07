@@ -169,6 +169,34 @@ description = "Import new Tailscale device export CSV"
 run = "./tailscale/scripts/refresh-devices.sh"
 
 # ---------------------------------------------------------------------------
+# SSH Management
+# ---------------------------------------------------------------------------
+
+[tasks.ssh-sync]
+description = "Sync SSH public key to all Tailscale devices"
+run = "./ssh-tools/scripts/sync-keys.sh"
+
+[tasks.ssh-sync-dry-run]
+description = "Preview SSH key sync without making changes"
+run = "DRY_RUN=1 ./ssh-tools/scripts/sync-keys.sh"
+
+# ---------------------------------------------------------------------------
+# Dotfiles Management
+# ---------------------------------------------------------------------------
+
+[tasks.tasks]
+description = "Interactive task discovery and execution"
+run = "./scripts/tasks-interactive.sh"
+
+[tasks.update-check]
+description = "Check for dotfiles updates from remote"
+run = "./scripts/check-updates.sh"
+
+[tasks.update]
+description = "Update dotfiles from remote and reload config"
+run = "./scripts/update-dotfiles.sh"
+
+# ---------------------------------------------------------------------------
 # Containers / Kubernetes
 # ---------------------------------------------------------------------------
 
