@@ -28,6 +28,7 @@ merge_json_config() {
 
   local tmp
   tmp="$(mktemp)"
+  trap 'rm -f "${tmp}" "${tmp}.new"' RETURN
 
   # Start from existing config or empty object
   if [[ -f "${cfg}" ]]; then
@@ -38,13 +39,11 @@ merge_json_config() {
 
   # Apply jq filter and write atomically
   if ! jq "$@" "${filter}" "${tmp}" > "${tmp}.new"; then
-    rm -f "${tmp}" "${tmp}.new"
     log_err "jq filter failed for ${cfg}"
     return 1
   fi
 
   mv "${tmp}.new" "${cfg}"
-  rm -f "${tmp}"
   return 0
 }
 

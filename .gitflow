@@ -27,18 +27,3 @@
 	upstreamstrategy = merge
 	downstreamstrategy = rebase
 
-[gitflow "feature.finish"]
-	no-ff = true
-	keep = false
-	fetch = true
-
-[gitflow "hotfix.finish"]
-	no-ff = true
-	tag = true
-	keep = false
-	fetch = true
-
-[gitflow "chore.finish"]
-	no-ff = true
-	keep = false
-	fetch = true

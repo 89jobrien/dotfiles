@@ -18,6 +18,13 @@ BAML_LOG_DEFAULT="${DOT_BAML_LOG_DEFAULT:-info}"
 BOUNDARY_MAX_LOG_CHUNK_CHARS_DEFAULT="${DOT_BOUNDARY_MAX_LOG_CHUNK_CHARS_DEFAULT:-3000}"
 MCP_BIN="${HOME_DIR}/.local/bin/personal-mcp"
 MCP_REPO="${HOME_DIR}/dev/personal-mcp"
+MCP_JQ_ARGS=(
+  --arg cmd            "${MCP_BIN}"
+  --arg mcp_ctx        "${MCP_CTX_DIR}"
+  --arg mcp_env_file   "${MCP_ENV_FILE_PATH}"
+  --arg baml_log       "${BAML_LOG_DEFAULT}"
+  --arg baml_max_chars "${BOUNDARY_MAX_LOG_CHUNK_CHARS_DEFAULT}"
+)
 
 # Config file paths
 CLAUDE_DESKTOP_CFG="${HOME_DIR}/Library/Application Support/Claude/claude_desktop_config.json"
@@ -121,11 +128,7 @@ configure_claude_desktop() {
       }
     }
   ' \
-    --arg cmd "${MCP_BIN}" \
-    --arg mcp_ctx "${MCP_CTX_DIR}" \
-    --arg mcp_env_file "${MCP_ENV_FILE_PATH}" \
-    --arg baml_log "${BAML_LOG_DEFAULT}" \
-    --arg baml_max_chars "${BOUNDARY_MAX_LOG_CHUNK_CHARS_DEFAULT}"
+    "${MCP_JQ_ARGS[@]}"
   log_ok "updated Claude Desktop: ${CLAUDE_DESKTOP_CFG}"
 }
 
@@ -152,11 +155,7 @@ configure_claude_code() {
       }
     }
   ' \
-    --arg baml_log "${BAML_LOG_DEFAULT}" \
-    --arg baml_max_chars "${BOUNDARY_MAX_LOG_CHUNK_CHARS_DEFAULT}" \
-    --arg mcp_env_file "${MCP_ENV_FILE_PATH}" \
-    --arg cmd "${MCP_BIN}" \
-    --arg mcp_ctx "${MCP_CTX_DIR}"
+    "${MCP_JQ_ARGS[@]}"
   log_ok "updated Claude Code: ${CLAUDE_CODE_CFG}"
 }
 
@@ -174,11 +173,7 @@ configure_cursor() {
       }
     }
   ' \
-    --arg cmd "${MCP_BIN}" \
-    --arg mcp_ctx "${MCP_CTX_DIR}" \
-    --arg mcp_env_file "${MCP_ENV_FILE_PATH}" \
-    --arg baml_log "${BAML_LOG_DEFAULT}" \
-    --arg baml_max_chars "${BOUNDARY_MAX_LOG_CHUNK_CHARS_DEFAULT}"
+    "${MCP_JQ_ARGS[@]}"
   log_ok "updated Cursor: ${CURSOR_CFG}"
 }
 
@@ -196,11 +191,7 @@ configure_zed() {
       }
     }
   ' \
-    --arg cmd "${MCP_BIN}" \
-    --arg mcp_ctx "${MCP_CTX_DIR}" \
-    --arg mcp_env_file "${MCP_ENV_FILE_PATH}" \
-    --arg baml_log "${BAML_LOG_DEFAULT}" \
-    --arg baml_max_chars "${BOUNDARY_MAX_LOG_CHUNK_CHARS_DEFAULT}"
+    "${MCP_JQ_ARGS[@]}"
   log_ok "updated Zed: ${ZED_CFG}"
 }
 
@@ -224,11 +215,7 @@ configure_opencode() {
       .environment.BAML_LOG = (.environment.BAML_LOG // $baml_log) |
       .environment.BOUNDARY_MAX_LOG_CHUNK_CHARS = (.environment.BOUNDARY_MAX_LOG_CHUNK_CHARS // $baml_max_chars))
   ' \
-    --arg cmd "${MCP_BIN}" \
-    --arg mcp_ctx "${MCP_CTX_DIR}" \
-    --arg mcp_env_file "${MCP_ENV_FILE_PATH}" \
-    --arg baml_log "${BAML_LOG_DEFAULT}" \
-    --arg baml_max_chars "${BOUNDARY_MAX_LOG_CHUNK_CHARS_DEFAULT}"
+    "${MCP_JQ_ARGS[@]}"
   log_ok "updated OpenCode: ${OPENCODE_CFG}"
 }
 
@@ -283,11 +270,7 @@ configure_gemini() {
       .env.BAML_LOG = (.env.BAML_LOG // $baml_log) |
       .env.BOUNDARY_MAX_LOG_CHUNK_CHARS = (.env.BOUNDARY_MAX_LOG_CHUNK_CHARS // $baml_max_chars))
   ' \
-    --arg cmd "${MCP_BIN}" \
-    --arg mcp_ctx "${MCP_CTX_DIR}" \
-    --arg mcp_env_file "${MCP_ENV_FILE_PATH}" \
-    --arg baml_log "${BAML_LOG_DEFAULT}" \
-    --arg baml_max_chars "${BOUNDARY_MAX_LOG_CHUNK_CHARS_DEFAULT}"
+    "${MCP_JQ_ARGS[@]}"
   log_ok "updated Gemini: ${GEMINI_CFG}"
 }
 
@@ -296,7 +279,7 @@ sync_catalog() {
     log_skip "personal-mcp not found at ${MCP_BIN}; skipping catalog sync"
     return 0
   fi
-  "${MCP_BIN}" sync --global && log_ok "synced catalog to ~/.claude/" || log_warn "catalog sync failed; continuing"
+  "${MCP_BIN}" sync --global && log_ok "synced catalog to ${HOME_DIR}/.claude/" || log_warn "catalog sync failed; continuing"
 }
 
 # ---------------------------------------------------------------------------
