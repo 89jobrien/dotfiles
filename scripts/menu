@@ -9,23 +9,23 @@ TAG="menu"
 main_menu() {
   local choice
   choice=$(gum choose \
-    "🚀 Run Scripts" \
-    "⚙️  Run Tasks (mise)" \
-    "📖 View Documentation" \
-    "🔍 Explore Repository" \
-    "📊 Git Status" \
-    "🛠️  Utilities" \
-    "❌ Exit" \
-    --header "📦 Dotfiles Menu")
+    "Run Scripts" \
+    "Run Tasks (mise)" \
+    "View Documentation" \
+    "Explore Repository" \
+    "Git Status" \
+    "Utilities" \
+    "Exit" \
+    --header "Dotfiles Menu")
 
   case "$choice" in
-    "🚀 Run Scripts") scripts_menu ;;
-    "⚙️  Run Tasks (mise)") tasks_menu ;;
-    "📖 View Documentation") docs_menu ;;
-    "🔍 Explore Repository") explore_menu ;;
-    "📊 Git Status") git_menu ;;
-    "🛠️  Utilities") utils_menu ;;
-    "❌ Exit") log "Goodbye!"; exit 0 ;;
+    "Run Scripts") scripts_menu ;;
+    "Run Tasks (mise)") tasks_menu ;;
+    "View Documentation") docs_menu ;;
+    "Explore Repository") explore_menu ;;
+    "Git Status") git_menu ;;
+    "Utilities") utils_menu ;;
+    "Exit") log "Goodbye!"; exit 0 ;;
     *) log_err "Invalid choice"; main_menu ;;
   esac
 }
@@ -142,30 +142,30 @@ docs_menu() {
 explore_menu() {
   local choice
   choice=$(gum choose \
-    "📁 List top-level directories" \
-    "📜 List all scripts" \
-    "📋 List all stow packages" \
-    "📊 Show file counts by type" \
+    "List top-level directories" \
+    "List all scripts" \
+    "List all stow packages" \
+    "Show file counts by type" \
     "« Back" \
     --header "Explore Repository")
 
   case "$choice" in
-    "📁 List top-level directories")
+    "List top-level directories")
       ls -la "$ROOT_DIR" | grep "^d" | awk '{print $NF}' | sort
       read -p "Press enter to continue..."
       explore_menu
       ;;
-    "📜 List all scripts")
+    "List all scripts")
       find "$ROOT_DIR/scripts" -type f -executable | sort | xargs -I {} basename {}
       read -p "Press enter to continue..."
       explore_menu
       ;;
-    "📋 List all stow packages")
+    "List all stow packages")
       ls -1 "$ROOT_DIR" | grep -v "^\." | grep -v "^scripts$" | sort
       read -p "Press enter to continue..."
       explore_menu
       ;;
-    "📊 Show file counts by type")
+    "Show file counts by type")
       echo "=== File counts by extension ==="
       find "$ROOT_DIR" -type f ! -path '*/\.*' ! -path '*/.git/*' | sed 's/.*\.//' | sort | uniq -c | sort -rn | head -20
       read -p "Press enter to continue..."
@@ -178,32 +178,32 @@ explore_menu() {
 git_menu() {
   local choice
   choice=$(gum choose \
-    "📊 Status" \
-    "📝 Last 10 commits" \
-    "🔀 Current branch info" \
-    "🆕 Create new branch" \
+    "Status" \
+    "Last 10 commits" \
+    "Current branch info" \
+    "Create new branch" \
     "« Back" \
     --header "Git Operations")
 
   case "$choice" in
-    "📊 Status")
+    "Status")
       git -C "$ROOT_DIR" status
       read -p "Press enter to continue..."
       git_menu
       ;;
-    "📝 Last 10 commits")
+    "Last 10 commits")
       git -C "$ROOT_DIR" log --oneline -10
       read -p "Press enter to continue..."
       git_menu
       ;;
-    "🔀 Current branch info")
+    "Current branch info")
       echo "Current branch: $(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
       echo "Tracking: $(git -C "$ROOT_DIR" rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo 'none')"
       git -C "$ROOT_DIR" log --oneline -1
       read -p "Press enter to continue..."
       git_menu
       ;;
-    "🆕 Create new branch")
+    "Create new branch")
       local branch_name
       branch_name=$(gum input --placeholder "Branch name (e.g., feature/my-feature)")
       if [[ -n "$branch_name" ]]; then
@@ -220,30 +220,30 @@ git_menu() {
 utils_menu() {
   local choice
   choice=$(gum choose \
-    "🏥 Run doctor check" \
-    "🚨 Check for drift" \
-    "🔐 Check secrets" \
-    "🔄 Validate hooks" \
+    "Run doctor check" \
+    "Check for drift" \
+    "Check secrets" \
+    "Validate hooks" \
     "« Back" \
     --header "Utility Commands")
 
   case "$choice" in
-    "🏥 Run doctor check")
+    "Run doctor check")
       mise run doctor || true
       read -p "Press enter to continue..."
       utils_menu
       ;;
-    "🚨 Check for drift")
+    "Check for drift")
       mise run drift || true
       read -p "Press enter to continue..."
       utils_menu
       ;;
-    "🔐 Check secrets")
+    "Check secrets")
       mise run secrets-check || true
       read -p "Press enter to continue..."
       utils_menu
       ;;
-    "🔄 Validate hooks")
+    "Validate hooks")
       if [[ -f "$ROOT_DIR/scripts/setup-hooks.sh" ]]; then
         bash "$ROOT_DIR/scripts/setup-hooks.sh"
         log_ok "Hooks validation complete"

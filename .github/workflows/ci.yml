@@ -16,7 +16,7 @@ jobs:
 
       - name: Syntax check all scripts
         run: |
-          echo "🔍 Checking shell script syntax..."
+          echo "Checking shell script syntax..."
           error=0
           for script in scripts/*.sh scripts/lib/*.sh; do
             if ! bash -n "$script" 2>/dev/null; then
@@ -25,7 +25,7 @@ jobs:
             fi
           done
           if [ $error -eq 0 ]; then
-            echo "✅ All scripts passed syntax check"
+            echo "All scripts passed syntax check"
           else
             exit 1
           fi
@@ -35,11 +35,11 @@ jobs:
 
       - name: Run core library tests
         run: |
-          echo "🧪 Running essential library tests..."
+          echo "Running essential library tests..."
           # Test the most critical libraries
           bats tests/lib/cmd.bats
-          bats tests/lib/log.bats 2>/dev/null || echo "⚠️  log.bats not found, skipping"
-          echo "✅ Core tests passed"
+          bats tests/lib/log.bats 2>/dev/null || echo "  log.bats not found, skipping"
+          echo "Core tests passed"
 
   shellcheck-critical:
     name: Shellcheck (Critical Issues)
@@ -51,6 +51,6 @@ jobs:
       - name: Run shellcheck on critical scripts
         uses: ludeeus/action-shellcheck@master
         with:
-          scandir: './scripts'
+          scandir: "./scripts"
           severity: error
-          ignore_paths: 'scripts/post-bootstrap.local.example.sh'
+          ignore_paths: "scripts/post-bootstrap.local.example.sh"

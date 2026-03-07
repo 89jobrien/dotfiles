@@ -406,3 +406,5 @@ mnpm() { command npm "$@"; }
 
 # Mutable local overrides (not managed by stow repo)
 [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
+export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
+export JAVA_HOME="/opt/homebrew/opt/openjdk"
