@@ -37,6 +37,29 @@
 
 [color]
 	ui = auto
+
+[gitflow "feature.finish"]
+	no-ff = true
+	keep = false
+	fetch = true
+
+[gitflow "release.finish"]
+	no-ff = true
+	tag = true
+	keep = false
+	fetch = true
+
+[gitflow "hotfix.finish"]
+	no-ff = true
+	tag = true
+	keep = false
+	fetch = true
+
+[gitflow "chore.finish"]
+	no-ff = true
+	keep = false
+	fetch = true
+
 [coderabbit]
 	machineId = cli/35d6eb1759d74bd48409c39e2eb4802c
 [credential "https://github.com"]

@@ -108,7 +108,8 @@ install_opencode_if_missing() {
 configure_claude_desktop() {
   merge_json_config "${CLAUDE_DESKTOP_CFG}" '
     .mcpServers = (.mcpServers // {}) |
-    .mcpServers.personal = {
+    del(.mcpServers.personal) |
+    .mcpServers["personal-mcp"] = {
       "type": "stdio",
       "command": $cmd,
       "args": [],
@@ -137,11 +138,25 @@ configure_claude_code() {
     .env.BOUNDARY_MAX_LOG_CHUNK_CHARS = (.env.BOUNDARY_MAX_LOG_CHUNK_CHARS // $baml_max_chars) |
     .env.MCP_ENV_FILE = (.env.MCP_ENV_FILE // $mcp_env_file) |
     .permissions = (.permissions // {}) |
-    .permissions.defaultMode = (.permissions.defaultMode // "acceptEdits")
+    .permissions.defaultMode = (.permissions.defaultMode // "acceptEdits") |
+    .mcpServers = (.mcpServers // {}) |
+    .mcpServers["personal-mcp"] = {
+      "type": "stdio",
+      "command": $cmd,
+      "args": [],
+      "env": {
+        "MCP_CTX_DIR": $mcp_ctx,
+        "MCP_ENV_FILE": $mcp_env_file,
+        "BAML_LOG": $baml_log,
+        "BOUNDARY_MAX_LOG_CHUNK_CHARS": $baml_max_chars
+      }
+    }
   ' \
     --arg baml_log "${BAML_LOG_DEFAULT}" \
     --arg baml_max_chars "${BOUNDARY_MAX_LOG_CHUNK_CHARS_DEFAULT}" \
-    --arg mcp_env_file "${MCP_ENV_FILE_PATH}"
+    --arg mcp_env_file "${MCP_ENV_FILE_PATH}" \
+    --arg cmd "${MCP_BIN}" \
+    --arg mcp_ctx "${MCP_CTX_DIR}"
   log_ok "updated Claude Code: ${CLAUDE_CODE_CFG}"
 }
 
@@ -276,6 +291,14 @@ configure_gemini() {
   log_ok "updated Gemini: ${GEMINI_CFG}"
 }
 
+sync_catalog() {
+  if [[ ! -x "${MCP_BIN}" ]]; then
+    log_skip "personal-mcp not found at ${MCP_BIN}; skipping catalog sync"
+    return 0
+  fi
+  "${MCP_BIN}" sync --global && log_ok "synced catalog to ~/.claude/" || log_warn "catalog sync failed; continuing"
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -287,6 +310,7 @@ main() {
   install_opencode_if_missing
   configure_claude_desktop
   configure_claude_code
+  sync_catalog
   configure_cursor
   configure_zed
   configure_opencode

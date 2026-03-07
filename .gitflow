@@ -1,0 +1,44 @@
+[gitflow]
+	version = 1.0
+
+[gitflow "branch.main"]
+	type = base
+
+[gitflow "branch.feature"]
+	type = topic
+	parent = main
+	prefix = feature/
+	upstreamstrategy = merge
+	downstreamstrategy = rebase
+
+[gitflow "branch.hotfix"]
+	type = topic
+	parent = main
+	prefix = hotfix/
+	upstreamstrategy = merge
+	downstreamstrategy = merge
+	tag = true
+	tagprefix = v
+
+[gitflow "branch.chore"]
+	type = topic
+	parent = main
+	prefix = chore/
+	upstreamstrategy = merge
+	downstreamstrategy = rebase
+
+[gitflow "feature.finish"]
+	no-ff = true
+	keep = false
+	fetch = true
+
+[gitflow "hotfix.finish"]
+	no-ff = true
+	tag = true
+	keep = false
+	fetch = true
+
+[gitflow "chore.finish"]
+	no-ff = true
+	keep = false
+	fetch = true
