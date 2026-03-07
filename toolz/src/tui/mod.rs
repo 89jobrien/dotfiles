@@ -4,6 +4,7 @@ pub mod screens;
 
 use anyhow::Result;
 use app::App;
+use crate::observability::LogBuffer;
 use crossterm::{
     event::{self, Event, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -13,14 +14,14 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 use std::time::Duration;
 
-pub fn run_tui() -> Result<()> {
+pub fn run_tui(log_buffer: LogBuffer) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     stdout.execute(EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new();
+    let mut app = App::new(log_buffer);
     let result = run_loop(&mut terminal, &mut app);
 
     disable_raw_mode()?;

@@ -5,7 +5,9 @@ pub mod sys;
 
 use crate::cli::Commands;
 use anyhow::Result;
+use tracing::instrument;
 
+#[instrument(skip_all)]
 pub async fn dispatch(cmd: Commands) -> Result<()> {
     match cmd {
         Commands::Sys(args) => sys::run(args).await,

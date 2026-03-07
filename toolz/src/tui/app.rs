@@ -1,3 +1,5 @@
+use crate::observability::LogBuffer;
+
 /// Active screen in the TUI.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Screen {
@@ -6,6 +8,7 @@ pub enum Screen {
     Log,
     AiChat,
     Db,
+    Traces,
 }
 
 /// Shared application state threaded through all screens.
@@ -41,6 +44,11 @@ pub struct App {
     pub db_query_input: String,
     pub db_results: Vec<String>,
     pub db_focus: DbFocus,
+
+    // Traces screen
+    pub log_buffer: LogBuffer,
+    pub logs_scroll: usize,
+    pub logs_filter: LogsFilter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -63,8 +71,47 @@ pub struct SysItem {
     pub done: Option<bool>, // None = not run, Some(true/false) = ok/failed
 }
 
+/// Filter for which log levels to show in the Traces screen.
+#[derive(Debug, Clone, PartialEq)]
+pub enum LogsFilter {
+    All,
+    Info,
+    Warn,
+    Error,
+}
+
+impl LogsFilter {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::All => "ALL",
+            Self::Info => "INFO+",
+            Self::Warn => "WARN+",
+            Self::Error => "ERROR",
+        }
+    }
+
+    pub fn matches(&self, level: tracing::Level) -> bool {
+        use tracing::Level;
+        match self {
+            Self::All => true,
+            Self::Info => matches!(level, Level::INFO | Level::WARN | Level::ERROR),
+            Self::Warn => matches!(level, Level::WARN | Level::ERROR),
+            Self::Error => level == Level::ERROR,
+        }
+    }
+
+    pub fn next(&self) -> Self {
+        match self {
+            Self::All => Self::Info,
+            Self::Info => Self::Warn,
+            Self::Warn => Self::Error,
+            Self::Error => Self::All,
+        }
+    }
+}
+
 impl App {
-    pub fn new() -> Self {
+    pub fn new(log_buffer: LogBuffer) -> Self {
         let cfg = crate::config::load().unwrap_or_default();
         let db_connections = cfg
             .db
@@ -77,7 +124,13 @@ impl App {
             screen: Screen::Main,
             should_quit: false,
             main_selected: 0,
-            main_items: vec!["sys  — system maintenance", "log  — log analysis", "ai   — AI chat / RAG", "db   — database management"],
+            main_items: vec![
+                "sys     — system maintenance",
+                "log     — log file analysis",
+                "ai      — AI chat / RAG",
+                "db      — database management",
+                "traces  — live tracing output",
+            ],
             sys_selected: 0,
             sys_items: vec![
                 SysItem { label: "brew", selected: true, done: None },
@@ -101,6 +154,9 @@ impl App {
             db_query_input: String::new(),
             db_results: Vec::new(),
             db_focus: DbFocus::ConnectionList,
+            log_buffer,
+            logs_scroll: 0,
+            logs_filter: LogsFilter::All,
         }
     }
 

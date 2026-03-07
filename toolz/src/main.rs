@@ -1,9 +1,9 @@
 use clap::Parser;
-use tracing_subscriber::EnvFilter;
 
 mod cli;
 mod commands;
 mod config;
+mod observability;
 mod output;
 mod tui;
 
@@ -11,16 +11,20 @@ use cli::Cli;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .with_target(false)
-        .init();
-
     let cli = Cli::parse();
 
     match cli.command {
-        None => tui::run_tui()?,
-        Some(cmd) => commands::dispatch(cmd).await?,
+        None => {
+            // TUI mode: no stdout/stderr tracing — would corrupt the terminal.
+            // Logs go to file + ring buffer (displayed on the Traces screen).
+            let (log_buffer, _tracing_guard) = observability::init_tui()?;
+            tui::run_tui(log_buffer)?;
+        }
+        Some(cmd) => {
+            // CLI mode: file log + compact stderr output.
+            let _tracing_guard = observability::init_cli()?;
+            commands::dispatch(cmd).await?;
+        }
     }
 
     Ok(())
