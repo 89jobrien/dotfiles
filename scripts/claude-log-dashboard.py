@@ -1086,23 +1086,21 @@ HTML_TEMPLATE = """<!doctype html>
       <div class="card kpi"><div class="k">Combined Cost</div><div class="v-cost" id="cost-combined">-</div></div>
     </div>
 
-    <div class="main">
-      <div class="card table-card">
-        <h2>Claude Code — Cost by Model</h2>
-        <p class="note">Pricing via pydantic/genai-prices. Cache read/write tokens are billed at reduced rates.</p>
-        <table id="cost-table">
-          <thead><tr><th>Model</th><th>Calls</th><th>Input</th><th>Output</th><th>Cache Read</th><th>Cache Write</th><th>Cost (USD)</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="card table-card">
-        <h2>Codex — Cost by Model</h2>
-        <p class="note">Read from ~/.codex/sessions. Cached input tokens billed at cache_read rate.</p>
-        <table id="codex-cost-table">
-          <thead><tr><th>Model</th><th>Events</th><th>Input</th><th>Output</th><th>Cached</th><th>Reasoning</th><th>Cost (USD)</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
+    <div class="card table-card">
+      <h2>Claude Code — Cost by Model</h2>
+      <p class="note">Pricing via pydantic/genai-prices. Cache read/write tokens are billed at reduced rates.</p>
+      <table id="cost-table">
+        <thead><tr><th>Model</th><th>Calls</th><th>Input</th><th>Output</th><th>Cache Read</th><th>Cache Write</th><th>Cost (USD)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card table-card">
+      <h2>Codex — Cost by Model</h2>
+      <p class="note">Read from ~/.codex/sessions. Cached input tokens billed at cache_read rate.</p>
+      <table id="codex-cost-table">
+        <thead><tr><th>Model</th><th>Events</th><th>Input</th><th>Output</th><th>Cached</th><th>Reasoning</th><th>Cost (USD)</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
 
     <!-- ── Tool Activity ── -->
