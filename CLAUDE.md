@@ -29,9 +29,33 @@ mise run dev-tools       # cargo/bun tool installs
 
 # Secrets
 mise run secrets-check   # verify no plaintext secrets staged
+
+# Testing & quality
+mise run test            # run all bats unit tests
+mise run test-lib        # run library tests only (tests/lib/*.bats)
+mise run shellcheck      # shellcheck all scripts in scripts/
+
+# toolz crate
+mise run toolz-install   # build + install toolz to ~/.local/bin/toolz
+mise run toolz-dev       # cargo build (no install)
+
+# Interactive
+mise run menu            # interactive TUI to explore and run commands
 ```
 
 Three equivalent task runners: `mise run <task>` (interactive), `just <recipe>` (automation/agents), `make <target>` (compat wrapper). Task definitions live in `.mise.toml`, `Justfile`, and `Makefile` respectively.
+
+## Issue Tracking
+
+Uses `bd` (beads) for issue tracking. See `AGENTS.md` for the full agent workflow including mandatory push-before-done rules.
+
+```bash
+bd ready              # find available work
+bd show <id>          # view issue details
+bd update <id> --status in_progress
+bd close <id>
+bd sync               # sync with git
+```
 
 ## Architecture
 
@@ -40,11 +64,12 @@ Three equivalent task runners: `mise run <task>` (interactive), `just <recipe>` 
 `install.sh` delegates to `pj dot install` when `pj` is available, otherwise runs `scripts/bootstrap.sh` directly. Bootstrap executes in order:
 
 1. `setup-zerobrew.sh` (pre-homebrew fast companion)
-2. `zerobrew` (`zb`) package install (`zb bundle --file Brewfile.macos/Brewfile.linux`); falls back to `brew bundle`, then `apt` on Linux
-3. `mise install` (language runtimes from `.mise.toml`)
-4. Stow symlinks (packages from `config/stow-packages.txt`)
-5. Post-hooks in section order: Shell (git-config + oh-my-zsh) → Secrets → Nix → macOS → AI Tools → Maestro → Companion Repos → Dev Tools → Editor → Local (if `scripts/post-bootstrap.local.sh` exists)
-6. Summary table printed at end
+2. `zerobrew` (`zb`) package install (`zb bundle install --file Brewfile.macos/Brewfile.linux`); falls back to `brew bundle`, then `apt` on Linux
+3. `setup-npm-tools.sh` (npm packages via standard Homebrew — runs immediately after packages)
+4. `mise install` (language runtimes from `.mise.toml`)
+5. Stow symlinks (packages from `config/stow-packages.txt`)
+6. Post-hooks in section order: Shell (`setup-git-config.sh` then `setup-oh-my-zsh.sh`) → Secrets → Nix → macOS → AI Tools (`setup-ai-tools.sh` + `setup-hooks.sh`) → Maestro → Companion Repos → Dev Tools → Editor → Local (if `scripts/post-bootstrap.local.sh` exists)
+7. Summary table printed at end
 
 ### `brew()` Shell Shim
 
@@ -60,6 +85,18 @@ All scripts source `scripts/lib/log.sh` and set `TAG="name"` at the top. Availab
 - `ROOT_DIR` always points to the repo root via `$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)`
 - Post-hook scripts exit 0 on skip (not failure) so bootstrap continues
 - Bootstrap wraps each hook in `run_hook "Name" script` which captures exit codes for the summary
+
+**Library source order** (log.sh must be first; others as needed):
+1. `log.sh` — logging (required; others may call it)
+2. `cmd.sh` — `has_cmd`, `require_cmd`, `check_cmd`, `ensure_cmd`
+3. `pkg.sh` — package manager detection
+4. `dryrun.sh` — `set_dryrun_mode`, `dryrun_exec` (for destructive ops)
+5. `json.sh` — `merge_json_config` for jq-based read-modify-write
+6. `launchd.sh` — macOS service management (`launchd_start`, `launchd_stop`, `launchd_status`)
+7. `obfuscate.sh` — secret redaction (`obfuscate_text`, `obfuscate_file`); auto-used by `log.sh` bootstrap output
+8. `common.sh` — shared utility functions
+
+See `SCRIPTS.md` for the full library reference and script template.
 
 ### Managed vs Local Layer
 
@@ -81,10 +118,7 @@ Single script configures 7 tools: Claude Desktop, Claude Code, Cursor, Zed, Open
 
 ### Nix Flake (`flake.nix`)
 
-Declarative CLI tools layer that sits alongside Homebrew. Installs a single `buildEnv` profile
-entry bundling ~30 CLI tools via `nix profile install .#default`. The setup script
-(`scripts/setup-nix.sh`) installs Nix itself (Determinate Systems installer) then installs or
-upgrades the profile. Runs as a bootstrap post-hook after Secrets.
+Declarative CLI tools layer that sits alongside Homebrew. Installs a single `buildEnv` profile entry bundling ~30 CLI tools via `nix profile install .#default`. The setup script (`scripts/setup-nix.sh`) installs Nix itself (Determinate Systems installer) then installs or upgrades the profile. Runs as a bootstrap post-hook after Secrets.
 
 ```bash
 mise run nix-install     # install Nix + apply flake packages
@@ -92,13 +126,13 @@ mise run nix-update      # update nixpkgs lock + reinstall
 mise run nix-check       # verify profile + flake
 ```
 
-To add a package: find the nixpkgs attr name (`nix search nixpkgs <term>`), add to
-`cliPackages` in `flake.nix`, run `mise run nix-install`. To list installed binaries:
-`ls ~/.nix-profile/bin/`.
+To add a package: find the nixpkgs attr name (`nix search nixpkgs <term>`), add to `cliPackages` in `flake.nix`, run `mise run nix-install`. To list installed binaries: `ls ~/.nix-profile/bin/`.
 
-Brewfile entries tagged `# [nix-batch-1]` are the first migration wave (kept in both during
-transition). What stays in Brew: casks, container stack, macOS-only tools, tools not in nixpkgs,
-and runtimes managed by mise.
+Brewfile entries tagged `# [nix-batch-1]` are the first migration wave (kept in both during transition). What stays in Brew: casks, container stack, macOS-only tools, tools not in nixpkgs, and runtimes managed by mise.
+
+### toolz Crate (`toolz/`)
+
+Embedded Rust crate at `toolz/` — personal swiss-army CLI (sys, log, ai, db subcommands). Uses ratatui for TUI screens, tokio for async, fastembed for ONNX-based RAG. Installed to `~/.local/bin/toolz` via `mise run toolz-install`. First build is slow due to fastembed's ONNX transitive deps.
 
 ### Companion Projects
 
@@ -113,8 +147,7 @@ These projects live outside the dotfiles repo but depend on tools the dotfiles p
 
 All four are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh`.
 
-Runtime runtimes (Go, Rust) are managed by mise. CLI tools (`tmux`, `just`, `jq`, etc.) come
-from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
+Runtime runtimes (Go, Rust) are managed by mise. CLI tools (`tmux`, `just`, `jq`, etc.) come from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
 
 ## Tooling Preferences
 
@@ -128,8 +161,10 @@ from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
 ## Modifying Scripts
 
 When adding a new post-hook script:
-1. Source `scripts/lib/log.sh` and set `TAG`
+1. Source `scripts/lib/log.sh` (and other libs as needed) and set `TAG`
 2. Add a `run_hook` call in `scripts/bootstrap.sh` under the appropriate section
 3. Add a mise task in `.mise.toml` and matching entries in `Justfile`/`Makefile`
 
 When modifying AI tool configs: all 7 tools are configured in `setup-ai-tools.sh`. Don't create separate per-tool scripts.
+
+When adding shared library functions: add bats tests in `tests/lib/` and update `scripts/lib/README.md`.

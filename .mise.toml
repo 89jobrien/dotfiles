@@ -320,6 +320,18 @@ run = "mkdir -p ~/.local/state/vector && vector --config vector/.config/vector/v
 description = "Serve local Claude logs dashboard"
 run = "python3 ./scripts/claude-log-dashboard.py"
 
+[tasks.logs-sessions]
+description = "List Claude Code sessions with tool/token stats"
+run = "python3 ./scripts/claude-sessions.py sessions"
+
+[tasks.logs-tools]
+description = "Tool call frequency across all Claude Code sessions"
+run = "python3 ./scripts/claude-sessions.py tools"
+
+[tasks.logs-agents]
+description = "Subagent dispatch breakdown by type"
+run = "python3 ./scripts/claude-sessions.py agents --detail"
+
 [tasks.logs-central-retention]
 description = "Apply retention/compression to centralized Claude logs"
 run = "./scripts/claude-log-retention.sh"

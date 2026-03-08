@@ -212,6 +212,8 @@ Foundation layer providing reusable utilities for all scripts:
 | `dryrun.sh` | Dry-run mode | `set_dryrun_mode`, `is_dryrun`, `dryrun_exec` | 3 scripts |
 | `json.sh` | JSON manipulation | `merge_json_config`, `read_json_value`, `validate_json` | AI tools |
 | `launchd.sh` | macOS services | `launchd_start`, `launchd_stop`, `launchd_status`, `launchd_logs` | 3 service scripts |
+| `obfuscate.sh` | Secret redaction | `obfuscate_text`, `obfuscate_file`, `obfuscate_lines` | `log.sh` bootstrap output |
+| `common.sh` | Shared utilities | `is_non_negative_int`, misc helpers | Retention, service scripts |
 
 **Design Principles:**
 - Single responsibility per library
@@ -268,9 +270,10 @@ These projects live outside the dotfiles repo but depend on tools the dotfiles p
 |---------|------|------|----------|---------------------|
 | personal-mcp | `~/dev/personal-mcp` | `89jobrien/personal-mcp` | Rust | `cargo`/`rust` (mise), `baml-cli` (dev-tools), `jq`, `just` (nix) |
 | dumcp | `~/dev/dumcp` | `89jobrien/dumcp` | Go | `go` (mise) |
+| obfsck | `~/dev/obfsck` | `89jobrien/obfsck` | Rust | `cargo`/`rust` (mise) |
 | maestro-dev | `~/maestro-dev` | `89jobrien/maestro-dev` | Shell/Docker | `docker`/`colima` (brew), `tmux`, `just` (nix) |
 
-All three are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh` during the Companion Repos post-hook phase.
+All four are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh` during the Companion Repos post-hook phase.
 
 Runtime toolchains (Go, Rust) are managed by mise. CLI tools (`just`, `jq`, `tmux`, etc.) come from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
 
@@ -522,32 +525,56 @@ Explicit and minimal:
 
 ## Centralized AI logs (Vector)
 
-- Enable local `vector` stow package via `config/stow-packages.local.txt`.
-- Sources: Claude Code, Codex, OpenCode, Gemini CLI.
-- The Vector config writes normalized logs to:
-  - `~/logs/ai/<agent>/<YYYY-MM-DD>/<session>/events.jsonl`
-  - `agent` is `claude`, `codex`, `opencode`, or `gemini`
-- Useful tasks:
-  - `mise run logs-central-validate`
-  - `mise run logs-central-run`
-  - `mise run logs-central-dashboard` (serves `http://127.0.0.1:8765`)
-  - `mise run logs-central-service-install`
-  - `mise run logs-central-service-status`
-  - `mise run logs-central-service-logs`
-  - `mise run logs-central-service-stop`
-  - `mise run logs-central-service-uninstall`
-  - `mise run logs-central-retention-service-install`
-  - `mise run logs-central-retention-service-status`
-  - `mise run logs-central-retention-service-run-now`
-  - `mise run logs-central-retention-service-logs`
-  - `mise run logs-central-retention-service-uninstall`
-  - `mise run logs-central-retention`
-  - `mise run logs-central-retention-dry`
-- Retention defaults are customizable with env vars:
-  - `AI_LOG_RETENTION_DAYS` (default: `180`)
-  - `AI_LOG_COMPRESS_AFTER_DAYS` (default: `14`)
-  - `AI_LOG_ROOT` (default: `~/logs/ai`)
-  - Scheduler time vars: `VECTOR_RETENTION_HOUR` and `VECTOR_RETENTION_MINUTE`
+Enable via local stow package in `config/stow-packages.local.txt`. Vector runs as a launchd service and aggregates logs from 8 sources into daily JSONL shards.
+
+**Sources collected:**
+
+| Source | Path | Format |
+|--------|------|--------|
+| Claude Code | `~/logs/claude/**/*.jsonl` | Structured JSONL (assistant/user/progress events) |
+| Codex | `~/.codex/sessions/**/*.jsonl` | Session events with token counts |
+| OpenCode | `~/.local/state/opencode/prompt-history.jsonl` | Prompt history |
+| OpenCode sessions | `~/.local/share/opencode/log/*.log` | Richer session logs |
+| Copilot | `~/.copilot/session-state/**/*.jsonl` | Tool execution events |
+| Cursor audit | `~/.cursor/audit/audit-*.log` | Per-tool audit lines |
+| Cursor cost | `~/.cursor/cost/cost.log` | Per-tool token counts |
+| Cursor diary | `~/.cursor/diary/session-*.md` | Per-session tool usage summaries |
+
+**Sink:** `~/logs/ai/vector/YYYY-MM-DD.jsonl` (daily rotation, gzip after 14 days, delete after 180 days).
+
+**Service management:**
+```bash
+mise run logs-central-service-install    # install + start launchd service
+mise run logs-central-service-status     # check service status
+mise run logs-central-service-logs       # tail stdout/stderr
+mise run logs-central-service-restart    # restart after config changes
+mise run logs-central-service-uninstall  # remove service
+mise run logs-central-validate           # validate vector.yaml before applying
+```
+
+**Dashboard** (`scripts/claude-log-dashboard.py`):
+```bash
+mise run logs-central-dashboard   # serves http://127.0.0.1:8765
+```
+Includes token cost analysis using [pydantic/genai-prices](https://github.com/pydantic/genai-prices) pricing data. Shows Claude Code cost by model (with cache read/write breakdown), Codex token totals, Cursor tokens by tool.
+
+**Session analysis** (`scripts/claude-sessions.py`):
+```bash
+mise run logs-sessions                         # list sessions with tool counts and token stats
+mise run logs-tools                            # tool call frequency (main vs sidechain)
+mise run logs-agents                           # subagent dispatch breakdown by type
+python3 scripts/claude-sessions.py tree <id>  # full tool+subagent tree for a session
+python3 scripts/claude-sessions.py show <id>  # turn-by-turn timeline
+```
+Reconstructs subagent relationships from `isSidechain`/`parentUuid` fields. Agent dispatches appear inline in the timeline with `subagent_type`, description, and child tool call summary.
+
+**Retention:**
+```bash
+mise run logs-central-retention           # apply retention/compression
+mise run logs-central-retention-dry       # dry run
+mise run logs-central-retention-service-install   # daily launchd schedule
+```
+Customizable via env vars: `AI_LOG_RETENTION_DAYS` (default: 180), `AI_LOG_COMPRESS_AFTER_DAYS` (default: 14), `AI_LOG_ROOT`, `VECTOR_LOG_ROOT`.
 
 ## Documentation
 

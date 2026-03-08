@@ -5,15 +5,32 @@
     "context": ".."
   },
   "remoteUser": "vscode",
-  "postCreateCommand": "./scripts/doctor.sh || true",
+  "postCreateCommand": "mise trust && mise install && ./scripts/doctor.sh || true",
+  "remoteEnv": {
+    "PATH": "/usr/local/bin:/home/vscode/.local/bin:/home/vscode/.local/share/mise/shims:${containerEnv:PATH}"
+  },
   "customizations": {
     "vscode": {
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": { "path": "/usr/bin/zsh" }
+        },
+        "editor.formatOnSave": true,
+        "[shellscript]": {
+          "editor.defaultFormatter": "foxundermoon.shell-format"
+        }
       },
       "extensions": [
         "tamasfe.even-better-toml",
-        "ms-vscode.makefile-tools"
+        "ms-vscode.makefile-tools",
+        "skellock.just",
+        "mads-hartmann.bash-ide-vscode",
+        "foxundermoon.shell-format",
+        "timonwong.shellcheck",
+        "rust-lang.rust-analyzer",
+        "ms-python.python",
+        "charliermarsh.ruff"
       ]
     }
   }

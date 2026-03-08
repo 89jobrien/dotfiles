@@ -3,11 +3,16 @@
 # Managed by: scripts/vector-service.sh
 #
 # Sources:
-#   - claude_code_logs: Claude Code session logs
-#   - script_logs: Dotfiles bootstrap/maintenance scripts (JSON format)
+#   - claude_code_logs:  Claude Code session logs (~/.claude/logs/ + ~/logs/claude/)
+#   - codex_logs:        Codex session JSONL (~/.codex/sessions/**/*.jsonl)
+#   - opencode_logs:     OpenCode prompt history (~/.local/state/opencode/prompt-history.jsonl)
+#   - copilot_logs:      Copilot session-state JSONL (~/.copilot/session-state/**/*.jsonl)
+#   - cursor_audit_logs: Cursor audit log (~/.cursor/audit/audit-*.log)
+#   - cursor_cost_logs:  Cursor cost/token log (~/.cursor/cost/cost.log)
+#   - script_logs:       Dotfiles bootstrap scripts (LOG_FORMAT=json required)
 #
 # Sinks:
-#   - file_sink: Write to ~/logs/ai/vector/ with rotation and compression
+#   - file_sink: Write to ~/logs/ai/vector/ with daily rotation
 #
 # Documentation: https://vector.dev/docs/
 
@@ -19,13 +24,79 @@ data_dir: "${HOME}/.local/state/vector"
 # ============================================================================
 
 sources:
-  # Claude Code logs from ~/.claude/logs/
+  # Claude Code session logs — actual path is ~/logs/claude/, not ~/.claude/logs/
   claude_code_logs:
     type: file
     include:
+      - "${HOME}/logs/claude/**/*.jsonl"
       - "${HOME}/.claude/logs/**/*.jsonl"
     read_from: beginning
     max_line_bytes: 1048576  # 1MB max line size for large events
+
+  # Codex raw session events — includes token counts, model info, tool calls
+  codex_logs:
+    type: file
+    include:
+      - "${HOME}/.codex/sessions/**/*.jsonl"
+    read_from: end
+    max_line_bytes: 524288  # 512KB
+
+  # OpenCode prompt history
+  opencode_logs:
+    type: file
+    include:
+      - "${HOME}/.local/state/opencode/prompt-history.jsonl"
+    read_from: end
+    max_line_bytes: 102400
+
+  # OpenCode richer session logs — plaintext with directory/project context
+  # Filename encodes session timestamp (e.g. 2026-03-04T134245.log)
+  opencode_session_logs:
+    type: file
+    include:
+      - "${HOME}/.local/share/opencode/log/*.log"
+    read_from: end
+    file_key: "_file"
+    max_line_bytes: 102400
+
+  # Copilot session-state events
+  copilot_logs:
+    type: file
+    include:
+      - "${HOME}/.copilot/session-state/**/*.jsonl"
+    read_from: end
+    max_line_bytes: 524288
+
+  # Cursor session diary — one markdown file per session, e.g. session-2026-03-08-120000.md
+  # Each file is a single block; multiline aggregates all lines into one event per file.
+  cursor_diary_logs:
+    type: file
+    include:
+      - "${HOME}/.cursor/diary/session-*.md"
+    read_from: beginning
+    file_key: "_file"
+    max_line_bytes: 65536
+    multiline:
+      start_pattern: "^# Session Diary"
+      mode: halt_before
+      condition_pattern: "^# Session Diary"
+      timeout_ms: 1000
+
+  # Cursor audit log — plaintext: [date time] tool=X pattern=Y
+  cursor_audit_logs:
+    type: file
+    include:
+      - "${HOME}/.cursor/audit/audit-*.log"
+    read_from: end
+    max_line_bytes: 102400
+
+  # Cursor cost/token log — plaintext: [date time] tool=X tokens=N
+  cursor_cost_logs:
+    type: file
+    include:
+      - "${HOME}/.cursor/cost/cost.log"
+    read_from: end
+    max_line_bytes: 102400
 
   # Dotfiles script logs (JSON format from scripts/lib/log.sh)
   # Scripts must set LOG_FORMAT=json to output to this file
@@ -34,7 +105,7 @@ sources:
     include:
       - "${HOME}/logs/ai/scripts/*.jsonl"
     read_from: end
-    max_line_bytes: 102400  # 100KB
+    max_line_bytes: 102400
 
 # ============================================================================
 # Transforms - Parsing and Enrichment
@@ -51,7 +122,159 @@ transforms:
       .source = "claude-code"
       .host = get_hostname!()
 
-  # Parse script logs
+  # Parse Codex JSONL — already structured, just label and enrich
+  parse_codex_logs:
+    type: remap
+    inputs:
+      - codex_logs
+    source: |
+      parsed, err = parse_json(string!(.message))
+      if err == null {
+        . = parsed
+      }
+      .source = "codex"
+      .host = get_hostname!()
+
+  # Parse OpenCode richer session logs — plaintext, extract directory/level/service
+  parse_opencode_session_logs:
+    type: remap
+    inputs:
+      - opencode_session_logs
+    source: |
+      .source = "opencode-session"
+      .host = get_hostname!()
+      # Extract session ID from filename (e.g. 2026-03-04T134245.log → 2026-03-04T134245)
+      file_path = string(._file) ?? ""
+      parts = split(file_path, "/")
+      filename = string(parts[-1]) ?? ""
+      .session = replace(filename, ".log", "")
+      del(._file)
+      # Parse: LEVEL  timestamp  +Nms  key=value ...
+      parsed, err = parse_regex(.message, r'^(?P<level>\w+)\s+\S+\s+\+\d+ms\s+(?P<rest>.+)$')
+      if err == null {
+        .level = parsed.level
+        kv, kverr = parse_key_value(parsed.rest, field_delimiter: " ", key_value_delimiter: "=")
+        if kverr == null {
+          .service = kv.service
+          .directory = kv.directory
+          .method = kv.method
+          .path = kv.path
+          .status = kv.status
+        }
+      }
+
+  # Parse OpenCode prompt history JSONL
+  parse_opencode_logs:
+    type: remap
+    inputs:
+      - opencode_logs
+    source: |
+      parsed, err = parse_json(string!(.message))
+      if err == null {
+        . = parsed
+      }
+      .source = "opencode"
+      .host = get_hostname!()
+
+  # Parse Copilot session JSONL — structured events with type/data/timestamp
+  parse_copilot_logs:
+    type: remap
+    inputs:
+      - copilot_logs
+    source: |
+      parsed, err = parse_json(string!(.message))
+      if err == null {
+        . = parsed
+      }
+      .source = "copilot"
+      .host = get_hostname!()
+
+  # Parse Cursor audit log — plaintext: [2026-02-05 22:00:50] tool=Grep pattern=foo
+  parse_cursor_audit:
+    type: remap
+    inputs:
+      - cursor_audit_logs
+    source: |
+      .source = "cursor-audit"
+      .host = get_hostname!()
+      parsed, err = parse_regex(.message, r'^\[(?P<ts>[^\]]+)\]\s+tool=(?P<tool>\S+)(?:\s+(?P<rest>.+))?$')
+      if err == null {
+        .timestamp = parse_timestamp!(parsed.ts, "%Y-%m-%d %H:%M:%S")
+        .tool = parsed.tool
+        .details = parsed.rest
+      }
+
+  # Parse Cursor cost log — plaintext: [2026-02-05 22:00:50] tool=Grep tokens=25
+  parse_cursor_cost:
+    type: remap
+    inputs:
+      - cursor_cost_logs
+    source: |
+      .source = "cursor-cost"
+      .host = get_hostname!()
+      parsed, err = parse_regex(.message, r'^\[(?P<ts>[^\]]+)\]\s+tool=(?P<tool>\S+)\s+tokens=(?P<tokens>\d+)')
+      if err == null {
+        .timestamp = parse_timestamp!(parsed.ts, "%Y-%m-%d %H:%M:%S")
+        .tool = parsed.tool
+        .tokens = to_int!(parsed.tokens)
+      }
+
+  # Parse Cursor session diary markdown into structured events
+  parse_cursor_diary:
+    type: remap
+    inputs:
+      - cursor_diary_logs
+    source: |
+      .source = "cursor-diary"
+      .host = get_hostname!()
+
+      # Extract session timestamp from filename (session-2026-03-08-120000.md)
+      file_path = string(._file) ?? ""
+      parts = split(file_path, "/")
+      filename = string(parts[-1]) ?? ""
+      stem = replace(replace(filename, "session-", ""), ".md", "")
+      .session = stem
+
+      # Parse timestamp: YYYY-MM-DD-HHMMSS → ISO
+      ts_parsed, ts_err = parse_regex(stem, r'^(?P<date>\d{4}-\d{2}-\d{2})-(?P<hms>\d{6})$')
+      if ts_err == null {
+        iso, _e = ts_parsed.date + "T" + slice(ts_parsed.hms, 0, 2) + ":" + slice(ts_parsed.hms, 2, 4) + ":" + slice(ts_parsed.hms, 4, 6)
+        .session_started_at = iso
+      }
+      del(._file)
+
+      # Count tool calls: lines like "- ToolName: N calls"
+      tool_counts = {}
+      for_each(split(string!(.message), "\n")) -> |_i, line| {
+        m, err = parse_regex(line, r'^\s*-\s+(?P<tool>\w+):\s+(?P<n>\d+)\s+calls?')
+        if err == null {
+          tool_counts = set!(tool_counts, [m.tool], to_int!(m.n))
+        }
+      }
+      .tool_usage = tool_counts
+      .total_tool_calls = 0
+      for_each(values(tool_counts)) -> |_i, n| {
+        .total_tool_calls, _e = .total_tool_calls + n
+      }
+
+      # Collect commands run: lines inside "## Commands Run" section
+      commands = []
+      in_commands = false
+      for_each(split(string!(.message), "\n")) -> |_i, line| {
+        if contains(line, "## Commands Run") {
+          in_commands = true
+        } else if starts_with(line, "## ") {
+          in_commands = false
+        } else if in_commands {
+          m, err = parse_regex(line, r'^\s*-\s+`(?P<cmd>.+)`\s*$')
+          if err == null {
+            commands = push(commands, m.cmd)
+          }
+        }
+      }
+      .commands = commands
+
+  # Parse dotfiles script logs
   parse_script_logs:
     type: remap
     inputs:
@@ -66,6 +289,13 @@ transforms:
     type: remap
     inputs:
       - parse_claude_logs
+      - parse_codex_logs
+      - parse_opencode_logs
+      - parse_opencode_session_logs
+      - parse_copilot_logs
+      - parse_cursor_audit
+      - parse_cursor_cost
+      - parse_cursor_diary
       - parse_script_logs
     source: |
       .retention_days = 180
@@ -107,4 +337,4 @@ telemetry:
 api:
   enabled: true
   address: "127.0.0.1:9598"
-  playground: false
+  playground: true

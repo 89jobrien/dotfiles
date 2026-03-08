@@ -10,6 +10,7 @@ source "${ROOT_DIR}/scripts/lib/common.sh"
 TAG="claude-log-retention"
 
 AI_LOG_ROOT="${AI_LOG_ROOT:-${HOME}/logs/ai}"
+VECTOR_LOG_ROOT="${VECTOR_LOG_ROOT:-${HOME}/logs/ai/vector}"
 RETENTION_DAYS="${AI_LOG_RETENTION_DAYS:-180}"
 COMPRESS_AFTER_DAYS="${AI_LOG_COMPRESS_AFTER_DAYS:-14}"
 
@@ -18,7 +19,8 @@ usage() {
 Usage: claude-log-retention.sh [options]
 
 Options:
-  --root <path>                  Root directory (default: ~/logs/ai)
+  --root <path>                  Root directory for per-tool day dirs (default: ~/logs/ai)
+  --vector-root <path>           Root directory for Vector flat shards (default: ~/logs/ai/vector)
   --retention-days <n>           Days to keep daily shards (default: 180)
   --compress-after-days <n>      Compress events.jsonl after N days (default: 14)
   --dry-run                      Print actions without changing files
@@ -26,6 +28,7 @@ Options:
 
 Environment overrides:
   AI_LOG_ROOT
+  VECTOR_LOG_ROOT
   AI_LOG_RETENTION_DAYS
   AI_LOG_COMPRESS_AFTER_DAYS
 EOF
@@ -35,6 +38,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --root)
       AI_LOG_ROOT="$2"
+      shift 2
+      ;;
+    --vector-root)
+      VECTOR_LOG_ROOT="$2"
       shift 2
       ;;
     --retention-days)
@@ -111,12 +118,55 @@ for day_dir in "$AI_LOG_ROOT"/*; do
   fi
 done
 
+# ---------------------------------------------------------------------------
+# Vector flat shards: ~/logs/ai/vector/YYYY-MM-DD.jsonl
+# ---------------------------------------------------------------------------
+
+if [[ -d "$VECTOR_LOG_ROOT" ]]; then
+  log "processing vector shards: $VECTOR_LOG_ROOT"
+
+  for shard in "$VECTOR_LOG_ROOT"/*.jsonl; do
+    [[ -f "$shard" ]] || continue
+    shard_name="$(basename "$shard" .jsonl)"
+    [[ "$shard_name" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || continue
+
+    shard_epoch="$(date -j -f '%Y-%m-%d' "$shard_name" '+%s' 2>/dev/null || date -d "$shard_name" '+%s' 2>/dev/null || true)"
+    [[ -n "$shard_epoch" ]] || continue
+
+    age_days=$(( (NOW_EPOCH - shard_epoch) / 86400 ))
+
+    if (( age_days >= RETENTION_DAYS )); then
+      dryrun_exec rm -f "$shard"
+      ((deleted_count++))
+    elif (( age_days >= COMPRESS_AFTER_DAYS )); then
+      dryrun_exec gzip -f "$shard"
+      ((compressed_count++))
+    fi
+  done
+
+  # Also delete any already-compressed shards past retention
+  for shard in "$VECTOR_LOG_ROOT"/*.jsonl.gz; do
+    [[ -f "$shard" ]] || continue
+    shard_name="$(basename "$shard" .jsonl.gz)"
+    [[ "$shard_name" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || continue
+
+    shard_epoch="$(date -j -f '%Y-%m-%d' "$shard_name" '+%s' 2>/dev/null || date -d "$shard_name" '+%s' 2>/dev/null || true)"
+    [[ -n "$shard_epoch" ]] || continue
+
+    age_days=$(( (NOW_EPOCH - shard_epoch) / 86400 ))
+    if (( age_days >= RETENTION_DAYS )); then
+      dryrun_exec rm -f "$shard"
+      ((deleted_count++))
+    fi
+  done
+fi
+
 if [[ $compressed_count -gt 0 ]]; then
   log_ok "compressed $compressed_count file(s)"
 fi
 
 if [[ $deleted_count -gt 0 ]]; then
-  log_ok "deleted $deleted_count directory(ies)"
+  log_ok "deleted $deleted_count file(s)/directory(ies)"
 fi
 
 if [[ $compressed_count -eq 0 && $deleted_count -eq 0 ]]; then

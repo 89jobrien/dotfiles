@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Serve a lightweight dashboard for centralized AI CLI logs."""
+"""Serve a lightweight dashboard for centralized AI CLI logs, with token cost analysis."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import os
 import re
 import threading
 import time
+import urllib.request
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -21,6 +22,106 @@ from typing import Dict, Iterable, List, Tuple
 
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
+# ---------------------------------------------------------------------------
+# Pricing (pydantic/genai-prices)
+# ---------------------------------------------------------------------------
+
+PRICING_URL = "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/data_slim.json"
+_PRICING_CACHE: list | None = None
+_PRICING_CACHE_AT: float = 0.0
+_PRICING_CACHE_TTL = 86_400  # 24 h
+
+
+def _match_rule(model_id: str, rule: dict) -> bool:
+    mid = model_id.lower()
+    if "equals" in rule:
+        return mid == rule["equals"].lower()
+    if "starts_with" in rule:
+        return mid.startswith(rule["starts_with"].lower())
+    if "ends_with" in rule:
+        return mid.endswith(rule["ends_with"].lower())
+    if "contains" in rule:
+        return rule["contains"].lower() in mid
+    if "or" in rule:
+        return any(_match_rule(model_id, r) for r in rule["or"])
+    if "and" in rule:
+        return all(_match_rule(model_id, r) for r in rule["and"])
+    if "regex" in rule:
+        try:
+            return bool(re.search(rule["regex"], mid, re.IGNORECASE))
+        except re.error:
+            return False
+    return False
+
+
+def _flat_price(p: object) -> float:
+    if isinstance(p, (int, float)):
+        return float(p)
+    if isinstance(p, dict):
+        return float(p.get("base", 0))
+    return 0.0
+
+
+def fetch_pricing() -> list:
+    global _PRICING_CACHE, _PRICING_CACHE_AT
+    now = time.time()
+    if _PRICING_CACHE and (now - _PRICING_CACHE_AT) < _PRICING_CACHE_TTL:
+        return _PRICING_CACHE
+
+    cache_path = Path.home() / ".cache" / "genai-prices-slim.json"
+    if cache_path.exists() and (now - cache_path.stat().st_mtime) < _PRICING_CACHE_TTL:
+        try:
+            data = json.loads(cache_path.read_text())
+            # Cache stores already-flattened model list (written by fetch path below).
+            _PRICING_CACHE = data if isinstance(data, list) else []
+            _PRICING_CACHE_AT = now
+            return _PRICING_CACHE
+        except Exception:
+            pass
+
+    try:
+        with urllib.request.urlopen(PRICING_URL, timeout=8) as resp:
+            raw = json.loads(resp.read())
+        # data_slim.json is [{id:"anthropic", models:[{id, match, prices}]}, ...]
+        # Flatten all provider.models into a single list.
+        providers = raw if isinstance(raw, list) else [raw]
+        models: list = []
+        for provider in providers:
+            if isinstance(provider, dict):
+                models.extend(provider.get("models", []))
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(models))
+        _PRICING_CACHE = models
+        _PRICING_CACHE_AT = now
+        return models
+    except Exception:
+        return []
+
+
+def model_prices(model_id: str, pricing: list) -> dict:
+    for entry in pricing:
+        if _match_rule(model_id, entry.get("match", {})):
+            return entry.get("prices", {})
+    return {}
+
+
+def cost_usd(prices: dict, usage: dict) -> float:
+    M = 1_000_000
+    inp = (usage.get("input_tokens") or 0)
+    out = (usage.get("output_tokens") or 0)
+    cr = (usage.get("cache_read_input_tokens") or 0)
+    cw = (usage.get("cache_creation_input_tokens") or 0)
+    return (
+        (inp / M) * _flat_price(prices.get("input_mtok", 0))
+        + (out / M) * _flat_price(prices.get("output_mtok", 0))
+        + (cr / M) * _flat_price(prices.get("cache_read_mtok", 0))
+        + (cw / M) * _flat_price(prices.get("cache_write_mtok", 0))
+    )
+
+
+# ---------------------------------------------------------------------------
+# File helpers
+# ---------------------------------------------------------------------------
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -40,13 +141,142 @@ def count_lines(path: Path) -> int:
     return total
 
 
+# ---------------------------------------------------------------------------
+# Cost summary — reads from ~/logs/ai/vector/*.jsonl
+# ---------------------------------------------------------------------------
+
+def build_cost_summary(vector_root: Path) -> dict:
+    pricing = fetch_pricing()
+    pricing_loaded = len(pricing) > 0
+
+    claude_models: dict[str, dict] = defaultdict(lambda: {
+        "cost_usd": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "events": 0,
+    })
+
+    codex_stats = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cached_tokens": 0,
+        "reasoning_tokens": 0,
+        "events": 0,
+        "sessions": set(),
+    }
+
+    cursor_by_tool: dict[str, int] = defaultdict(int)
+    cursor_total = 0
+
+    copilot_stats = {"tool_calls": 0, "sessions": set()}
+
+    if not vector_root.exists():
+        return {"error": f"vector root not found: {vector_root}", "pricing_loaded": False}
+
+    for shard in sorted(vector_root.glob("*.jsonl*")):
+        try:
+            with open_text(shard) as f:
+                for line in f:
+                    try:
+                        e = json.loads(line)
+                    except Exception:
+                        continue
+
+                    src = e.get("source", "")
+
+                    if src == "claude-code" and e.get("type") == "assistant":
+                        msg = e.get("message") or {}
+                        model = msg.get("model") or ""
+                        usage = msg.get("usage") or {}
+                        if not model or not usage:
+                            continue
+                        prices = model_prices(model, pricing)
+                        rec = claude_models[model]
+                        rec["events"] += 1
+                        rec["input_tokens"] += usage.get("input_tokens") or 0
+                        rec["output_tokens"] += usage.get("output_tokens") or 0
+                        rec["cache_read_tokens"] += usage.get("cache_read_input_tokens") or 0
+                        rec["cache_write_tokens"] += usage.get("cache_creation_input_tokens") or 0
+                        rec["cost_usd"] += cost_usd(prices, usage)
+
+                    elif src == "codex" and e.get("type") == "event_msg":
+                        payload = e.get("payload") or {}
+                        if payload.get("type") == "token_count":
+                            info = payload.get("info") or {}
+                            tu = info.get("last_token_usage") or {}
+                            codex_stats["input_tokens"] += tu.get("input_tokens") or 0
+                            codex_stats["output_tokens"] += tu.get("output_tokens") or 0
+                            codex_stats["cached_tokens"] += tu.get("cached_input_tokens") or 0
+                            codex_stats["reasoning_tokens"] += tu.get("reasoning_output_tokens") or 0
+                            codex_stats["events"] += 1
+                        if e.get("session"):
+                            codex_stats["sessions"].add(e["session"])
+
+                    elif src == "codex" and e.get("type") == "session_meta":
+                        sid = (e.get("payload") or {}).get("id") or e.get("session") or ""
+                        if sid:
+                            codex_stats["sessions"].add(sid)
+
+                    elif src == "cursor-cost":
+                        tok = e.get("tokens") or 0
+                        tool = e.get("tool") or "unknown"
+                        cursor_by_tool[tool] += tok
+                        cursor_total += tok
+
+                    elif src == "copilot":
+                        t = e.get("type", "")
+                        if t in ("tool.execution_start", "tool.execution_complete"):
+                            copilot_stats["tool_calls"] += 1
+                        sid = (e.get("data") or {}).get("sessionId") or ""
+                        if sid:
+                            copilot_stats["sessions"].add(sid)
+
+        except Exception:
+            continue
+
+    total_cost = sum(m["cost_usd"] for m in claude_models.values())
+
+    return {
+        "generated_at": now_iso(),
+        "pricing_loaded": pricing_loaded,
+        "pricing_model_count": len(pricing),
+        "total_cost_usd": total_cost,
+        "claude": {
+            model: {**stats}
+            for model, stats in sorted(claude_models.items(), key=lambda x: -x[1]["cost_usd"])
+        },
+        "codex": {
+            **{k: v for k, v in codex_stats.items() if k != "sessions"},
+            "sessions": len(codex_stats["sessions"]),
+        },
+        "cursor": {
+            "total_tokens": cursor_total,
+            "by_tool": dict(sorted(cursor_by_tool.items(), key=lambda x: -x[1])),
+        },
+        "copilot": {
+            "tool_calls": copilot_stats["tool_calls"],
+            "sessions": len(copilot_stats["sessions"]),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Log summary (existing)
+# ---------------------------------------------------------------------------
+
 @dataclass
 class DashboardState:
     root: Path
+    vector_root: Path
     cache_ttl: int
     _lock: threading.Lock = field(default_factory=threading.Lock)
     _cached_at: float = 0.0
     _cached_summary: Dict | None = None
+    _cost_lock: threading.Lock = field(default_factory=threading.Lock)
+    _cost_cached_at: float = 0.0
+    _cost_cached: Dict | None = None
 
     def get_summary(self) -> Dict:
         with self._lock:
@@ -57,6 +287,17 @@ class DashboardState:
             self._cached_summary = summary
             self._cached_at = now
             return summary
+
+    def get_costs(self) -> Dict:
+        with self._cost_lock:
+            now = time.time()
+            # Cost scan is expensive — cache for longer (60s)
+            if self._cost_cached and (now - self._cost_cached_at) < 60:
+                return self._cost_cached
+            costs = build_cost_summary(self.vector_root)
+            self._cost_cached = costs
+            self._cost_cached_at = now
+            return costs
 
 
 def _scan_day(tool: str, day_dir: Path) -> Iterable[Tuple[str, str, str, Path]]:
@@ -72,12 +313,10 @@ def _scan_day(tool: str, day_dir: Path) -> Iterable[Tuple[str, str, str, Path]]:
             if file_path.exists() and file_path.is_file():
                 yield day_dir.name, session, tool, file_path
 
-        # Legacy layout: json/text subdirectories
         for log_type in ("json", "text"):
             type_dir = session_dir / log_type
             if not type_dir.is_dir():
                 continue
-
             for name in ("events.jsonl", "events.jsonl.gz"):
                 file_path = type_dir / name
                 if file_path.exists() and file_path.is_file():
@@ -88,7 +327,6 @@ def iter_event_files(root: Path) -> Iterable[Tuple[str, str, str, Path]]:
     if not root.exists():
         return
 
-    # New layout: root/<tool>/<day>/<session>/events.jsonl
     for tool_dir in sorted(root.iterdir()):
         if not tool_dir.is_dir() or tool_dir.name.startswith("."):
             continue
@@ -101,7 +339,6 @@ def iter_event_files(root: Path) -> Iterable[Tuple[str, str, str, Path]]:
                 if day_dir.is_dir() and DAY_RE.match(day_dir.name):
                     yield from _scan_day(tool_dir.name, day_dir)
         else:
-            # Legacy flat layout: root/<day>/<session>/events.jsonl
             if DAY_RE.match(tool_dir.name):
                 yield from _scan_day("claude", tool_dir)
 
@@ -226,6 +463,10 @@ def build_summary(root: Path) -> Dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# HTML
+# ---------------------------------------------------------------------------
+
 HTML_TEMPLATE = """<!doctype html>
 <html lang="en">
 <head>
@@ -248,6 +489,7 @@ HTML_TEMPLATE = """<!doctype html>
       --json: #40b8ff;
       --text: #f9b266;
       --good: #4bc08c;
+      --warn: #f0a840;
       --shadow: 0 8px 18px rgba(1, 8, 18, 0.24);
     }
 
@@ -304,9 +546,25 @@ HTML_TEMPLATE = """<!doctype html>
       text-overflow: ellipsis;
     }
 
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 14px 0 6px 2px;
+    }
+
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(10, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .kpi-grid-5 {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 8px;
       margin-bottom: 10px;
     }
@@ -316,7 +574,7 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     @media (max-width: 740px) {
-      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpi-grid, .kpi-grid-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .header { flex-direction: column; align-items: start; }
     }
 
@@ -354,6 +612,13 @@ HTML_TEMPLATE = """<!doctype html>
       margin-top: 7px;
       color: #d5e4f9;
       font-weight: 650;
+    }
+
+    .v-cost {
+      font-size: 22px;
+      font-weight: 700;
+      margin-top: 4px;
+      color: var(--good);
     }
 
     .main {
@@ -463,7 +728,6 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     .swatch { width: 10px; height: 10px; border-radius: 2px; }
-
     .swatch.json { background: var(--json); }
     .swatch.text { background: var(--text); }
 
@@ -531,7 +795,11 @@ HTML_TEMPLATE = """<!doctype html>
     .table-card {
       max-height: 350px;
       overflow: auto;
+      margin-bottom: 8px;
     }
+
+    .cost-highlight { color: var(--good); font-weight: 700; }
+    .note { color: var(--muted); font-size: 11px; margin: 4px 0 8px 0; }
 
     .foot {
       margin-top: 4px;
@@ -540,14 +808,8 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     @keyframes card-enter {
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
@@ -561,6 +823,8 @@ HTML_TEMPLATE = """<!doctype html>
       <div class="sub" id="header-meta">Auto refresh</div>
     </div>
 
+    <!-- ── Activity KPIs ── -->
+    <div class="section-label">Activity</div>
     <div class="kpi-grid">
       <div class="card kpi"><div class="k">Events</div><div class="v" id="events">-</div></div>
       <div class="card kpi"><div class="k">Sessions</div><div class="v" id="sessions">-</div></div>
@@ -574,6 +838,7 @@ HTML_TEMPLATE = """<!doctype html>
       <div class="card kpi"><div class="k">7 Day Events</div><div class="v-small" id="events-7d">-</div></div>
     </div>
 
+    <!-- ── Trends / Session breakdown ── -->
     <div class="main">
       <div class="panel">
         <div class="card chart-card">
@@ -587,7 +852,6 @@ HTML_TEMPLATE = """<!doctype html>
             </div>
           </div>
         </div>
-
         <div class="card table-card">
           <h2>Daily Volume</h2>
           <table id="days-table">
@@ -607,7 +871,6 @@ HTML_TEMPLATE = """<!doctype html>
             <div class="legend" id="agents-legend"></div>
           </div>
         </div>
-
         <div class="card">
           <h2>Session Concentration (Top 8)</h2>
           <div class="session-bars" id="session-bars"></div>
@@ -621,6 +884,40 @@ HTML_TEMPLATE = """<!doctype html>
         <thead><tr><th>Session</th><th>Agent</th><th>Events</th><th>Days</th><th>Files</th><th>Last Seen</th></tr></thead>
         <tbody></tbody>
       </table>
+    </div>
+
+    <!-- ── Cost KPIs ── -->
+    <div class="section-label">Token Cost</div>
+    <div class="kpi-grid-5">
+      <div class="card kpi"><div class="k">Claude Code Cost</div><div class="v-cost" id="cost-total">-</div></div>
+      <div class="card kpi"><div class="k">Codex Input Tokens</div><div class="v-small" id="codex-input">-</div></div>
+      <div class="card kpi"><div class="k">Codex Output Tokens</div><div class="v-small" id="codex-output">-</div></div>
+      <div class="card kpi"><div class="k">Codex Cached Tokens</div><div class="v-small" id="codex-cached">-</div></div>
+      <div class="card kpi"><div class="k">Cursor Tokens</div><div class="v-small" id="cursor-tokens-total">-</div></div>
+    </div>
+
+    <div class="card table-card">
+      <h2>Claude Code — Cost by Model</h2>
+      <p class="note">Pricing via pydantic/genai-prices. Cache read/write tokens are billed at reduced rates.</p>
+      <table id="cost-table">
+        <thead><tr><th>Model</th><th>Calls</th><th>Input</th><th>Output</th><th>Cache Read</th><th>Cache Write</th><th>Cost (USD)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="main">
+      <div class="card table-card">
+        <h2>Cursor — Tokens by Tool</h2>
+        <table id="cursor-table">
+          <thead><tr><th>Tool</th><th>Tokens</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>Other Tools</h2>
+        <div id="other-tools-stats" style="font-size:12px;line-height:1.9;color:#d5e4f9;"></div>
+        <p class="note" id="pricing-note"></p>
+      </div>
     </div>
 
     <div class="foot" id="foot"></div>
@@ -642,18 +939,20 @@ HTML_TEMPLATE = """<!doctype html>
     function fmtBytes(bytes) {
       if (!bytes) return '0 B';
       const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-      let i = 0;
-      let n = bytes;
-      while (n >= 1024 && i < units.length - 1) {
-        n /= 1024;
-        i += 1;
-      }
+      let i = 0, n = bytes;
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
       return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
     }
 
     function fmtPct(value) {
       if (!Number.isFinite(value)) return '0.0%';
       return `${value.toFixed(1)}%`;
+    }
+
+    function fmtCost(usd) {
+      if (!Number.isFinite(usd) || usd === 0) return '$0.00';
+      if (usd < 0.01) return `$${usd.toFixed(4)}`;
+      return `$${usd.toFixed(2)}`;
     }
 
     function shortTs(value) {
@@ -664,7 +963,8 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     function setText(id, text) {
-      document.getElementById(id).textContent = text;
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
     }
 
     function renderDays(days) {
@@ -677,17 +977,20 @@ HTML_TEMPLATE = """<!doctype html>
       }
     }
 
-    const AGENT_COLORS = { claude: '#4da3ff', codex: '#f9b266', opencode: '#4bc08c', gemini: '#c084fc' };
+    const AGENT_COLORS = {
+      'claude-code': '#4da3ff', claude: '#4da3ff',
+      codex: '#f9b266', opencode: '#4bc08c',
+      copilot: '#c084fc', cursor: '#fb7185',
+      gemini: '#34d399',
+    };
 
     function renderAgents(tools) {
       const entries = Object.entries(tools || {}).map(([name, rec]) => ({ name, events: rec.events || 0 }));
       entries.sort((a, b) => b.events - a.events);
       const total = entries.reduce((sum, item) => sum + item.events, 0);
 
-      // Build conic gradient from tool slices
       const donut = document.getElementById('agents-donut');
-      let gradParts = [];
-      let cursor = 0;
+      let gradParts = [], cursor = 0;
       for (const item of entries) {
         const pct = total > 0 ? (item.events / total) * 100 : 0;
         const color = AGENT_COLORS[item.name] || '#888';
@@ -700,7 +1003,7 @@ HTML_TEMPLATE = """<!doctype html>
       const root = document.getElementById('agents-legend');
       root.innerHTML = '';
       for (const item of entries) {
-        const pct = total > 0 ? ((item.events / total) * 100) : 0;
+        const pct = total > 0 ? (item.events / total) * 100 : 0;
         const color = AGENT_COLORS[item.name] || '#888';
         const row = document.createElement('div');
         row.className = 'legend-item';
@@ -762,13 +1065,12 @@ HTML_TEMPLATE = """<!doctype html>
       const sessions = Math.max(1, totals.sessions || 0);
       const events = totals.events || 0;
       const top = (data.top_sessions && data.top_sessions[0] && data.top_sessions[0].events) || 0;
-      const agentCount = Object.keys(data.tools || {}).length;
       const events7d = (data.days || []).slice(0, 7).reduce((sum, x) => sum + (x.events || 0), 0);
 
       setText('events-per-day', fmtInt(Math.round(events / days)));
       setText('events-per-session', fmtInt(Math.round(events / sessions)));
       setText('top-share', fmtPct(events > 0 ? (top / events) * 100 : 0));
-      setText('agent-count', fmtInt(agentCount));
+      setText('agent-count', fmtInt(Object.keys(data.agents || {}).length));
       setText('events-7d', fmtInt(events7d));
     }
 
@@ -782,7 +1084,79 @@ HTML_TEMPLATE = """<!doctype html>
       }
     }
 
-    async function refresh() {
+    function renderCosts(data) {
+      if (!data || data.error) return;
+
+      const total = data.total_cost_usd || 0;
+      setText('cost-total', fmtCost(total));
+
+      const codex = data.codex || {};
+      setText('codex-input', fmtInt(codex.input_tokens));
+      setText('codex-output', fmtInt(codex.output_tokens));
+      setText('codex-cached', fmtInt(codex.cached_tokens));
+
+      const cursor = data.cursor || {};
+      setText('cursor-tokens-total', fmtInt(cursor.total_tokens));
+
+      // Claude cost table
+      const tbody = document.querySelector('#cost-table tbody');
+      tbody.innerHTML = '';
+      for (const [model, rec] of Object.entries(data.claude || {})) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${esc(model)}</td>
+          <td>${fmtInt(rec.events)}</td>
+          <td>${fmtInt(rec.input_tokens)}</td>
+          <td>${fmtInt(rec.output_tokens)}</td>
+          <td>${fmtInt(rec.cache_read_tokens)}</td>
+          <td>${fmtInt(rec.cache_write_tokens)}</td>
+          <td class="cost-highlight">${fmtCost(rec.cost_usd)}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+      // Totals row
+      const claude = data.claude || {};
+      const totInp = Object.values(claude).reduce((s, r) => s + (r.input_tokens || 0), 0);
+      const totOut = Object.values(claude).reduce((s, r) => s + (r.output_tokens || 0), 0);
+      const totCR  = Object.values(claude).reduce((s, r) => s + (r.cache_read_tokens || 0), 0);
+      const totCW  = Object.values(claude).reduce((s, r) => s + (r.cache_write_tokens || 0), 0);
+      const totEv  = Object.values(claude).reduce((s, r) => s + (r.events || 0), 0);
+      if (Object.keys(claude).length > 1) {
+        const tr = document.createElement('tr');
+        tr.style.fontWeight = '700';
+        tr.innerHTML = `<td>Total</td><td>${fmtInt(totEv)}</td><td>${fmtInt(totInp)}</td><td>${fmtInt(totOut)}</td><td>${fmtInt(totCR)}</td><td>${fmtInt(totCW)}</td><td class="cost-highlight">${fmtCost(total)}</td>`;
+        tbody.appendChild(tr);
+      }
+
+      // Cursor table
+      const ctbody = document.querySelector('#cursor-table tbody');
+      ctbody.innerHTML = '';
+      for (const [tool, tokens] of Object.entries(cursor.by_tool || {})) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${esc(tool)}</td><td>${fmtInt(tokens)}</td>`;
+        ctbody.appendChild(tr);
+      }
+
+      // Other tools
+      const copilot = data.copilot || {};
+      const el = document.getElementById('other-tools-stats');
+      el.innerHTML = `
+        <div><strong>Codex</strong> — ${fmtInt(codex.sessions)} sessions, ${fmtInt(codex.events)} token-count events</div>
+        <div>Reasoning tokens: ${fmtInt(codex.reasoning_tokens)}</div>
+        <div style="margin-top:8px"><strong>Copilot</strong> — ${fmtInt(copilot.sessions)} sessions, ${fmtInt(copilot.tool_calls)} tool calls</div>
+        <div style="margin-top:8px;color:var(--muted);font-size:11px">Codex/Cursor costs not shown — model unknown at time of logging.</div>
+      `;
+
+      const note = document.getElementById('pricing-note');
+      if (data.pricing_loaded) {
+        note.textContent = `Pricing: pydantic/genai-prices (${data.pricing_model_count} models loaded).`;
+      } else {
+        note.textContent = 'Pricing data unavailable — check network or ~/.cache/genai-prices-slim.json.';
+        note.style.color = 'var(--warn)';
+      }
+    }
+
+    async function refreshSummary() {
       try {
         const response = await fetch('/api/summary', { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -797,7 +1171,7 @@ HTML_TEMPLATE = """<!doctype html>
         setText('bytes', fmtBytes(data.totals.bytes));
 
         renderDays(data.days || []);
-        renderAgents(data.tools || {});
+        renderAgents(data.agents || {});
         renderTrend(data.days || []);
         renderSessionBars(data.top_sessions || [], data.totals.events || 0);
         renderSessions(data.top_sessions || []);
@@ -810,8 +1184,18 @@ HTML_TEMPLATE = """<!doctype html>
       }
     }
 
-    refresh();
-    setInterval(refresh, REFRESH_MS);
+    async function refreshCosts() {
+      try {
+        const response = await fetch('/api/costs', { cache: 'no-store' });
+        if (!response.ok) return;
+        renderCosts(await response.json());
+      } catch (_) {}
+    }
+
+    refreshSummary();
+    refreshCosts();
+    setInterval(refreshSummary, REFRESH_MS);
+    setInterval(refreshCosts, REFRESH_MS * 6);  // costs refresh less frequently
   </script>
 </body>
 </html>
@@ -834,13 +1218,16 @@ def make_handler(state: DashboardState, refresh_ms: int):
 
         def do_GET(self) -> None:  # noqa: N802
             if self.path in ("/", "/index.html"):
-                self._send(
-                    HTTPStatus.OK, html.encode("utf-8"), "text/html; charset=utf-8"
-                )
+                self._send(HTTPStatus.OK, html.encode("utf-8"), "text/html; charset=utf-8")
                 return
 
             if self.path == "/api/summary":
                 payload = json.dumps(state.get_summary()).encode("utf-8")
+                self._send(HTTPStatus.OK, payload, "application/json; charset=utf-8")
+                return
+
+            if self.path == "/api/costs":
+                payload = json.dumps(state.get_costs()).encode("utf-8")
                 self._send(HTTPStatus.OK, payload, "application/json; charset=utf-8")
                 return
 
@@ -856,12 +1243,17 @@ def make_handler(state: DashboardState, refresh_ms: int):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Serve centralized Claude logs dashboard"
+        description="Serve centralized AI logs dashboard with token cost analysis"
     )
     parser.add_argument(
         "--root",
         default=os.path.expanduser("~/logs/ai"),
         help="Centralized logs root path (default: ~/logs/ai)",
+    )
+    parser.add_argument(
+        "--vector-root",
+        default=os.path.expanduser("~/logs/ai/vector"),
+        help="Vector sink directory for cost analysis (default: ~/logs/ai/vector)",
     )
     parser.add_argument(
         "--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)"
@@ -887,12 +1279,18 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     root = Path(args.root).expanduser().resolve()
-    state = DashboardState(root=root, cache_ttl=max(args.cache_seconds, 1))
+    vector_root = Path(args.vector_root).expanduser().resolve()
+    state = DashboardState(
+        root=root,
+        vector_root=vector_root,
+        cache_ttl=max(args.cache_seconds, 1),
+    )
     handler = make_handler(state, refresh_ms=max(args.refresh_seconds, 1) * 1000)
 
     server = ThreadingHTTPServer((args.host, args.port), handler)
     print(f"AI logs dashboard: http://{args.host}:{args.port}")
-    print(f"Log root: {root}")
+    print(f"Log root:    {root}")
+    print(f"Vector root: {vector_root}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
