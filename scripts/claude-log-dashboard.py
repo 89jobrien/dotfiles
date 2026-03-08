@@ -157,6 +157,10 @@ def build_cost_summary(vector_root: Path) -> dict:
         "cache_write_tokens": 0,
         "events": 0,
     })
+    claude_tools: dict[str, int] = defaultdict(int)
+    claude_agents: dict[str, int] = defaultdict(int)  # subagent_type → count
+    claude_sidechain_events = 0
+    claude_sessions: set = set()
 
     codex_stats = {
         "input_tokens": 0,
@@ -165,6 +169,9 @@ def build_cost_summary(vector_root: Path) -> dict:
         "reasoning_tokens": 0,
         "events": 0,
         "sessions": set(),
+        "tasks": 0,
+        "plans": 0,
+        "agent_messages": 0,
     }
 
     cursor_by_tool: dict[str, int] = defaultdict(int)
@@ -186,24 +193,39 @@ def build_cost_summary(vector_root: Path) -> dict:
 
                     src = e.get("source", "")
 
-                    if src == "claude-code" and e.get("type") == "assistant":
-                        msg = e.get("message") or {}
-                        model = msg.get("model") or ""
-                        usage = msg.get("usage") or {}
-                        if not model or not usage:
-                            continue
-                        prices = model_prices(model, pricing)
-                        rec = claude_models[model]
-                        rec["events"] += 1
-                        rec["input_tokens"] += usage.get("input_tokens") or 0
-                        rec["output_tokens"] += usage.get("output_tokens") or 0
-                        rec["cache_read_tokens"] += usage.get("cache_read_input_tokens") or 0
-                        rec["cache_write_tokens"] += usage.get("cache_creation_input_tokens") or 0
-                        rec["cost_usd"] += cost_usd(prices, usage)
+                    if src == "claude-code":
+                        sid = e.get("sessionId") or e.get("session") or ""
+                        if sid:
+                            claude_sessions.add(sid)
+                        if e.get("isSidechain"):
+                            claude_sidechain_events += 1
+
+                        if e.get("type") == "assistant":
+                            msg = e.get("message") or {}
+                            model = msg.get("model") or ""
+                            usage = msg.get("usage") or {}
+                            if model and usage:
+                                prices = model_prices(model, pricing)
+                                rec = claude_models[model]
+                                rec["events"] += 1
+                                rec["input_tokens"] += usage.get("input_tokens") or 0
+                                rec["output_tokens"] += usage.get("output_tokens") or 0
+                                rec["cache_read_tokens"] += usage.get("cache_read_input_tokens") or 0
+                                rec["cache_write_tokens"] += usage.get("cache_creation_input_tokens") or 0
+                                rec["cost_usd"] += cost_usd(prices, usage)
+                            # Count tool calls
+                            for block in (msg.get("content") or []):
+                                if isinstance(block, dict) and block.get("type") == "tool_use":
+                                    name = block.get("name", "?")
+                                    claude_tools[name] += 1
+                                    if name == "Agent":
+                                        st = (block.get("input") or {}).get("subagent_type", "?")
+                                        claude_agents[st] += 1
 
                     elif src == "codex" and e.get("type") == "event_msg":
                         payload = e.get("payload") or {}
-                        if payload.get("type") == "token_count":
+                        ptype = payload.get("type")
+                        if ptype == "token_count":
                             info = payload.get("info") or {}
                             tu = info.get("last_token_usage") or {}
                             codex_stats["input_tokens"] += tu.get("input_tokens") or 0
@@ -211,6 +233,14 @@ def build_cost_summary(vector_root: Path) -> dict:
                             codex_stats["cached_tokens"] += tu.get("cached_input_tokens") or 0
                             codex_stats["reasoning_tokens"] += tu.get("reasoning_output_tokens") or 0
                             codex_stats["events"] += 1
+                        elif ptype == "task_started":
+                            codex_stats["tasks"] += 1
+                        elif ptype == "agent_message":
+                            codex_stats["agent_messages"] += 1
+                        elif ptype == "item_completed":
+                            item = payload.get("item") or {}
+                            if item.get("type") == "Plan":
+                                codex_stats["plans"] += 1
                         if e.get("session"):
                             codex_stats["sessions"].add(e["session"])
 
@@ -247,6 +277,14 @@ def build_cost_summary(vector_root: Path) -> dict:
             model: {**stats}
             for model, stats in sorted(claude_models.items(), key=lambda x: -x[1]["cost_usd"])
         },
+        "claude_activity": {
+            "sessions": len(claude_sessions),
+            "sidechain_events": claude_sidechain_events,
+            "total_tool_calls": sum(claude_tools.values()),
+            "agent_dispatches": sum(claude_agents.values()),
+            "tools": dict(sorted(claude_tools.items(), key=lambda x: -x[1])),
+            "agents": dict(sorted(claude_agents.items(), key=lambda x: -x[1])),
+        },
         "codex": {
             **{k: v for k, v in codex_stats.items() if k != "sessions"},
             "sessions": len(codex_stats["sessions"]),
@@ -260,6 +298,84 @@ def build_cost_summary(vector_root: Path) -> dict:
             "sessions": len(copilot_stats["sessions"]),
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# Vector pipeline health (queries Vector GraphQL API)
+# ---------------------------------------------------------------------------
+
+VECTOR_API = "http://127.0.0.1:9598/graphql"
+
+_PIPELINE_QUERY = """
+{
+  sources { edges { node {
+    componentId componentType
+    metrics {
+      sentEventsTotal { sentEventsTotal }
+      receivedBytesTotal { receivedBytesTotal }
+    }
+  }}}
+  transforms { edges { node {
+    componentId componentType
+    metrics {
+      sentEventsTotal { sentEventsTotal }
+    }
+  }}}
+  sinks { edges { node {
+    componentId componentType
+    metrics {
+      sentEventsTotal { sentEventsTotal }
+      sentBytesTotal { sentBytesTotal }
+    }
+  }}}
+}
+"""
+
+
+def fetch_vector_pipeline() -> dict:
+    try:
+        data = json.dumps({"query": _PIPELINE_QUERY}).encode()
+        req = urllib.request.Request(
+            VECTOR_API,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            body = json.loads(resp.read())
+        if "errors" in body:
+            return {"error": body["errors"][0]["message"], "online": False}
+
+        d = body.get("data") or {}
+
+        def extract(section: str) -> list:
+            # sources expose receivedBytesTotal; sinks expose sentBytesTotal
+            bytes_field = "receivedBytesTotal" if section == "sources" else "sentBytesTotal"
+            rows = []
+            for edge in (d.get(section) or {}).get("edges") or []:
+                node = edge.get("node") or {}
+                m = node.get("metrics") or {}
+                rows.append({
+                    "id": node.get("componentId", "?"),
+                    "kind": section.rstrip("s"),   # sources→source
+                    "events": int((m.get("sentEventsTotal") or {}).get("sentEventsTotal") or 0),
+                    "bytes": int((m.get(bytes_field) or {}).get(bytes_field) or 0),
+                })
+            return rows
+
+        components = extract("sources") + extract("transforms") + extract("sinks")
+        total_events = sum(c["events"] for c in components if c["kind"] == "source")
+        total_bytes = sum(c["bytes"] for c in components if c["kind"] == "source")
+
+        return {
+            "online": True,
+            "generated_at": now_iso(),
+            "components": components,
+            "total_events": total_events,
+            "total_bytes": total_bytes,
+        }
+    except Exception as exc:
+        return {"online": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +393,9 @@ class DashboardState:
     _cost_lock: threading.Lock = field(default_factory=threading.Lock)
     _cost_cached_at: float = 0.0
     _cost_cached: Dict | None = None
+    _pipeline_lock: threading.Lock = field(default_factory=threading.Lock)
+    _pipeline_cached_at: float = 0.0
+    _pipeline_cached: Dict | None = None
 
     def get_summary(self) -> Dict:
         with self._lock:
@@ -298,6 +417,16 @@ class DashboardState:
             self._cost_cached = costs
             self._cost_cached_at = now
             return costs
+
+    def get_pipeline(self) -> Dict:
+        with self._pipeline_lock:
+            now = time.time()
+            if self._pipeline_cached and (now - self._pipeline_cached_at) < 5:
+                return self._pipeline_cached
+            data = fetch_vector_pipeline()
+            self._pipeline_cached = data
+            self._pipeline_cached_at = now
+            return data
 
 
 def _scan_day(tool: str, day_dir: Path) -> Iterable[Tuple[str, str, str, Path]]:
@@ -562,6 +691,12 @@ HTML_TEMPLATE = """<!doctype html>
       margin-bottom: 10px;
     }
 
+    .kpi-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
     .kpi-grid-5 {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -574,7 +709,7 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     @media (max-width: 740px) {
-      .kpi-grid, .kpi-grid-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpi-grid, .kpi-grid-4, .kpi-grid-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .header { flex-direction: column; align-items: start; }
     }
 
@@ -905,6 +1040,40 @@ HTML_TEMPLATE = """<!doctype html>
       </table>
     </div>
 
+    <!-- ── Tool Activity ── -->
+    <div class="section-label">Tool Activity</div>
+    <div class="main">
+      <div class="card">
+        <h2>Claude Code</h2>
+        <div class="kpi-grid-4" style="margin-bottom:12px">
+          <div class="card kpi"><div class="k">Sessions</div><div class="v" id="claude-act-sessions">-</div></div>
+          <div class="card kpi"><div class="k">Tool Calls</div><div class="v-small" id="claude-act-tools">-</div></div>
+          <div class="card kpi"><div class="k">Agent Dispatches</div><div class="v-small" id="claude-act-agents">-</div></div>
+          <div class="card kpi"><div class="k">Sidechain Events</div><div class="v-small" id="claude-act-sidechain">-</div></div>
+        </div>
+        <h3 style="font-size:11px;color:var(--muted);margin:8px 0 4px">Top Tools</h3>
+        <table id="claude-tools-table">
+          <thead><tr><th>Tool</th><th>Calls</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3 style="font-size:11px;color:var(--muted);margin:12px 0 4px">Agent Dispatches by Type</h3>
+        <table id="claude-agents-table">
+          <thead><tr><th>Subagent Type</th><th>Dispatches</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>Codex</h2>
+        <div class="kpi-grid-4" style="margin-bottom:12px">
+          <div class="card kpi"><div class="k">Sessions</div><div class="v" id="codex-act-sessions">-</div></div>
+          <div class="card kpi"><div class="k">Tasks</div><div class="v-small" id="codex-act-tasks">-</div></div>
+          <div class="card kpi"><div class="k">Plans</div><div class="v-small" id="codex-act-plans">-</div></div>
+          <div class="card kpi"><div class="k">Agent Messages</div><div class="v-small" id="codex-act-msgs">-</div></div>
+        </div>
+        <p class="note" style="margin-top:8px">Codex has no structured tool call log. Tasks = <code>task_started</code> events, Plans = completed plan items, Agent Messages = <code>agent_message</code> events.</p>
+      </div>
+    </div>
+
     <div class="main">
       <div class="card table-card">
         <h2>Cursor — Tokens by Tool</h2>
@@ -918,6 +1087,23 @@ HTML_TEMPLATE = """<!doctype html>
         <div id="other-tools-stats" style="font-size:12px;line-height:1.9;color:#d5e4f9;"></div>
         <p class="note" id="pricing-note"></p>
       </div>
+    </div>
+
+    <!-- ── Vector Pipeline Health ── -->
+    <div class="section-label">Vector Pipeline</div>
+    <div class="kpi-grid-5" id="pipeline-kpis">
+      <div class="card kpi"><div class="k">Status</div><div class="v-small" id="pipeline-status">-</div></div>
+      <div class="card kpi"><div class="k">Sources</div><div class="v" id="pipeline-sources">-</div></div>
+      <div class="card kpi"><div class="k">Transforms</div><div class="v" id="pipeline-transforms">-</div></div>
+      <div class="card kpi"><div class="k">Events (sources)</div><div class="v-small" id="pipeline-events">-</div></div>
+      <div class="card kpi"><div class="k">Bytes (sources)</div><div class="v-small" id="pipeline-bytes">-</div></div>
+    </div>
+    <div class="card table-card">
+      <h2>Component Throughput</h2>
+      <table id="pipeline-table">
+        <thead><tr><th>Component</th><th>Kind</th><th>Events Sent</th><th>Bytes Sent</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
 
     <div class="foot" id="foot"></div>
@@ -1137,12 +1323,40 @@ HTML_TEMPLATE = """<!doctype html>
         ctbody.appendChild(tr);
       }
 
+      // Activity — Claude Code
+      const act = data.claude_activity || {};
+      setText('claude-act-sessions', fmtInt(act.sessions));
+      setText('claude-act-tools', fmtInt(act.total_tool_calls));
+      setText('claude-act-agents', fmtInt(act.agent_dispatches));
+      setText('claude-act-sidechain', fmtInt(act.sidechain_events));
+
+      const toolsTbody = document.querySelector('#claude-tools-table tbody');
+      toolsTbody.innerHTML = '';
+      for (const [tool, n] of Object.entries(act.tools || {})) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${esc(tool)}</td><td>${fmtInt(n)}</td>`;
+        toolsTbody.appendChild(tr);
+      }
+
+      const agentsTbody = document.querySelector('#claude-agents-table tbody');
+      agentsTbody.innerHTML = '';
+      for (const [atype, n] of Object.entries(act.agents || {})) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${esc(atype)}</td><td>${fmtInt(n)}</td>`;
+        agentsTbody.appendChild(tr);
+      }
+
+      // Activity — Codex
+      setText('codex-act-sessions', fmtInt(codex.sessions));
+      setText('codex-act-tasks', fmtInt(codex.tasks));
+      setText('codex-act-plans', fmtInt(codex.plans));
+      setText('codex-act-msgs', fmtInt(codex.agent_messages));
+
       // Other tools
       const copilot = data.copilot || {};
       const el = document.getElementById('other-tools-stats');
       el.innerHTML = `
-        <div><strong>Codex</strong> — ${fmtInt(codex.sessions)} sessions, ${fmtInt(codex.events)} token-count events</div>
-        <div>Reasoning tokens: ${fmtInt(codex.reasoning_tokens)}</div>
+        <div><strong>Codex</strong> — ${fmtInt(codex.events)} token-count events, ${fmtInt(codex.reasoning_tokens)} reasoning tokens</div>
         <div style="margin-top:8px"><strong>Copilot</strong> — ${fmtInt(copilot.sessions)} sessions, ${fmtInt(copilot.tool_calls)} tool calls</div>
         <div style="margin-top:8px;color:var(--muted);font-size:11px">Codex/Cursor costs not shown — model unknown at time of logging.</div>
       `;
@@ -1192,10 +1406,57 @@ HTML_TEMPLATE = """<!doctype html>
       } catch (_) {}
     }
 
+    function renderPipeline(data) {
+      if (!data) return;
+
+      const online = data.online;
+      const statusEl = document.getElementById('pipeline-status');
+      statusEl.textContent = online ? 'Online' : ('Offline' + (data.error ? ': ' + data.error : ''));
+      statusEl.style.color = online ? 'var(--good)' : 'var(--warn)';
+
+      if (!online) return;
+
+      const components = data.components || [];
+      const sources = components.filter(c => c.kind === 'source');
+      const transforms = components.filter(c => c.kind === 'transform');
+
+      setText('pipeline-sources', fmtInt(sources.length));
+      setText('pipeline-transforms', fmtInt(transforms.length));
+      setText('pipeline-events', fmtInt(data.total_events));
+      setText('pipeline-bytes', fmtBytes(data.total_bytes));
+
+      const tbody = document.querySelector('#pipeline-table tbody');
+      tbody.innerHTML = '';
+
+      // Sort: sources first, then transforms, then sinks; within kind by events desc
+      const order = { source: 0, transform: 1, sink: 2 };
+      const sorted = [...components].sort((a, b) =>
+        (order[a.kind] - order[b.kind]) || (b.events - a.events)
+      );
+
+      const kindColors = { source: 'var(--accent)', transform: 'var(--warn)', sink: 'var(--good)' };
+      for (const c of sorted) {
+        const tr = document.createElement('tr');
+        const kindBadge = `<span style="font-size:10px;color:${kindColors[c.kind] || 'var(--muted)'}">${esc(c.kind)}</span>`;
+        tr.innerHTML = `<td>${esc(c.id)}</td><td>${kindBadge}</td><td>${fmtInt(c.events)}</td><td>${c.bytes ? fmtBytes(c.bytes) : '-'}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function refreshPipeline() {
+      try {
+        const response = await fetch('/api/pipeline', { cache: 'no-store' });
+        if (!response.ok) return;
+        renderPipeline(await response.json());
+      } catch (_) {}
+    }
+
     refreshSummary();
     refreshCosts();
+    refreshPipeline();
     setInterval(refreshSummary, REFRESH_MS);
     setInterval(refreshCosts, REFRESH_MS * 6);  // costs refresh less frequently
+    setInterval(refreshPipeline, REFRESH_MS * 2);
   </script>
 </body>
 </html>
@@ -1228,6 +1489,11 @@ def make_handler(state: DashboardState, refresh_ms: int):
 
             if self.path == "/api/costs":
                 payload = json.dumps(state.get_costs()).encode("utf-8")
+                self._send(HTTPStatus.OK, payload, "application/json; charset=utf-8")
+                return
+
+            if self.path == "/api/pipeline":
+                payload = json.dumps(state.get_pipeline()).encode("utf-8")
                 self._send(HTTPStatus.OK, payload, "application/json; charset=utf-8")
                 return
 
