@@ -148,6 +148,7 @@ def count_lines(path: Path) -> int:
 def build_cost_summary(vector_root: Path) -> dict:
     pricing = fetch_pricing()
     pricing_loaded = len(pricing) > 0
+    prices_cache: dict[str, dict] = {}
 
     claude_models: dict[str, dict] = defaultdict(lambda: {
         "cost_usd": 0.0,
@@ -205,7 +206,9 @@ def build_cost_summary(vector_root: Path) -> dict:
                             model = msg.get("model") or ""
                             usage = msg.get("usage") or {}
                             if model and usage:
-                                prices = model_prices(model, pricing)
+                                if model not in prices_cache:
+                                    prices_cache[model] = model_prices(model, pricing)
+                                prices = prices_cache[model]
                                 rec = claude_models[model]
                                 rec["events"] += 1
                                 rec["input_tokens"] += usage.get("input_tokens") or 0
@@ -268,7 +271,7 @@ def build_cost_summary(vector_root: Path) -> dict:
 
     # --- Read Codex from ~/logs/ai/codex/ (normalized by OpenClaw, has model+token data) ---
     # Falls back to ~/.codex/sessions/ if the normalized dir is absent.
-    codex_raw_models: dict[str, dict] = defaultdict(lambda: {
+    codex_model_stats: dict[str, dict] = defaultdict(lambda: {
         "cost_usd": 0.0,
         "input_tokens": 0,
         "output_tokens": 0,
@@ -276,12 +279,11 @@ def build_cost_summary(vector_root: Path) -> dict:
         "reasoning_tokens": 0,
         "events": 0,
     })
-    _norm_codex = Path.home() / "logs" / "ai" / "codex"
-    _raw_codex = Path.home() / ".codex" / "sessions"
-    codex_dir = _norm_codex if _norm_codex.exists() else _raw_codex
-    _is_normalized = codex_dir == _norm_codex
+    norm_codex_dir = Path.home() / "logs" / "ai" / "codex"
+    raw_codex_dir = Path.home() / ".codex" / "sessions"
+    codex_dir = norm_codex_dir if norm_codex_dir.exists() else raw_codex_dir
     if codex_dir.exists():
-        for codex_file in sorted(codex_dir.rglob("*.jsonl")):
+        for codex_file in sorted(codex_dir.rglob("*.jsonl*")):
             try:
                 with open_text(codex_file) as f:
                     current_model = ""
@@ -298,12 +300,14 @@ def build_cost_summary(vector_root: Path) -> dict:
                             info = payload.get("info") or {}
                             tu = info.get("last_token_usage") or {}
                             if tu and current_model:
-                                rec = codex_raw_models[current_model]
+                                rec = codex_model_stats[current_model]
                                 inp = tu.get("input_tokens", 0) or 0
                                 out = tu.get("output_tokens", 0) or 0
                                 cached = tu.get("cached_input_tokens", 0) or 0
                                 reasoning = tu.get("reasoning_output_tokens", 0) or 0
-                                prices = model_prices(current_model, pricing)
+                                if current_model not in prices_cache:
+                                    prices_cache[current_model] = model_prices(current_model, pricing)
+                                prices = prices_cache[current_model]
                                 usage_for_cost = {
                                     "input_tokens": inp,
                                     "output_tokens": out,
@@ -320,18 +324,13 @@ def build_cost_summary(vector_root: Path) -> dict:
                 continue
 
     total_cost = sum(m["cost_usd"] for m in claude_models.values())
-    codex_cost_total = sum(m["cost_usd"] for m in codex_raw_models.values())
+    codex_cost_total = sum(m["cost_usd"] for m in codex_model_stats.values())
 
     return {
         "generated_at": now_iso(),
         "pricing_loaded": pricing_loaded,
         "pricing_model_count": len(pricing),
         "total_cost_usd": total_cost,
-        "codex_cost_total": codex_cost_total,
-        "codex_models": {
-            model: {**stats}
-            for model, stats in sorted(codex_raw_models.items(), key=lambda x: -x[1]["cost_usd"])
-        },
         "claude": {
             model: {**stats}
             for model, stats in sorted(claude_models.items(), key=lambda x: -x[1]["cost_usd"])
@@ -347,6 +346,11 @@ def build_cost_summary(vector_root: Path) -> dict:
         "codex": {
             **{k: v for k, v in codex_stats.items() if k != "sessions"},
             "sessions": len(codex_stats["sessions"]),
+            "cost_usd": codex_cost_total,
+            "models": {
+                model: {**stats}
+                for model, stats in sorted(codex_model_stats.items(), key=lambda x: -x[1]["cost_usd"])
+            },
         },
         "cursor": {
             "total_tokens": cursor_total,
@@ -1340,16 +1344,16 @@ HTML_TEMPLATE = """<!doctype html>
       if (!data || data.error) return;
 
       const total = data.total_cost_usd || 0;
-      const codexCostTotal = data.codex_cost_total || 0;
+      const codex = data.codex || {};
+      const codexCostTotal = codex.cost_usd || 0;
       setText('cost-total', fmtCost(total));
       setText('codex-cost-total', fmtCost(codexCostTotal));
       setText('cost-combined', fmtCost(total + codexCostTotal));
 
-      const codex = data.codex || {};
       setText('codex-cached', fmtInt(codex.cached_tokens));
 
       // Codex cost table
-      const codexModels = data.codex_models || {};
+      const codexModels = codex.models || {};
       const codexCtbody = document.querySelector('#codex-cost-table tbody');
       codexCtbody.innerHTML = '';
       for (const [model, rec] of Object.entries(codexModels)) {
