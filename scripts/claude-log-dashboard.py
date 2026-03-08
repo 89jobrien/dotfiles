@@ -266,7 +266,8 @@ def build_cost_summary(vector_root: Path) -> dict:
         except Exception:
             continue
 
-    # --- Read raw Codex session files (Vector loses the token info payload) ---
+    # --- Read Codex from ~/logs/ai/codex/ (normalized by OpenClaw, has model+token data) ---
+    # Falls back to ~/.codex/sessions/ if the normalized dir is absent.
     codex_raw_models: dict[str, dict] = defaultdict(lambda: {
         "cost_usd": 0.0,
         "input_tokens": 0,
@@ -275,7 +276,10 @@ def build_cost_summary(vector_root: Path) -> dict:
         "reasoning_tokens": 0,
         "events": 0,
     })
-    codex_dir = Path.home() / ".codex" / "sessions"
+    _norm_codex = Path.home() / "logs" / "ai" / "codex"
+    _raw_codex = Path.home() / ".codex" / "sessions"
+    codex_dir = _norm_codex if _norm_codex.exists() else _raw_codex
+    _is_normalized = codex_dir == _norm_codex
     if codex_dir.exists():
         for codex_file in sorted(codex_dir.rglob("*.jsonl")):
             try:
@@ -465,8 +469,7 @@ class DashboardState:
     def get_costs(self) -> Dict:
         with self._cost_lock:
             now = time.time()
-            # Cost scan is expensive — cache for longer (60s)
-            if self._cost_cached and (now - self._cost_cached_at) < 60:
+            if self._cost_cached and (now - self._cost_cached_at) < 15:
                 return self._cost_cached
             costs = build_cost_summary(self.vector_root)
             self._cost_cached = costs
@@ -1548,7 +1551,7 @@ HTML_TEMPLATE = """<!doctype html>
     refreshCosts();
     refreshPipeline();
     setInterval(refreshSummary, REFRESH_MS);
-    setInterval(refreshCosts, REFRESH_MS * 6);  // costs refresh less frequently
+    setInterval(refreshCosts, REFRESH_MS * 2);
     setInterval(refreshPipeline, REFRESH_MS * 2);
   </script>
 </body>
