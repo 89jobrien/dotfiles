@@ -266,13 +266,68 @@ def build_cost_summary(vector_root: Path) -> dict:
         except Exception:
             continue
 
+    # --- Read raw Codex session files (Vector loses the token info payload) ---
+    codex_raw_models: dict[str, dict] = defaultdict(lambda: {
+        "cost_usd": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cached_tokens": 0,
+        "reasoning_tokens": 0,
+        "events": 0,
+    })
+    codex_dir = Path.home() / ".codex" / "sessions"
+    if codex_dir.exists():
+        for codex_file in sorted(codex_dir.rglob("*.jsonl")):
+            try:
+                with open_text(codex_file) as f:
+                    current_model = ""
+                    for line in f:
+                        try:
+                            e = json.loads(line)
+                        except Exception:
+                            continue
+                        t = e.get("type", "")
+                        payload = e.get("payload") or {}
+                        if t == "turn_context":
+                            current_model = payload.get("model", "") or current_model
+                        elif t == "event_msg" and payload.get("type") == "token_count":
+                            info = payload.get("info") or {}
+                            tu = info.get("last_token_usage") or {}
+                            if tu and current_model:
+                                rec = codex_raw_models[current_model]
+                                inp = tu.get("input_tokens", 0) or 0
+                                out = tu.get("output_tokens", 0) or 0
+                                cached = tu.get("cached_input_tokens", 0) or 0
+                                reasoning = tu.get("reasoning_output_tokens", 0) or 0
+                                prices = model_prices(current_model, pricing)
+                                usage_for_cost = {
+                                    "input_tokens": inp,
+                                    "output_tokens": out,
+                                    "cache_read_input_tokens": cached,
+                                    "cache_creation_input_tokens": 0,
+                                }
+                                rec["input_tokens"] += inp
+                                rec["output_tokens"] += out
+                                rec["cached_tokens"] += cached
+                                rec["reasoning_tokens"] += reasoning
+                                rec["events"] += 1
+                                rec["cost_usd"] += cost_usd(prices, usage_for_cost)
+            except Exception:
+                continue
+
     total_cost = sum(m["cost_usd"] for m in claude_models.values())
+    codex_cost_total = sum(m["cost_usd"] for m in codex_raw_models.values())
 
     return {
         "generated_at": now_iso(),
         "pricing_loaded": pricing_loaded,
         "pricing_model_count": len(pricing),
         "total_cost_usd": total_cost,
+        "codex_cost_total": codex_cost_total,
+        "codex_models": {
+            model: {**stats}
+            for model, stats in sorted(codex_raw_models.items(), key=lambda x: -x[1]["cost_usd"])
+        },
         "claude": {
             model: {**stats}
             for model, stats in sorted(claude_models.items(), key=lambda x: -x[1]["cost_usd"])
@@ -1025,19 +1080,29 @@ HTML_TEMPLATE = """<!doctype html>
     <div class="section-label">Token Cost</div>
     <div class="kpi-grid-5">
       <div class="card kpi"><div class="k">Claude Code Cost</div><div class="v-cost" id="cost-total">-</div></div>
-      <div class="card kpi"><div class="k">Codex Input Tokens</div><div class="v-small" id="codex-input">-</div></div>
-      <div class="card kpi"><div class="k">Codex Output Tokens</div><div class="v-small" id="codex-output">-</div></div>
-      <div class="card kpi"><div class="k">Codex Cached Tokens</div><div class="v-small" id="codex-cached">-</div></div>
+      <div class="card kpi"><div class="k">Codex Cost</div><div class="v-cost" id="codex-cost-total">-</div></div>
+      <div class="card kpi"><div class="k">Codex Cache Tokens</div><div class="v-small" id="codex-cached">-</div></div>
       <div class="card kpi"><div class="k">Cursor Tokens</div><div class="v-small" id="cursor-tokens-total">-</div></div>
+      <div class="card kpi"><div class="k">Combined Cost</div><div class="v-cost" id="cost-combined">-</div></div>
     </div>
 
-    <div class="card table-card">
-      <h2>Claude Code — Cost by Model</h2>
-      <p class="note">Pricing via pydantic/genai-prices. Cache read/write tokens are billed at reduced rates.</p>
-      <table id="cost-table">
-        <thead><tr><th>Model</th><th>Calls</th><th>Input</th><th>Output</th><th>Cache Read</th><th>Cache Write</th><th>Cost (USD)</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <div class="main">
+      <div class="card table-card">
+        <h2>Claude Code — Cost by Model</h2>
+        <p class="note">Pricing via pydantic/genai-prices. Cache read/write tokens are billed at reduced rates.</p>
+        <table id="cost-table">
+          <thead><tr><th>Model</th><th>Calls</th><th>Input</th><th>Output</th><th>Cache Read</th><th>Cache Write</th><th>Cost (USD)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card table-card">
+        <h2>Codex — Cost by Model</h2>
+        <p class="note">Read from ~/.codex/sessions. Cached input tokens billed at cache_read rate.</p>
+        <table id="codex-cost-table">
+          <thead><tr><th>Model</th><th>Events</th><th>Input</th><th>Output</th><th>Cached</th><th>Reasoning</th><th>Cost (USD)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ── Tool Activity ── -->
@@ -1274,12 +1339,43 @@ HTML_TEMPLATE = """<!doctype html>
       if (!data || data.error) return;
 
       const total = data.total_cost_usd || 0;
+      const codexCostTotal = data.codex_cost_total || 0;
       setText('cost-total', fmtCost(total));
+      setText('codex-cost-total', fmtCost(codexCostTotal));
+      setText('cost-combined', fmtCost(total + codexCostTotal));
 
       const codex = data.codex || {};
-      setText('codex-input', fmtInt(codex.input_tokens));
-      setText('codex-output', fmtInt(codex.output_tokens));
       setText('codex-cached', fmtInt(codex.cached_tokens));
+
+      // Codex cost table
+      const codexModels = data.codex_models || {};
+      const codexCtbody = document.querySelector('#codex-cost-table tbody');
+      codexCtbody.innerHTML = '';
+      for (const [model, rec] of Object.entries(codexModels)) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${esc(model)}</td>
+          <td>${fmtInt(rec.events)}</td>
+          <td>${fmtInt(rec.input_tokens)}</td>
+          <td>${fmtInt(rec.output_tokens)}</td>
+          <td>${fmtInt(rec.cached_tokens)}</td>
+          <td>${fmtInt(rec.reasoning_tokens)}</td>
+          <td class="cost-highlight">${fmtCost(rec.cost_usd)}</td>
+        `;
+        codexCtbody.appendChild(tr);
+      }
+      if (Object.keys(codexModels).length > 1) {
+        const totCost = Object.values(codexModels).reduce((s, r) => s + (r.cost_usd || 0), 0);
+        const totEv = Object.values(codexModels).reduce((s, r) => s + (r.events || 0), 0);
+        const totInp = Object.values(codexModels).reduce((s, r) => s + (r.input_tokens || 0), 0);
+        const totOut = Object.values(codexModels).reduce((s, r) => s + (r.output_tokens || 0), 0);
+        const totCached = Object.values(codexModels).reduce((s, r) => s + (r.cached_tokens || 0), 0);
+        const totReas = Object.values(codexModels).reduce((s, r) => s + (r.reasoning_tokens || 0), 0);
+        const tr = document.createElement('tr');
+        tr.style.fontWeight = '700';
+        tr.innerHTML = `<td>Total</td><td>${fmtInt(totEv)}</td><td>${fmtInt(totInp)}</td><td>${fmtInt(totOut)}</td><td>${fmtInt(totCached)}</td><td>${fmtInt(totReas)}</td><td class="cost-highlight">${fmtCost(totCost)}</td>`;
+        codexCtbody.appendChild(tr);
+      }
 
       const cursor = data.cursor || {};
       setText('cursor-tokens-total', fmtInt(cursor.total_tokens));
@@ -1356,9 +1452,8 @@ HTML_TEMPLATE = """<!doctype html>
       const copilot = data.copilot || {};
       const el = document.getElementById('other-tools-stats');
       el.innerHTML = `
-        <div><strong>Codex</strong> — ${fmtInt(codex.events)} token-count events, ${fmtInt(codex.reasoning_tokens)} reasoning tokens</div>
-        <div style="margin-top:8px"><strong>Copilot</strong> — ${fmtInt(copilot.sessions)} sessions, ${fmtInt(copilot.tool_calls)} tool calls</div>
-        <div style="margin-top:8px;color:var(--muted);font-size:11px">Codex/Cursor costs not shown — model unknown at time of logging.</div>
+        <div><strong>Copilot</strong> — ${fmtInt(copilot.sessions)} sessions, ${fmtInt(copilot.tool_calls)} tool calls</div>
+        <div style="margin-top:8px;color:var(--muted);font-size:11px">Cursor costs not calculable — model not logged. Copilot costs not calculable — no token counts in session-state logs.</div>
       `;
 
       const note = document.getElementById('pricing-note');
