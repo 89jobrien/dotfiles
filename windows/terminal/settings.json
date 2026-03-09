@@ -1,0 +1,70 @@
+{
+    "$help": "Windows Terminal settings — part of dotfiles. Managed by windows/terminal/settings.json.",
+    "$schema": "https://aka.ms/terminal-profiles-schema",
+    "defaultProfile": "{2c4de342-38b7-51cf-b940-2309a097f518}",
+    "copyOnSelect": false,
+    "copyFormatting": "none",
+    "largePasteWarning": false,
+    "profiles": {
+        "defaults": {
+            "font": {
+                "face": "JetBrainsMono Nerd Font",
+                "size": 13
+            },
+            "cursorShape": "bar",
+            "padding": "8",
+            "scrollbarState": "hidden",
+            "colorScheme": "Catppuccin Mocha"
+        },
+        "list": [
+            {
+                "guid": "{2c4de342-38b7-51cf-b940-2309a097f518}",
+                "name": "Ubuntu (WSL)",
+                "source": "Windows.Terminal.Wsl",
+                "startingDirectory": "~",
+                "icon": "https://assets.ubuntu.com/v1/49a1a858-favicon-32x32.png"
+            },
+            {
+                "guid": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+                "name": "PowerShell",
+                "source": "Windows.Terminal.PowershellCore",
+                "startingDirectory": "%USERPROFILE%"
+            }
+        ]
+    },
+    "schemes": [
+        {
+            "name": "Catppuccin Mocha",
+            "background": "#1E1E2E",
+            "foreground": "#CDD6F4",
+            "black": "#45475A",
+            "red": "#F38BA8",
+            "green": "#A6E3A1",
+            "yellow": "#F9E2AF",
+            "blue": "#89B4FA",
+            "purple": "#CBA6F7",
+            "cyan": "#94E2D5",
+            "white": "#BAC2DE",
+            "brightBlack": "#585B70",
+            "brightRed": "#F38BA8",
+            "brightGreen": "#A6E3A1",
+            "brightYellow": "#F9E2AF",
+            "brightBlue": "#89B4FA",
+            "brightPurple": "#CBA6F7",
+            "brightCyan": "#94E2D5",
+            "brightWhite": "#A6ADC8",
+            "cursorColor": "#F5E0DC",
+            "selectionBackground": "#585B70"
+        }
+    ],
+    "actions": [
+        { "command": { "action": "copy", "singleLine": false }, "keys": "ctrl+c" },
+        { "command": "paste", "keys": "ctrl+v" },
+        { "command": "find", "keys": "ctrl+shift+f" },
+        { "command": { "action": "splitPane", "split": "auto", "splitMode": "duplicate" }, "keys": "alt+shift+d" },
+        { "command": { "action": "newTab" }, "keys": "ctrl+t" },
+        { "command": { "action": "closeTab" }, "keys": "ctrl+w" },
+        { "command": { "action": "nextTab" }, "keys": "ctrl+tab" },
+        { "command": { "action": "prevTab" }, "keys": "ctrl+shift+tab" }
+    ]
+}

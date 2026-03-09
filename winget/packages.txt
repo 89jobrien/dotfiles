@@ -1,0 +1,55 @@
+# Windows packages — installed via winget during bootstrap
+# Format: <PackageId>  # optional comment
+# Run: winget install --id <PackageId> -e --accept-source-agreements --accept-package-agreements
+#
+# Mirror of key tools from Brewfile.linux/macos that have native Windows builds.
+# WSL2 handles the rest (ripgrep, fzf, neovim, etc. are installed inside the distro).
+
+# ── Shell & Terminal ──────────────────────────────────────────────────────────
+Microsoft.WindowsTerminal
+Microsoft.PowerShell           # PowerShell 7+
+
+# ── Git & version control ─────────────────────────────────────────────────────
+Git.Git
+GitHub.cli                     # gh
+dandavison.delta               # git diff pager
+
+# ── Editors ───────────────────────────────────────────────────────────────────
+ZedIndustries.Zed
+Alacritty.Alacritty
+Microsoft.VisualStudioCode     # fallback editor
+
+# ── AI tools ──────────────────────────────────────────────────────────────────
+Anthropic.ClaudeDesktop
+Anthropic.ClaudeCLI            # claude-code CLI (if available on winget)
+
+# ── Runtimes & toolchains ─────────────────────────────────────────────────────
+jdx.mise                       # runtime version manager (replaces nvm/pyenv/rustup)
+
+# ── Core CLI utilities ────────────────────────────────────────────────────────
+jqlang.jq
+MikeFarah.yq
+sharkdp.bat
+sharkdp.fd
+BurntSushi.ripgrep.MSVC
+eza-community.eza
+junegunn.fzf
+Casey.Just                     # just (task runner)
+charmbracelet.gum              # gum (TUI prompts)
+ajeetdsouza.zoxide             # zoxide (smart cd)
+Neovim.Neovim
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+FiloSottile.age
+mozilla.sops
+
+# ── Containers ────────────────────────────────────────────────────────────────
+Docker.DockerDesktop           # or: suse.RancherDesktop
+
+# ── Kubernetes ────────────────────────────────────────────────────────────────
+Kubernetes.kubectl
+helm.helm
+kubernetes-sigs.kind
+
+# ── Fonts (required for terminal icons/powerline) ─────────────────────────────
+DEVCOM.JetBrainsMonoNerdFont

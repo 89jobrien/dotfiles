@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-A dotfiles repo that bootstraps a reproducible dev environment on macOS/Linux. Uses GNU Stow for symlink management, Homebrew/apt for packages, and mise for language runtimes. The primary entrypoint is `pj dot install` (which calls `install.sh` → `scripts/bootstrap.sh`).
+A dotfiles repo that bootstraps a reproducible dev environment on macOS/Linux/Windows. Uses GNU Stow for symlink management, Homebrew/apt for packages, and mise for language runtimes. The primary entrypoint is `pj dot install` (which calls `install.sh` → `scripts/bootstrap.sh`) on POSIX systems. On Windows, use `install.ps1` → `scripts/setup-windows.ps1`.
 
 ## Key Commands
 
@@ -29,6 +29,12 @@ mise run dev-tools       # cargo/bun tool installs
 
 # Secrets
 mise run secrets-check   # verify no plaintext secrets staged
+
+# Windows (run from elevated PowerShell)
+.\install.ps1                          # full bootstrap (WSL2 + winget + Linux bootstrap)
+.\install.ps1 -SkipWSL                 # winget packages only
+.\install.ps1 -SkipBootstrap           # WSL2 + winget, skip Linux bootstrap inside WSL
+.\install.ps1 -DryRun                  # print actions without making changes
 
 # Testing & quality
 mise run test            # run all bats unit tests
