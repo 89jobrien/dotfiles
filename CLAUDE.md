@@ -33,8 +33,12 @@ mise run secrets-check   # verify no plaintext secrets staged
 # Windows (run from elevated PowerShell)
 .\install.ps1                          # full bootstrap (WSL2 + winget + Linux bootstrap)
 .\install.ps1 -SkipWSL                 # winget packages only
-.\install.ps1 -SkipBootstrap           # WSL2 + winget, skip Linux bootstrap inside WSL
+.\install.ps1 -SkipBootstrap           # WSL2 + winget, skip NixOS bootstrap
 .\install.ps1 -DryRun                  # print actions without making changes
+
+# Inside NixOS-WSL (after bootstrap)
+sudo nixos-rebuild switch --flake ~/dotfiles/nixos#wsl   # apply system config
+home-manager switch --flake ~/dotfiles/nixos#nixos       # apply user config
 
 # Testing & quality
 mise run test            # run all bats unit tests

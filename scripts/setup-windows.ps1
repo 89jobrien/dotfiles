@@ -1,14 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Bootstrap a Windows machine with WSL2 and dev tools.
+    Bootstrap a Windows machine with NixOS-WSL and native dev tools.
 
 .DESCRIPTION
     1. Optionally self-elevates to Administrator
-    2. Installs WSL2 + Ubuntu (unless -SkipWSL)
-    3. Installs native Windows packages via winget (unless -SkipPackages)
-    4. Clones dotfiles into WSL and runs the Linux bootstrap inside it (unless -SkipBootstrap)
-    5. Sets up a PowerShell profile
+    2. Installs WSL2 + NixOS (via NixOS-WSL) unless -SkipWSL
+    3. Installs native Windows packages via winget unless -SkipPackages
+    4. Clones dotfiles into NixOS-WSL and runs nixos-rebuild + home-manager unless -SkipBootstrap
+    5. Sets up a PowerShell profile and Windows Terminal config
 
 .NOTES
     Requires Windows 10 2004+ (build 19041+) or Windows 11.
@@ -20,23 +20,26 @@ param(
     [switch]$SkipPackages,
     [switch]$SkipBootstrap,
     [switch]$DryRun,
-    [string]$WslDistro = 'Ubuntu',
+    [string]$WslDistro    = 'NixOS',
     [string]$DotfilesRepo = 'https://github.com/89jobrien/dotfiles.git',
-    [string]$DotfilesWslPath = '~/dotfiles'
+    [string]$DotfilesPath = '~/dotfiles'   # expands inside NixOS shell
 )
 
 $ErrorActionPreference = 'Stop'
-$ScriptDir  = $PSScriptRoot
-$RepoRoot   = Split-Path $ScriptDir -Parent
+$ScriptDir   = $PSScriptRoot
+$RepoRoot    = Split-Path $ScriptDir -Parent
 $PackageList = Join-Path $RepoRoot 'winget\packages.txt'
+
+# GitHub release for NixOS-WSL
+$NixOSWslRelease = 'https://api.github.com/repos/nix-community/NixOS-WSL/releases/latest'
 
 # ── Colour helpers ────────────────────────────────────────────────────────────
 
-function Write-Step  { param($msg) Write-Host "  --> $msg" -ForegroundColor Cyan }
-function Write-Ok    { param($msg) Write-Host "  [ok] $msg" -ForegroundColor Green }
-function Write-Skip  { param($msg) Write-Host " [skip] $msg" -ForegroundColor DarkGray }
-function Write-Warn  { param($msg) Write-Host " [warn] $msg" -ForegroundColor Yellow }
-function Write-Err   { param($msg) Write-Host "  [err] $msg" -ForegroundColor Red }
+function Write-Step    { param($msg) Write-Host "  --> $msg" -ForegroundColor Cyan }
+function Write-Ok      { param($msg) Write-Host "  [ok] $msg" -ForegroundColor Green }
+function Write-Skip    { param($msg) Write-Host " [skip] $msg" -ForegroundColor DarkGray }
+function Write-Warn    { param($msg) Write-Host " [warn] $msg" -ForegroundColor Yellow }
+function Write-Err     { param($msg) Write-Host "  [err] $msg" -ForegroundColor Red }
 function Write-Section { param($msg) Write-Host "`n=== $msg ===" -ForegroundColor Magenta }
 
 function Invoke-Step {
@@ -44,6 +47,11 @@ function Invoke-Step {
     Write-Step $Label
     if ($DryRun) { Write-Skip "dry-run: skipped"; return }
     & $Block
+}
+
+function Invoke-Nix {
+    param([string]$Cmd)
+    wsl -d $WslDistro -- bash -c $Cmd
 }
 
 # ── Elevation ─────────────────────────────────────────────────────────────────
@@ -59,7 +67,6 @@ function Assert-Admin {
         if ($v -is [switch]) { if ($v) { $args_ += " -$k" } }
         else { $args_ += " -$k `"$v`"" }
     }
-    # Use pwsh.exe (PS 7+) if that's what we're running, otherwise fall back to powershell.exe
     $exe = if ($PSVersionTable.PSVersion.Major -ge 7) { 'pwsh.exe' } else { 'powershell.exe' }
     Start-Process $exe -Verb RunAs -ArgumentList $args_
     exit 0
@@ -76,24 +83,45 @@ function Assert-WindowsVersion {
     Write-Ok "Windows build $build — WSL2 supported"
 }
 
-# ── WSL2 install ──────────────────────────────────────────────────────────────
+# ── NixOS-WSL install ─────────────────────────────────────────────────────────
 
-function Install-WSL {
-    Write-Section 'WSL2'
+function Install-NixOSWSL {
+    Write-Section 'NixOS-WSL'
 
+    # Check if already installed
     if (Get-Command wsl -ErrorAction SilentlyContinue) {
         $distros = wsl --list --quiet 2>$null
         if ($distros -match $WslDistro) {
-            Write-Skip "$WslDistro already installed"
+            Write-Skip "NixOS already registered in WSL"
             return
         }
     }
 
-    Invoke-Step "Enable WSL2 and install $WslDistro" {
-        # wsl --install handles: WSL feature, VirtualMachinePlatform, WSL2 default, distro download
-        wsl --install --distribution $WslDistro
-        Write-Ok "WSL2 + $WslDistro installed"
-        Write-Warn 'A reboot may be required. Re-run this script after rebooting if bootstrap fails.'
+    Invoke-Step 'Enable WSL2 feature' {
+        # Enable WSL without installing a distro
+        wsl --install --no-distribution
+        Write-Warn 'A reboot may be required before NixOS can be imported. Re-run after rebooting.'
+    }
+
+    Invoke-Step 'Download NixOS-WSL release' {
+        $release = Invoke-RestMethod $NixOSWslRelease
+        $asset   = $release.assets | Where-Object { $_.name -eq 'nixos.wsl' } | Select-Object -First 1
+        if (-not $asset) {
+            Write-Err 'nixos.wsl asset not found in latest NixOS-WSL release'
+            exit 1
+        }
+        $script:NixOSWslFile = Join-Path $env:TEMP 'nixos.wsl'
+        Write-Step "Downloading $($asset.name) ($([math]::Round($asset.size/1MB, 1)) MB)..."
+        Invoke-WebRequest $asset.browser_download_url -OutFile $script:NixOSWslFile -UseBasicParsing
+        Write-Ok "Downloaded to $($script:NixOSWslFile)"
+    }
+
+    Invoke-Step 'Import NixOS into WSL' {
+        $distroPath = Join-Path $env:USERPROFILE ".wsl\$WslDistro"
+        New-Item -ItemType Directory -Path $distroPath -Force | Out-Null
+        wsl --import $WslDistro $distroPath $script:NixOSWslFile --version 2
+        wsl --set-default $WslDistro
+        Write-Ok "NixOS imported at $distroPath and set as default WSL distro"
     }
 }
 
@@ -123,6 +151,7 @@ function Install-WingetPackages {
         winget install --id $id -e --accept-source-agreements --accept-package-agreements --silent 2>&1 |
             Where-Object { $_ -notmatch 'Found an existing package' } |
             ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
+        # 0 = success, -1978335189 (0x8A15002B) = already installed
         if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq -1978335189) {
             Write-Ok $id
         } else {
@@ -131,13 +160,13 @@ function Install-WingetPackages {
     }
 }
 
-# ── Dotfiles bootstrap inside WSL ────────────────────────────────────────────
+# ── NixOS bootstrap ───────────────────────────────────────────────────────────
 
-function Invoke-WslBootstrap {
-    Write-Section 'Dotfiles bootstrap inside WSL'
+function Invoke-NixOSBootstrap {
+    Write-Section 'NixOS bootstrap'
 
     if (-not (Get-Command wsl -ErrorAction SilentlyContinue)) {
-        Write-Warn 'wsl not available — skipping Linux bootstrap'
+        Write-Warn 'wsl not available — skipping NixOS bootstrap'
         return
     }
 
@@ -147,25 +176,35 @@ function Invoke-WslBootstrap {
         return
     }
 
-    Invoke-Step "Clone dotfiles into WSL at $DotfilesWslPath" {
-        wsl -d $WslDistro -- bash -c @"
+    Invoke-Step "Clone dotfiles into NixOS at $DotfilesPath" {
+        Invoke-Nix @"
 set -e
-if [ ! -d '$DotfilesWslPath/.git' ]; then
-    git clone '$DotfilesRepo' '$DotfilesWslPath'
+if [ ! -d $DotfilesPath/.git ]; then
+    git clone $DotfilesRepo $DotfilesPath
 fi
 "@
     }
 
-    Invoke-Step 'Run Linux bootstrap inside WSL' {
-        wsl -d $WslDistro -- bash -c @"
+    Invoke-Step 'Apply NixOS system configuration (nixos-rebuild switch)' {
+        Invoke-Nix @"
 set -e
-cd '$DotfilesWslPath'
-export ALLOW_DIRECT_DOTFILES_INSTALL=1
-bash install.sh
+cd $DotfilesPath/nixos
+sudo nixos-rebuild switch --flake .#wsl
 "@
+        Write-Ok 'NixOS system config applied'
     }
 
-    Write-Ok 'WSL bootstrap complete'
+    Invoke-Step 'Apply home-manager configuration' {
+        Invoke-Nix @"
+set -e
+cd $DotfilesPath/nixos
+# home-manager is available after nixos-rebuild
+home-manager switch --flake .#nixos
+"@
+        Write-Ok 'home-manager config applied'
+    }
+
+    Write-Ok 'NixOS bootstrap complete'
 }
 
 # ── PowerShell profile ────────────────────────────────────────────────────────
@@ -211,7 +250,7 @@ function Set-GitConfig {
 
     Invoke-Step 'Set core.symlinks = true' {
         git config --global core.symlinks true
-        Write-Ok 'core.symlinks = true (requires Developer Mode or admin git operations)'
+        Write-Ok 'core.symlinks = true (requires Developer Mode or admin)'
     }
 }
 
@@ -232,7 +271,7 @@ function Set-WindowsTerminalConfig {
         return
     }
 
-    Invoke-Step "Copy Windows Terminal settings" {
+    Invoke-Step 'Apply Windows Terminal settings' {
         Copy-Item $wtSettingsSrc (Join-Path $wtDir 'settings.json') -Force
         Write-Ok 'Windows Terminal settings applied'
     }
@@ -244,15 +283,15 @@ Assert-Admin
 Assert-WindowsVersion
 
 Write-Host ''
-Write-Host '  dotfiles — Windows bootstrap' -ForegroundColor White
+Write-Host '  dotfiles — Windows bootstrap (NixOS-WSL)' -ForegroundColor White
 Write-Host "  Repo: $RepoRoot" -ForegroundColor DarkGray
 if ($DryRun) { Write-Host '  [DRY RUN]' -ForegroundColor Yellow }
 Write-Host ''
 
-if (-not $SkipWSL)       { Install-WSL }
+if (-not $SkipWSL)       { Install-NixOSWSL }
 if (-not $SkipPackages)  { Install-WingetPackages }
 Set-GitConfig
-if (-not $SkipBootstrap) { Invoke-WslBootstrap }
+if (-not $SkipBootstrap) { Invoke-NixOSBootstrap }
 Install-PsProfile
 Set-WindowsTerminalConfig
 
@@ -260,7 +299,9 @@ Write-Host ''
 Write-Ok 'Bootstrap complete.'
 Write-Host ''
 Write-Host '  Next steps:' -ForegroundColor White
-Write-Host '    1. Reboot if WSL was just installed' -ForegroundColor DarkGray
-Write-Host '    2. Open Windows Terminal and select the Ubuntu profile' -ForegroundColor DarkGray
-Write-Host '    3. Your Linux dev environment is in WSL at ~/dotfiles' -ForegroundColor DarkGray
+Write-Host '    1. Reboot if WSL was just installed for the first time' -ForegroundColor DarkGray
+Write-Host '    2. Open Windows Terminal — NixOS should be the default profile' -ForegroundColor DarkGray
+Write-Host '    3. Run: wsl -d NixOS' -ForegroundColor DarkGray
+Write-Host '    4. Your dotfiles are at ~/dotfiles inside NixOS' -ForegroundColor DarkGray
+Write-Host "    5. To update: cd ~/dotfiles/nixos && sudo nixos-rebuild switch --flake .#wsl" -ForegroundColor DarkGray
 Write-Host ''

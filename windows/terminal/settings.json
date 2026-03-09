@@ -1,7 +1,7 @@
 {
     "$help": "Windows Terminal settings — part of dotfiles. Managed by windows/terminal/settings.json.",
     "$schema": "https://aka.ms/terminal-profiles-schema",
-    "defaultProfile": "{2c4de342-38b7-51cf-b940-2309a097f518}",
+    "defaultProfile": "{a9b0d7e4-2b1c-4c3d-8e5f-1a2b3c4d5e6f}",
     "copyOnSelect": false,
     "copyFormatting": "none",
     "largePasteWarning": false,
@@ -18,11 +18,12 @@
         },
         "list": [
             {
-                "guid": "{2c4de342-38b7-51cf-b940-2309a097f518}",
-                "name": "Ubuntu (WSL)",
+                "guid": "{a9b0d7e4-2b1c-4c3d-8e5f-1a2b3c4d5e6f}",
+                "name": "NixOS (WSL)",
                 "source": "Windows.Terminal.Wsl",
+                "commandline": "wsl.exe -d NixOS",
                 "startingDirectory": "~",
-                "icon": "https://assets.ubuntu.com/v1/49a1a858-favicon-32x32.png"
+                "icon": "https://nixos.org/favicon.png"
             },
             {
                 "guid": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
