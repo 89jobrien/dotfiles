@@ -52,6 +52,9 @@ function Invoke-Step {
 function Invoke-Nix {
     param([string]$Cmd)
     wsl -d $WslDistro -- bash -c $Cmd
+    if ($LASTEXITCODE -ne 0) {
+        throw "wsl command failed (exit $LASTEXITCODE): $Cmd"
+    }
 }
 
 # -- Elevation -----------------------------------------------------------------
@@ -90,7 +93,7 @@ function Install-NixOSWSL {
 
     # Check if already installed (wsl.exe may exist as a stub even when WSL is not set up)
     $distros = $null
-    try { $distros = wsl --list --quiet 2>$null } catch {}
+    try { $distros = (wsl --list --quiet 2>$null) -replace "`0", "" } catch {}
     if ($distros -match $WslDistro) {
         Write-Skip "NixOS already registered in WSL"
         return
@@ -169,7 +172,7 @@ function Invoke-NixOSBootstrap {
         return
     }
 
-    $distros = wsl --list --quiet 2>$null
+    $distros = (wsl --list --quiet 2>$null) -replace "`0", ""
     if ($distros -notmatch $WslDistro) {
         Write-Warn "$WslDistro not found in WSL  -  skipping bootstrap"
         return
@@ -227,8 +230,14 @@ function Install-PsProfile {
             Write-Warn "Existing profile at $PROFILE  -  backing up to $PROFILE.bak"
             Copy-Item $PROFILE "$PROFILE.bak" -Force
         }
-        New-Item -ItemType SymbolicLink -Path $PROFILE -Target $profileSrc -Force | Out-Null
-        Write-Ok "Profile linked: $PROFILE -> $profileSrc"
+        try {
+            New-Item -ItemType SymbolicLink -Path $PROFILE -Target $profileSrc -Force | Out-Null
+            Write-Ok "Profile linked: $PROFILE -> $profileSrc"
+        } catch {
+            Write-Warn "Symlink not supported on this path  -  copying instead"
+            Copy-Item $profileSrc $PROFILE -Force
+            Write-Ok "Profile copied: $PROFILE (update manually when dotfiles change)"
+        }
     }
 }
 
