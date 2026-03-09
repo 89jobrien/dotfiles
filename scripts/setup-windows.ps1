@@ -22,7 +22,7 @@ param(
     [switch]$DryRun,
     [string]$WslDistro = 'Ubuntu',
     [string]$DotfilesRepo = 'https://github.com/89jobrien/dotfiles.git',
-    [string]$DotfilesWslPath = '/root/dotfiles'
+    [string]$DotfilesWslPath = '~/dotfiles'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -59,7 +59,9 @@ function Assert-Admin {
         if ($v -is [switch]) { if ($v) { $args_ += " -$k" } }
         else { $args_ += " -$k `"$v`"" }
     }
-    Start-Process powershell.exe -Verb RunAs -ArgumentList $args_
+    # Use pwsh.exe (PS 7+) if that's what we're running, otherwise fall back to powershell.exe
+    $exe = if ($PSVersionTable.PSVersion.Major -ge 7) { 'pwsh.exe' } else { 'powershell.exe' }
+    Start-Process $exe -Verb RunAs -ArgumentList $args_
     exit 0
 }
 
