@@ -1,4 +1,4 @@
-﻿﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Bootstrap a Windows machine with NixOS-WSL and native dev tools.

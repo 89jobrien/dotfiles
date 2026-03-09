@@ -1,4 +1,4 @@
-﻿# PowerShell profile  -  part of dotfiles
+# PowerShell profile  -  part of dotfiles
 # Managed by: windows/powershell/Microsoft.PowerShell_profile.ps1
 # Linked to $PROFILE by scripts/setup-windows.ps1
 
