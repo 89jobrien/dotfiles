@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Bootstrap a Windows machine with NixOS-WSL and native dev tools.
@@ -33,7 +33,7 @@ $PackageList = Join-Path $RepoRoot 'winget\packages.txt'
 # GitHub release for NixOS-WSL
 $NixOSWslRelease = 'https://api.github.com/repos/nix-community/NixOS-WSL/releases/latest'
 
-# ── Colour helpers ────────────────────────────────────────────────────────────
+# -- Colour helpers ------------------------------------------------------------
 
 function Write-Step    { param($msg) Write-Host "  --> $msg" -ForegroundColor Cyan }
 function Write-Ok      { param($msg) Write-Host "  [ok] $msg" -ForegroundColor Green }
@@ -54,13 +54,13 @@ function Invoke-Nix {
     wsl -d $WslDistro -- bash -c $Cmd
 }
 
-# ── Elevation ─────────────────────────────────────────────────────────────────
+# -- Elevation -----------------------------------------------------------------
 
 function Assert-Admin {
     $current = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
     if ($current.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { return }
 
-    Write-Warn 'Not running as Administrator — relaunching elevated...'
+    Write-Warn 'Not running as Administrator  -  relaunching elevated...'
     $args_ = "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
     foreach ($k in $PSBoundParameters.Keys) {
         $v = $PSBoundParameters[$k]
@@ -72,7 +72,7 @@ function Assert-Admin {
     exit 0
 }
 
-# ── Windows version check ─────────────────────────────────────────────────────
+# -- Windows version check -----------------------------------------------------
 
 function Assert-WindowsVersion {
     $build = [System.Environment]::OSVersion.Version.Build
@@ -80,10 +80,10 @@ function Assert-WindowsVersion {
         Write-Err "WSL2 requires Windows 10 build 19041+ (current: $build). Update Windows first."
         exit 1
     }
-    Write-Ok "Windows build $build — WSL2 supported"
+    Write-Ok "Windows build $build  -  WSL2 supported"
 }
 
-# ── NixOS-WSL install ─────────────────────────────────────────────────────────
+# -- NixOS-WSL install ---------------------------------------------------------
 
 function Install-NixOSWSL {
     Write-Section 'NixOS-WSL'
@@ -125,7 +125,7 @@ function Install-NixOSWSL {
     }
 }
 
-# ── winget packages ───────────────────────────────────────────────────────────
+# -- winget packages -----------------------------------------------------------
 
 function Install-WingetPackages {
     Write-Section 'Native Windows packages (winget)'
@@ -160,19 +160,19 @@ function Install-WingetPackages {
     }
 }
 
-# ── NixOS bootstrap ───────────────────────────────────────────────────────────
+# -- NixOS bootstrap -----------------------------------------------------------
 
 function Invoke-NixOSBootstrap {
     Write-Section 'NixOS bootstrap'
 
     if (-not (Get-Command wsl -ErrorAction SilentlyContinue)) {
-        Write-Warn 'wsl not available — skipping NixOS bootstrap'
+        Write-Warn 'wsl not available  -  skipping NixOS bootstrap'
         return
     }
 
     $distros = wsl --list --quiet 2>$null
     if ($distros -notmatch $WslDistro) {
-        Write-Warn "$WslDistro not found in WSL — skipping bootstrap"
+        Write-Warn "$WslDistro not found in WSL  -  skipping bootstrap"
         return
     }
 
@@ -207,7 +207,7 @@ home-manager switch --flake .#nixos
     Write-Ok 'NixOS bootstrap complete'
 }
 
-# ── PowerShell profile ────────────────────────────────────────────────────────
+# -- PowerShell profile --------------------------------------------------------
 
 function Install-PsProfile {
     Write-Section 'PowerShell profile'
@@ -225,7 +225,7 @@ function Install-PsProfile {
             New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
         }
         if (Test-Path $PROFILE) {
-            Write-Warn "Existing profile at $PROFILE — backing up to $PROFILE.bak"
+            Write-Warn "Existing profile at $PROFILE  -  backing up to $PROFILE.bak"
             Copy-Item $PROFILE "$PROFILE.bak" -Force
         }
         New-Item -ItemType SymbolicLink -Path $PROFILE -Target $profileSrc -Force | Out-Null
@@ -233,13 +233,13 @@ function Install-PsProfile {
     }
 }
 
-# ── Git config (Windows-side) ─────────────────────────────────────────────────
+# -- Git config (Windows-side) -------------------------------------------------
 
 function Set-GitConfig {
     Write-Section 'Git config (Windows)'
 
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        Write-Skip 'git not in PATH — skipping (install via winget first)'
+        Write-Skip 'git not in PATH  -  skipping (install via winget first)'
         return
     }
 
@@ -254,7 +254,7 @@ function Set-GitConfig {
     }
 }
 
-# ── Windows Terminal config ───────────────────────────────────────────────────
+# -- Windows Terminal config ---------------------------------------------------
 
 function Set-WindowsTerminalConfig {
     Write-Section 'Windows Terminal'
@@ -267,7 +267,7 @@ function Set-WindowsTerminalConfig {
 
     $wtDir = Join-Path $env:LOCALAPPDATA 'Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState'
     if (-not (Test-Path $wtDir)) {
-        Write-Skip 'Windows Terminal not installed yet — run again after package install'
+        Write-Skip 'Windows Terminal not installed yet  -  run again after package install'
         return
     }
 
@@ -277,13 +277,13 @@ function Set-WindowsTerminalConfig {
     }
 }
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# -- Main ----------------------------------------------------------------------
 
 Assert-Admin
 Assert-WindowsVersion
 
 Write-Host ''
-Write-Host '  dotfiles — Windows bootstrap (NixOS-WSL)' -ForegroundColor White
+Write-Host '  dotfiles  -  Windows bootstrap (NixOS-WSL)' -ForegroundColor White
 Write-Host "  Repo: $RepoRoot" -ForegroundColor DarkGray
 if ($DryRun) { Write-Host '  [DRY RUN]' -ForegroundColor Yellow }
 Write-Host ''
@@ -300,7 +300,7 @@ Write-Ok 'Bootstrap complete.'
 Write-Host ''
 Write-Host '  Next steps:' -ForegroundColor White
 Write-Host '    1. Reboot if WSL was just installed for the first time' -ForegroundColor DarkGray
-Write-Host '    2. Open Windows Terminal — NixOS should be the default profile' -ForegroundColor DarkGray
+Write-Host '    2. Open Windows Terminal  -  NixOS should be the default profile' -ForegroundColor DarkGray
 Write-Host '    3. Run: wsl -d NixOS' -ForegroundColor DarkGray
 Write-Host '    4. Your dotfiles are at ~/dotfiles inside NixOS' -ForegroundColor DarkGray
 Write-Host "    5. To update: cd ~/dotfiles/nixos && sudo nixos-rebuild switch --flake .#wsl" -ForegroundColor DarkGray
