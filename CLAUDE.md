@@ -126,7 +126,7 @@ Encrypted with `sops + age`. Decrypted to `~/.config/dev-bootstrap/secrets.env` 
 
 Single script configures 7 tools: Claude Desktop, Claude Code, Cursor, Zed, OpenCode, Codex, Gemini. Uses `merge_json_config()` helper for JSON configs (jq-based read-modify-write). Codex uses TOML via awk strip+append. Builds `personal-mcp` binary from `~/dev/personal-mcp` if the repo exists.
 
-### Nix Flake (`flake.nix`)
+### Nix Flake (`flake.nix`) — macOS/Linux profile
 
 Declarative CLI tools layer that sits alongside Homebrew. Installs a single `buildEnv` profile entry bundling ~30 CLI tools via `nix profile install .#default`. The setup script (`scripts/setup-nix.sh`) installs Nix itself (Determinate Systems installer) then installs or upgrades the profile. Runs as a bootstrap post-hook after Secrets.
 
@@ -139,6 +139,26 @@ mise run nix-check       # verify profile + flake
 To add a package: find the nixpkgs attr name (`nix search nixpkgs <term>`), add to `cliPackages` in `flake.nix`, run `mise run nix-install`. To list installed binaries: `ls ~/.nix-profile/bin/`.
 
 Brewfile entries tagged `# [nix-batch-1]` are the first migration wave (kept in both during transition). What stays in Brew: casks, container stack, macOS-only tools, tools not in nixpkgs, and runtimes managed by mise.
+
+### Windows Bootstrap (`scripts/setup-windows.ps1`)
+
+PowerShell bootstrap for Windows. Downloads `nixos.wsl` from the [nix-community/NixOS-WSL](https://github.com/nix-community/NixOS-WSL) latest GitHub release, imports it via `wsl --import`, installs native Windows tools via `winget/packages.txt`, then runs `nixos-rebuild switch` + `home-manager switch` inside NixOS. Entry point is `install.ps1` at repo root.
+
+Native Windows package list lives in `winget/packages.txt` (one winget ID per line, `#` comments). Windows Terminal config and PowerShell profile live in `windows/`.
+
+### NixOS-WSL Config (`nixos/`)
+
+Full NixOS system configuration for use inside WSL2. Three files:
+
+- `nixos/flake.nix` — wires `nixpkgs`, `nixos-wsl`, and `home-manager` into a `#wsl` output. **Separate from the root `flake.nix`** (which is a macOS/Linux Nix profile, not a NixOS system).
+- `nixos/configuration.nix` — system-level: WSL module, default user `nixos`, zsh, passwordless sudo, weekly Nix GC.
+- `nixos/home.nix` — home-manager user config: packages (mirrors `cliPackages` in root `flake.nix`), zsh, starship, zoxide, neovim, tmux, fzf, direnv, mise, git-delta.
+
+After any change to these files, apply with:
+```bash
+sudo nixos-rebuild switch --flake ~/dotfiles/nixos#wsl   # system
+home-manager switch --flake ~/dotfiles/nixos#nixos        # user
+```
 
 ### toolz Crate (`toolz/`)
 
@@ -178,3 +198,7 @@ When adding a new post-hook script:
 When modifying AI tool configs: all 7 tools are configured in `setup-ai-tools.sh`. Don't create separate per-tool scripts.
 
 When adding shared library functions: add bats tests in `tests/lib/` and update `scripts/lib/README.md`.
+
+When modifying Windows native packages: edit `winget/packages.txt`. When modifying the PowerShell profile or terminal config: edit `windows/powershell/` or `windows/terminal/`.
+
+When modifying the NixOS-WSL system config: edit `nixos/configuration.nix` (system-level) or `nixos/home.nix` (user packages/shell). The `nixos/flake.nix` inputs only need touching when pinning new versions of `nixos-wsl` or `home-manager`.
