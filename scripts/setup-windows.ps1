@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+﻿﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Bootstrap a Windows machine with NixOS-WSL and native dev tools.
@@ -88,13 +88,12 @@ function Assert-WindowsVersion {
 function Install-NixOSWSL {
     Write-Section 'NixOS-WSL'
 
-    # Check if already installed
-    if (Get-Command wsl -ErrorAction SilentlyContinue) {
-        $distros = wsl --list --quiet 2>$null
-        if ($distros -match $WslDistro) {
-            Write-Skip "NixOS already registered in WSL"
-            return
-        }
+    # Check if already installed (wsl.exe may exist as a stub even when WSL is not set up)
+    $distros = $null
+    try { $distros = wsl --list --quiet 2>$null } catch {}
+    if ($distros -match $WslDistro) {
+        Write-Skip "NixOS already registered in WSL"
+        return
     }
 
     Invoke-Step 'Enable WSL2 feature' {
