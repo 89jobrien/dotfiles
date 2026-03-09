@@ -2,26 +2,26 @@
 
 [![CI](https://github.com/89jobrien/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/89jobrien/dotfiles/actions/workflows/ci.yml)
 
-Reproducible dev environment bootstrap with a managed (immutable) core and local (mutable) overrides.
+Reproducible dev environment bootstrap with a managed (immutable) core and local (mutable) overrides. Supports macOS, Linux, and Windows (via NixOS-WSL).
 
 ## Quick start
 
-```bash
-cd ~/dotfiles
-pj dot install
-```
-
-Or from anywhere:
+**macOS / Linux:**
 
 ```bash
 pj dot install
-```
-
-Without `pj`:
-
-```bash
+# or without pj:
 ALLOW_DIRECT_DOTFILES_INSTALL=1 ./install.sh
 ```
+
+**Windows** (elevated PowerShell):
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force
+.\install.ps1
+```
+
+Installs NixOS-WSL, native Windows dev tools via winget, then runs `nixos-rebuild switch` + `home-manager switch` inside NixOS. See [Windows bootstrap](#windows-nixos-wsl) for details.
 
 ### Task Runners
 
@@ -277,9 +277,58 @@ All four are private repos. Bootstrap clones them via `scripts/setup-companion-r
 
 Runtime toolchains (Go, Rust) are managed by mise. CLI tools (`just`, `jq`, `tmux`, etc.) come from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
 
-## Nix packages
+## Windows (NixOS-WSL)
+
+Full declarative dev environment on Windows via [NixOS-WSL](https://github.com/nix-community/NixOS-WSL). The bootstrap downloads a pre-built NixOS image, imports it into WSL2, then applies the system and user config from `nixos/`.
+
+```powershell
+# Full bootstrap (elevated PowerShell)
+.\install.ps1
+
+# Flags
+.\install.ps1 -SkipWSL        # winget packages only (NixOS already installed)
+.\install.ps1 -SkipBootstrap  # WSL2 + winget, skip nixos-rebuild
+.\install.ps1 -DryRun         # print actions without executing
+```
+
+**Bootstrap steps:**
+1. Enable WSL2 feature (`wsl --install --no-distribution`)
+2. Download `nixos.wsl` from [nix-community/NixOS-WSL](https://github.com/nix-community/NixOS-WSL/releases) latest release
+3. `wsl --import NixOS ~/.wsl/NixOS nixos.wsl`
+4. Install native Windows packages via `winget/packages.txt`
+5. Inside NixOS: `git clone` dotfiles, then `nixos-rebuild switch` + `home-manager switch`
+
+**Day-to-day inside NixOS-WSL:**
+
+```bash
+# Apply system config changes (kernel, services, system packages)
+sudo nixos-rebuild switch --flake ~/dotfiles/nixos#wsl
+
+# Apply user env changes (packages, shell, tools)
+home-manager switch --flake ~/dotfiles/nixos#nixos
+```
+
+**NixOS config files (`nixos/`):**
+
+| File | Purpose |
+|---|---|
+| `flake.nix` | Wires nixpkgs, nixos-wsl, and home-manager into `#wsl` output |
+| `configuration.nix` | System-level: WSL module, default user `nixos`, zsh, sudo, GC |
+| `home.nix` | User-level: full package set, zsh, starship, zoxide, neovim, tmux, mise, git |
+
+**Native Windows packages** (`winget/packages.txt`): Windows Terminal, Git, Zed, Alacritty, PowerShell 7+, gh, jq, mise, Docker Desktop, kubectl, and more.
+
+**Quirks:**
+- WSL2 feature enable requires a reboot on first install — re-run `install.ps1 -SkipWSL` after rebooting
+- NixOS first boot does not prompt for a username/password (default user is `nixos`, passwordless sudo)
+- `nixos-rebuild switch` on first run will be slow (downloads all packages); subsequent runs are fast
+- Developer Mode must be enabled for Windows-side symlinks (`git config core.symlinks true`)
+
+## Nix packages (macOS/Linux profile)
 
 Declarative CLI tools layer using a Nix flake (`flake.nix`). Installs a single `buildEnv` profile entry bundling ~30 CLI tools via `nix profile install .#default`. The setup script (`scripts/setup-nix.sh`) installs Nix itself (Determinate Systems installer) then installs or upgrades the profile. Runs as a bootstrap post-hook after Secrets.
+
+> **Note:** This is separate from the NixOS-WSL config in `nixos/`. The root `flake.nix` is a Nix profile for macOS/Linux; `nixos/flake.nix` is a full NixOS system configuration for WSL2.
 
 ```bash
 # First-time install (installs Nix + flake packages)
@@ -594,7 +643,9 @@ The dotfiles repository has comprehensive documentation covering all aspects of 
 ## Notes
 
 **Platform Support:**
-- Primary focus on macOS, with Linux support for core functionality
+- macOS: full support (primary development platform)
+- Linux: full support via `install.sh` → `scripts/bootstrap.sh`
+- Windows: NixOS-WSL via `install.ps1` → `scripts/setup-windows.ps1`; native tools via `winget/packages.txt`
 - Platform-aware testing (macOS-specific tests skip gracefully on Linux)
 
 **Testing & Quality:**
