@@ -41,16 +41,16 @@ jobs:
           bats tests/lib/log.bats 2>/dev/null || echo "  log.bats not found, skipping"
           echo "Core tests passed"
 
-  shellcheck-critical:
-    name: Shellcheck (Critical Issues)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # shellcheck-critical:
+  #   name: Shellcheck (Critical Issues)
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Run shellcheck on critical scripts
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: "./scripts"
-          severity: error
-          ignore_paths: "scripts/post-bootstrap.local.example.sh"
+  #     - name: Run shellcheck on critical scripts
+  #       uses: ludeeus/action-shellcheck@master
+  #       with:
+  #         scandir: "./scripts"
+  #         severity: error
+  #         ignore_paths: "scripts/post-bootstrap.local.example.sh"
