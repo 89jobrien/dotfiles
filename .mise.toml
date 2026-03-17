@@ -424,12 +424,12 @@ run = "./scripts/rust-clean-service.sh logs"
 # ---------------------------------------------------------------------------
 
 [tasks.toolz-install]
-description = "Build and install toolz CLI from local crate to ~/.local/bin/toolz"
-run = "cargo install --path ${ROOT_DIR}/toolz --root ${HOME}/.local --force"
+description = "Build and install toolz CLI from ~/dev/tools to ~/.local/bin/toolz"
+run = "cargo install --path ${HOME}/dev/tools --root ${HOME}/.local --force"
 
 [tasks.toolz-dev]
 description = "Build toolz in dev mode (no install)"
-run = "cd ${ROOT_DIR}/toolz && cargo build"
+run = "cd ${HOME}/dev/tools && cargo build"
 
 # ---------------------------------------------------------------------------
 # Code Quality

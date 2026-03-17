@@ -204,10 +204,10 @@ secrets-setup:
     ./scripts/setup-secrets-interactive.sh
 
 toolz-install:
-    cargo install --path toolz --root "${HOME}/.local" --force
+    cargo install --path ~/dev/tools --root "${HOME}/.local" --force
 
 toolz-dev:
-    cd toolz && cargo build
+    cd ~/dev/tools && cargo build
 
 menu:
     ./scripts/menu

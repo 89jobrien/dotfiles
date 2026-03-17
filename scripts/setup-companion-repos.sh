@@ -15,6 +15,7 @@ REPOS=(
   "$HOME/dev/personal-mcp  89jobrien/personal-mcp"
   "$HOME/dev/dumcp          89jobrien/dumcp"
   "$HOME/dev/obfsck         89jobrien/obfsck"
+  "$HOME/dev/tools          89jobrien/tools"
   "$HOME/maestro-dev        89jobrien/maestro-dev"
 )
 

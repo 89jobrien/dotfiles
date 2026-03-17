@@ -17,8 +17,6 @@ if has_cmd cargo; then
   if has_cmd mise; then
     ensure_cmd "alacritty" "mise exec -- cargo install --locked alacritty" "failed_optional" || true
     ensure_cmd "bacon" "mise exec -- cargo install --locked bacon" "failed_optional" || true
-    ensure_cmd "cargo-nextest" "mise exec -- cargo install --locked cargo-nextest" "failed_optional" || true
-    ensure_cmd "cargo-watch" "mise exec -- cargo install --locked cargo-watch" "failed_optional" || true
     ensure_cmd "trunk" "mise exec -- cargo install --locked trunk" "failed_optional" || true
     ensure_cmd "sccache" "mise exec -- cargo install --locked sccache" "failed_optional" || true
     ensure_cmd "cargo-chef" "mise exec -- cargo install --locked cargo-chef" "failed_optional" || true
@@ -34,8 +32,6 @@ if has_cmd cargo; then
   else
     ensure_cmd "alacritty" "cargo install --locked alacritty" "failed_optional" || true
     ensure_cmd "bacon" "cargo install --locked bacon" "failed_optional" || true
-    ensure_cmd "cargo-nextest" "cargo install --locked cargo-nextest" "failed_optional" || true
-    ensure_cmd "cargo-watch" "cargo install --locked cargo-watch" "failed_optional" || true
     ensure_cmd "trunk" "cargo install --locked trunk" "failed_optional" || true
     ensure_cmd "sccache" "cargo install --locked sccache" "failed_optional" || true
     ensure_cmd "cargo-chef" "cargo install --locked cargo-chef" "failed_optional" || true
@@ -63,19 +59,6 @@ if has_cmd bun; then
 elif has_cmd npm; then
   log "bun missing; using npm fallback for BAML CLI"
   ensure_cmd "baml-cli" "npm install -g @boundaryml/baml" "failed_optional" || true
-fi
-
-# Toolz — personal swiss-army CLI (embedded crate at dotfiles/toolz/).
-if has_cmd cargo; then
-  log "building toolz..."
-  if cargo install --path "${ROOT_DIR}/toolz" --root "${HOME}/.local" --force >/dev/null 2>&1; then
-    log_ok "toolz installed to ~/.local/bin/toolz"
-  else
-    log_warn "toolz build failed — skipping"
-    failed_optional+=("toolz")
-  fi
-else
-  log_warn "cargo not found; skipping toolz install"
 fi
 
 # Obfsck — secret redaction and obfuscation lib/binary (companion repo at ~/dev/obfsck).
