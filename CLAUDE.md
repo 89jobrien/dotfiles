@@ -179,6 +179,10 @@ All four are private repos. Bootstrap clones them via `scripts/setup-companion-r
 
 Runtime runtimes (Go, Rust) are managed by mise. CLI tools (`tmux`, `just`, `jq`, etc.) come from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
 
+## Git / Commit Signing
+
+Commits are signed via SSH key through the 1Password agent. If `git commit` fails with `1Password: agent returned an error`, open 1Password and unlock it, then retry. No config change needed.
+
 ## Tooling Preferences
 
 - Rust-native CLI tools preferred (`rg`, `fd`, `eza`, `bacon`, `cargo-nextest`)
