@@ -45,8 +45,12 @@ run = "./scripts/drift-check.sh"
 # ---------------------------------------------------------------------------
 
 [tasks.dev-tools]
-description = "Install core global dev tools used across repos"
+description = "Install non-cargo dev tools (baml-cli via bun/npm)"
 run = "./scripts/setup-dev-tools.sh"
+
+[tasks.rust-tools]
+description = "Compile and install Rust tools (alacritty, bacon, toolz, obfsck, etc.) — run after bootstrap"
+run = "./scripts/setup-rust-tools.sh"
 
 [tasks.nix-install]
 description = "Install Nix and apply flake packages"

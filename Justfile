@@ -209,5 +209,8 @@ toolz-install:
 toolz-dev:
     cd ~/dev/tools && cargo build
 
+rust-tools:
+    ./scripts/setup-rust-tools.sh
+
 menu:
     ./scripts/menu
