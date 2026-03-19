@@ -9,6 +9,10 @@ A dotfiles repo that bootstraps a reproducible dev environment on macOS/Linux/Wi
 ## Key Commands
 
 ```bash
+# Fast path — configs & dotfiles only (seconds, re-run anytime)
+mise run dot                              # stow + shell/AI/macOS configs
+ALLOW_DIRECT_DOTFILES_INSTALL=1 ./install.sh --dot-only
+
 # Full bootstrap (preferred entry)
 pj dot install
 # Bypass pj requirement
@@ -26,6 +30,10 @@ mise run drift           # detect uncommitted changes + stow conflicts
 mise run ai-tools        # install personal-mcp + configure all AI tool configs
 mise run macos           # macOS defaults + Raycast script linking
 mise run dev-tools       # cargo/bun tool installs
+
+# Rust tools (slow — run once after bootstrap, or in background)
+mise run rust-tools          # compile alacritty, bacon, toolz, obfsck, etc.
+mise run rust-tools &        # background variant
 
 # Secrets
 mise run secrets-check   # verify no plaintext secrets staged

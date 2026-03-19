@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
 source "${ROOT_DIR}/scripts/lib/cmd.sh"
+source "${ROOT_DIR}/scripts/lib/common.sh"
+source "${ROOT_DIR}/scripts/lib/onepassword.sh"
 TAG="bootstrap"
 
 STOW_LIST_FILE="${ROOT_DIR}/config/stow-packages.txt"
@@ -14,6 +16,7 @@ APT_LIST_LOCAL_FILE="${ROOT_DIR}/config/apt-packages.local.txt"
 DO_PACKAGES=1
 DO_STOW=1
 DO_POST=1
+DOT_ONLY=0
 
 # ---------------------------------------------------------------------------
 # Summary tracking
@@ -31,8 +34,10 @@ _record() {
 }
 
 print_summary() {
-  local elapsed="$(get_elapsed_time)"
-  local os_name="$(uname -s)"
+  local elapsed
+  elapsed="$(get_elapsed_time)"
+  local os_name
+  os_name="$(uname -s)"
   local divider="========================================"
   printf '\n%s\n' "${divider}"
   printf ' Bootstrap Summary (%s) on %s\n' "${elapsed}" "${os_name}"
@@ -75,6 +80,7 @@ Options:
   --no-packages   Skip package manager installs
   --no-stow       Skip stow linking
   --no-post       Skip post-setup hooks
+  --dot-only       Stow + config hooks only (no packages, no compilation)
   -h, --help      Show this help
 EOF
 }
@@ -84,6 +90,7 @@ for arg in "$@"; do
     --no-packages) DO_PACKAGES=0 ;;
     --no-stow) DO_STOW=0 ;;
     --no-post) DO_POST=0 ;;
+    --dot-only)  DOT_ONLY=1 ;;
     -h|--help)
       usage
       exit 0
@@ -182,13 +189,10 @@ install_packages() {
   fi
 
   local brew_compat_cmd=""
-  local brew_compat_name=""
   if has_cmd zb; then
     brew_compat_cmd="zb"
-    brew_compat_name="zerobrew"
   elif has_cmd brew; then
     brew_compat_cmd="brew"
-    brew_compat_name="brew"
   fi
 
   if [[ -n "${brew_compat_cmd}" ]]; then
@@ -202,7 +206,7 @@ install_packages() {
     if [[ -f "${brewfile}" ]]; then
       # Count packages (lines that don't start with # or are empty)
       local pkg_count
-      pkg_count="$(grep -Ev '^\s*(#|$)' "${brewfile}" | wc -l | tr -d ' ')"
+      pkg_count="$(grep -cEv '^\s*(#|$)' "${brewfile}")"
 
       if [[ "${brew_compat_cmd}" == "zb" ]]; then
         spin_with_msg "Installing packages ($pkg_count)..." "${brew_compat_cmd}" bundle install --file "${brewfile}" || {
@@ -224,11 +228,11 @@ install_packages() {
   if [[ "$(uname -s)" == "Linux" ]] && has_cmd apt-get; then
     if [[ -f "${APT_LIST_FILE}" ]]; then
       local pkg_count
-      pkg_count="$(grep -Ev '^\s*(#|$)' "${APT_LIST_FILE}" | wc -l | tr -d ' ')"
-      spin_with_msg "Installing packages ($pkg_count)..." sh -c "apt-get update && apt-get install -y $(grep -Ev '^\s*(#|$)' "${APT_LIST_FILE}")"
+      pkg_count="$(grep -cEv '^\s*(#|$)' "${APT_LIST_FILE}")"
+      spin_with_msg "Installing packages ($pkg_count)..." sh -c "apt-get update && grep -Ev '^\s*(#|$)' '${APT_LIST_FILE}' | xargs apt-get install -y"
       if [[ -f "${APT_LIST_LOCAL_FILE}" ]]; then
-        pkg_count="$((pkg_count + $(grep -Ev '^\s*(#|$)' "${APT_LIST_LOCAL_FILE}" | wc -l | tr -d ' ')))"
-        spin_with_msg "Installing local packages..." sudo apt-get install -y $(grep -Ev '^\s*(#|$)' "${APT_LIST_LOCAL_FILE}")
+        pkg_count="$((pkg_count + $(grep -cEv '^\s*(#|$)' "${APT_LIST_LOCAL_FILE}")))"
+        spin_with_msg "Installing local packages..." sh -c "grep -Ev '^\s*(#|$)' '${APT_LIST_LOCAL_FILE}' | xargs sudo apt-get install -y"
       fi
       _record "Packages" "ok" "${pkg_count}"
     fi
@@ -244,10 +248,16 @@ install_mise_toolchain() {
     return 0
   fi
 
+  if [[ -f "${HOME}/.config/mise/config.toml" ]]; then
+    local global_tool_count
+    global_tool_count="$(awk '/^\[tools\]/,/^\[/ { if (/^[[:space:]]*[^#[:space:]][^=]*=/) count++ } END { print count }' "${HOME}/.config/mise/config.toml" 2>/dev/null || echo 0)"
+    spin_with_msg "Installing global mise tools ($global_tool_count)..." sh -c "cd '${HOME}' && mise install"
+    _record "Global Tools" "ok" "${global_tool_count}"
+  fi
+
   if [[ -f "${ROOT_DIR}/.mise.toml" ]]; then
-    # Count tools from the [tools] section
     local tool_count
-    tool_count="$(awk '/^\[tools\]/,/^\[/ { if (/^[a-z].*=/) count++ } END { print count }' "${ROOT_DIR}/.mise.toml" 2>/dev/null || echo 0)"
+    tool_count="$(awk '/^\[tools\]/,/^\[/ { if (/^[[:space:]]*[^#[:space:]][^=]*=/) count++ } END { print count }' "${ROOT_DIR}/.mise.toml" 2>/dev/null || echo 0)"
     spin_with_msg "Installing runtimes ($tool_count)..." sh -c "cd '${ROOT_DIR}' && mise install"
     _record "Runtimes" "ok" "${tool_count}"
   fi
@@ -317,9 +327,10 @@ run_hook() {
   return 0
 }
 
-run_post_hooks() {
+# Fast hooks — configs/dotfiles only (no packages, no compilation, ~seconds)
+run_dot_hooks() {
   if [[ "$DO_POST" -ne 1 ]]; then
-    log_skip "post-setup hooks"
+    log_skip "post hooks"
     return 0
   fi
 
@@ -330,9 +341,6 @@ run_post_hooks() {
   section "Secrets"
   run_hook "Secrets" "${ROOT_DIR}/scripts/setup-secrets.sh"
 
-  section "Nix"
-  run_hook "Nix" "${ROOT_DIR}/scripts/setup-nix.sh"
-
   if [[ "$(uname -s)" == "Darwin" ]]; then
     section "macOS"
     run_hook "macOS" "${ROOT_DIR}/scripts/setup-macos.sh"
@@ -341,6 +349,17 @@ run_post_hooks() {
   section "AI Tools"
   run_hook "AI Tools" "${ROOT_DIR}/scripts/setup-ai-tools.sh"
   run_hook "Hooks" "${ROOT_DIR}/scripts/setup-hooks.sh"
+}
+
+# Slow hooks — packages, runtimes, compilation (run once on new machines)
+run_setup_hooks() {
+  if [[ "$DO_POST" -ne 1 ]]; then
+    log_skip "post hooks"
+    return 0
+  fi
+
+  section "Nix"
+  run_hook "Nix" "${ROOT_DIR}/scripts/setup-nix.sh"
 
   section "Maestro"
   run_hook "Maestro" "${ROOT_DIR}/scripts/setup-maestro.sh"
@@ -364,22 +383,62 @@ run_post_hooks() {
   fi
 }
 
+# Full post-hooks — dot + setup combined (original behavior)
+run_post_hooks() {
+  run_dot_hooks
+  run_setup_hooks
+}
+
 # ---------------------------------------------------------------------------
 # Environment checks
 # ---------------------------------------------------------------------------
 
 check_env() {
-  local age_key="${HOME}/.config/sops/age/keys.txt"
-  local secrets_file="${HOME}/.config/dev-bootstrap/secrets.env"
+  local age_key="${SOPS_AGE_KEY_FILE:-${HOME}/.config/sops/age/keys.txt}"
+  local secrets_dir="${HOME}/.config/dev-bootstrap"
+  local secrets_file="${secrets_dir}/secrets.env"
 
+  ensure_file_dir "${age_key}"
+  ensure_dir "${secrets_dir}"
+
+  # Age key: try 1Password → generate new → warn
   if [[ ! -f "${age_key}" ]]; then
-    log_warn "age key not found at ${age_key}"
-    log_warn "secrets decryption will fail; ensure age key is set up"
+    if op_restore_file "${OP_AGE_KEY_ITEM}" "${age_key}"; then
+      log_ok "restored age key from 1Password"
+    elif [[ -t 0 ]]; then
+      _generate_age_key "${age_key}"
+    else
+      log_warn "age key not found at ${age_key}"
+      log "run bootstrap interactively to generate, or restore from 1Password"
+    fi
   fi
 
   if [[ ! -f "${secrets_file}" ]]; then
     log_warn "secrets file not found at ${secrets_file}"
-    log_warn "run 'mise run secrets-decrypt' to decrypt secrets"
+    log "will attempt decryption during Secrets phase"
+  fi
+}
+
+_generate_age_key() {
+  local age_key="$1"
+  if ! has_cmd age-keygen; then
+    log_warn "age-keygen not found; cannot generate age key"
+    return 1
+  fi
+
+  log "generating new age key..."
+  age-keygen -o "${age_key}" 2>&1
+  chmod 600 "${age_key}"
+  log_ok "generated age key at ${age_key}"
+
+  if prompt_confirm "Save age key to 1Password?" "true"; then
+    if op_save_file "${OP_AGE_KEY_ITEM}" "${age_key}"; then
+      log_ok "age key saved to 1Password (item: ${OP_AGE_KEY_ITEM})"
+    else
+      log_warn "failed to save to 1Password; back up ${age_key} manually"
+    fi
+  else
+    log_warn "back up ${age_key} — it cannot be recovered if lost"
   fi
 }
 
@@ -392,13 +451,21 @@ main() {
   record_start_time
   log "starting bootstrap on $(uname -s)"
   check_env
+
+  if [[ "${DOT_ONLY}" -eq 1 ]]; then
+    stow_packages
+    run_dot_hooks
+    print_summary
+    log_ok "dot install complete"
+    return 0
+  fi
+
   spin_with_msg "Setting up zerobrew..." "${ROOT_DIR}/scripts/setup-zerobrew.sh" || true
   ensure_homebrew || true
   check_homebrew_writable
   install_packages
-  spin_with_msg "Installing npm tools..." "${ROOT_DIR}/scripts/setup-npm-tools.sh" || true
-  install_mise_toolchain
   stow_packages
+  install_mise_toolchain
   run_post_hooks
   print_summary
   log_ok "bootstrap complete"

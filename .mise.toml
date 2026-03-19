@@ -24,6 +24,10 @@ PJ_TUI_EVENT_MAX_CHARS = "140"
 description = "Run full bootstrap install"
 run = "./install.sh"
 
+[tasks.dot]
+description = "Fast install — stow symlinks + configs only (no packages, no compilation)"
+run = "./install.sh --dot-only"
+
 [tasks.stow]
 description = "Restow managed package set only"
 run = "./install.sh --no-packages --no-post"

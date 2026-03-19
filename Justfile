@@ -18,6 +18,9 @@ stow:
 post:
     ./install.sh --no-packages --no-stow
 
+dot:
+    ./install.sh --dot-only
+
 nvim:
     ./scripts/setup-nvchad-avante.sh
 
