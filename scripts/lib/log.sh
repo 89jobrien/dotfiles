@@ -102,7 +102,7 @@ spin_with_msg() {
   # Always suppress verbose output and show only tail (no full output scroll)
   local tmpfile
   tmpfile="$(mktemp)"
-  trap "rm -f '${tmpfile}'" RETURN
+  trap 'rm -f "${tmpfile}"' RETURN
 
   # Show status message with styling
   if [[ "${_LOG_HAS_GUM}" == "1" ]]; then
@@ -195,7 +195,7 @@ get_elapsed_time() {
 # Obfuscation helpers
 # Source the obfuscate library (provides obfuscate_text, obfuscate_file, obfuscate_lines)
 if [[ -f "${BASH_SOURCE%/*}/obfuscate.sh" ]]; then
-  # shellcheck source=obfuscate.sh
+  # shellcheck disable=SC1091
   source "${BASH_SOURCE%/*}/obfuscate.sh"
 fi
 

@@ -19,7 +19,8 @@ if status is-interactive
         fish_add_path --move --prepend "$HOME/.local/share/mise/shims"
     end
     if test -f "$HOME/.config/sops/age/keys.txt"
-        set -gx MISE_SOPS_AGE_KEY_FILE "$HOME/.config/sops/age/keys.txt"
+        set -gx SOPS_AGE_KEY_FILE "$HOME/.config/sops/age/keys.txt"
+        set -gx MISE_SOPS_AGE_KEY_FILE "$SOPS_AGE_KEY_FILE"
     end
     if command -q zb
         alias zbi "zb install"

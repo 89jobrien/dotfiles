@@ -3,8 +3,6 @@ brew "stow"              # [nix-batch-1]
 brew "git"
 brew "git-flow-next"
 brew "gh"                # [nix-batch-1]
-brew "opencode"
-brew "gemini-cli"
 brew "ripgrep"           # [nix-batch-1]
 brew "fd"                # [nix-batch-1]
 brew "fzf"               # [nix-batch-1]
@@ -23,7 +21,6 @@ brew "sops"              # [nix-batch-1]
 brew "gum"               # [nix-batch-1]
 brew "direnv"            # [nix-batch-1]
 brew "zoxide"            # [nix-batch-1]
-brew "just"              # [nix-batch-1]
 brew "mise"
 brew "tmux"              # [nix-batch-1]
 brew "neovim"            # [nix-batch-1]
@@ -38,10 +35,6 @@ brew "k3d"
 brew "tilt"
 brew "stern"             # [nix-batch-1]
 brew "bacon"
-brew "cargo-nextest"
-brew "cargo-watch"
-brew "trunk"
 brew "rust-analyzer"
-brew "rust-script"
 brew "cmake"
 brew "pkgconf"

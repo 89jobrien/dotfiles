@@ -119,6 +119,7 @@ do_stop() {
 }
 
 do_restart() {
+  # shellcheck disable=SC2119  # launchd_restart takes no args; $@ intentionally not passed
   launchd_restart
 }
 

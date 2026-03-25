@@ -1,0 +1,13 @@
+[tools]
+node = "22.22.1"
+python = "3.13.12"
+uv = "0.10.9"
+rust = "1.91.1"
+"npm:@google/gemini-cli" = "0.33.1"
+"npm:opencode-ai" = "1.2.26"
+"npm:claude-code-templates" = "1.28.16"
+"cargo:rust-script" = "0.36.0"
+"pipx:glances" = "4.5.1"
+gcloud = "560.0.0"
+"cargo:cargo-nextest" = "0.9.130"
+"cargo:cargo-watch" = "8.5.3"

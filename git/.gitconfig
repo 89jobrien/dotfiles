@@ -5,13 +5,13 @@
 	required = true
 
 [user]
-	name = Joesph O'Brien
+	name = Joseph O'Brien
 	email = 98370624+89jobrien@users.noreply.github.com
+	signingkey = /Users/joe/.ssh/id_ed25519_signing
 
 [core]
 	editor = vim
 	autocrlf = input
-	hooksPath = /Users/rentamac/.config/git/hooks
 
 [init]
 	defaultBranch = main
@@ -38,6 +38,15 @@
 [color]
 	ui = auto
 
+[gpg]
+	format = ssh
+
+[gpg "ssh"]
+	signingKey = /Users/joe/.ssh/id_ed25519_signing
+
+[commit]
+	gpgsign = true
+
 [gitflow "feature.finish"]
 	no-ff = true
 	keep = false
@@ -59,10 +68,7 @@
 	no-ff = true
 	keep = false
 	fetch = true
-
-[coderabbit]
-	machineId = cli/35d6eb1759d74bd48409c39e2eb4802c
 [credential "https://github.com"]
-	helper = !/Users/rentamac/.nix-profile/bin/gh auth git-credential
+	helper = !/opt/homebrew/bin/gh auth git-credential
 [credential "https://gist.github.com"]
-	helper = !/Users/rentamac/.nix-profile/bin/gh auth git-credential
+	helper = !/opt/homebrew/bin/gh auth git-credential

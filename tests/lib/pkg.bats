@@ -4,6 +4,7 @@
 setup() {
   ROOT_DIR="$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)"
   source "${ROOT_DIR}/scripts/lib/log.sh"
+  source "${ROOT_DIR}/scripts/lib/cmd.sh"
   source "${ROOT_DIR}/scripts/lib/pkg.sh"
   TAG="test"
 }

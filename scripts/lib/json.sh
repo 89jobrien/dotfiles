@@ -26,9 +26,9 @@ merge_json_config() {
   # Ensure jq is available
   require_cmd jq
 
-  local tmp
+  local tmp=""
   tmp="$(mktemp)"
-  trap 'rm -f "${tmp}" "${tmp}.new"' RETURN
+  trap 'rm -f "${tmp:-}" "${tmp:+${tmp}.new}"' RETURN
 
   # Start from existing config or empty object
   if [[ -f "${cfg}" ]]; then
