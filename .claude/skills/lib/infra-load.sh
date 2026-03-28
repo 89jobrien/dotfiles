@@ -26,6 +26,7 @@ with open(path, "rb") as f:
 m = cfg.get("machines", {})
 ts = cfg.get("tailscale", {})
 op = cfg.get("onepassword", {})
+p = cfg.get("paths", {})
 
 pairs = {
     "INFRA_VPS_HOST":        m.get("vps", {}).get("host", ""),
@@ -41,7 +42,9 @@ pairs = {
     "INFRA_MAC_MINI_USER":   m.get("mac_mini", {}).get("user", ""),
     "INFRA_MAC_MINI_ADDR":   m.get("mac_mini", {}).get("tailscale_addr", ""),
     "INFRA_TAILSCALE_SUFFIX": ts.get("suffix", ""),
-    "INFRA_OP_PERSONAL":     op.get("personal_account", ""),
+    "INFRA_OP_PERSONAL":        op.get("personal_account", ""),
+    "INFRA_VECTOR_LOG_ROOT":    p.get("vector_log_root", "~/logs/ai/vector"),
+    "INFRA_OBSIDIAN_VAULT":     p.get("obsidian_vault", "~/Documents/Obsidian Vault"),
 }
 
 for k, v in pairs.items():

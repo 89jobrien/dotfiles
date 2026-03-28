@@ -26,3 +26,7 @@ suffix = "your-tailnet.ts.net"
 
 [onepassword]
 personal_account = "your.1password.com"
+
+[paths]
+vector_log_root = "~/logs/ai/vector"
+obsidian_vault  = "~/Documents/Obsidian Vault"
