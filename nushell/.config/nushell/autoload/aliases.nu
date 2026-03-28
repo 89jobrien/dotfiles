@@ -1,5 +1,8 @@
 # Aliases
 
+# ── Shell ────────────────────────────────────────────────────────────────────
+alias nunu = exec nu   # reload nushell config (replaces current process)
+
 # ── Files ────────────────────────────────────────────────────────────────────
 alias ll = ls -l
 alias la = ls -la
