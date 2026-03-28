@@ -8,11 +8,17 @@
 let vendor = $nu.data-dir | path join "vendor/autoload"
 mkdir $vendor
 
-starship  init nu             | save -f ($vendor | path join "starship.nu")
-zoxide    init nushell        | save -f ($vendor | path join "zoxide.nu")
-^mise     activate nu         | save -f ($vendor | path join "mise.nu")
-atuin     init nu             | save -f ($vendor | path join "atuin.nu")
-carapace  _carapace nushell   | save -f ($vendor | path join "carapace.nu")
+# Ensure nix and mise are on PATH for vendor seeding — may already be set by env.nu
+$env.PATH = ($env.PATH | prepend [
+  ($env.HOME | path join ".nix-profile/bin")
+  ($env.HOME | path join ".local/share/mise/shims")
+] | uniq)
+
+try { starship  init nu           | save -f ($vendor | path join "starship.nu") }
+try { zoxide    init nushell      | save -f ($vendor | path join "zoxide.nu") }
+try { ^mise     activate nu       | save -f ($vendor | path join "mise.nu") }
+try { atuin     init nu           | save -f ($vendor | path join "atuin.nu") }
+try { carapace  _carapace nushell | save -f ($vendor | path join "carapace.nu") }
 
 # ── Keybindings ───────────────────────────────────────────────────────────────
 

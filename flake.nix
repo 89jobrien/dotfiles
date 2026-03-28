@@ -64,6 +64,7 @@
             nil
             atuin
             carapace
+            starship
 
             # Git
             gh
