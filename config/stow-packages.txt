@@ -7,3 +7,5 @@ mise
 alacritty
 zed
 nushell
+starship
+.claude
