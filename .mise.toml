@@ -66,7 +66,7 @@ run = ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix flake 
 
 [tasks.nix-check]
 description = "Verify Nix installation and package availability"
-run = "nix profile list && nix flake check"
+run = ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix profile list && nix flake check"
 
 [tasks.nvim]
 description = "Run Neovim NvChad + Avante setup"
