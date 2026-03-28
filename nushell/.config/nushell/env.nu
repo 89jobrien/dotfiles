@@ -106,8 +106,10 @@ $env.HOMEBREW_PREFIX     = "/opt/homebrew"
 $env.HOMEBREW_CELLAR     = "/opt/homebrew/Cellar"
 $env.HOMEBREW_REPOSITORY = "/opt/homebrew"
 
-# ── 1Password SSH agent ───────────────────────────────────────────────────────
-let op_sock = ($env.HOME | path join "Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock")
-if ($op_sock | path exists) {
-    $env.SSH_AUTH_SOCK = $op_sock
+# ── SSH agent (native macOS) ──────────────────────────────────────────────────
+# Use native macOS SSH agent (no Touch ID prompts).
+# 1Password agent is used only for specific hosts via IdentityAgent in ~/.ssh/config.
+let native_sock = (glob "/var/run/com.apple.launchd.*/Listeners" | first)
+if ($native_sock | is-not-empty) {
+    $env.SSH_AUTH_SOCK = $native_sock
 }
