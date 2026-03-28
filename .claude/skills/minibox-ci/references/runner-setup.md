@@ -1,11 +1,11 @@
-# GHA Self-Hosted Runner Setup (jobrien-vm)
+# GHA Self-Hosted Runner Setup ($INFRA_VPS_HOST)
 
 ## Configuration
 
 | Field | Value |
 |---|---|
-| Machine | jobrien-vm (100.105.75.7) |
-| User | dev |
+| Machine | $INFRA_VPS_HOST ($INFRA_VPS_IP) |
+| User | `$INFRA_VPS_USER` |
 | Runner dir | `~/actions-runner/` |
 | Runner label | `minibox` |
 | Workflow target | `runs-on: [self-hosted, minibox]` |
@@ -56,7 +56,7 @@ cd ~/actions-runner
 |---|---|---|
 | fmt-check + clippy + build | Local pre-commit hook | `cargo xtask pre-commit` |
 | nextest + coverage | Local pre-push hook | `cargo xtask prepush` |
-| lib + handler + conformance tests | CI (jobrien-vm) | `cargo xtask test-unit` |
+| lib + handler + conformance tests | CI ($INFRA_VPS_HOST) | `cargo xtask test-unit` |
 | e2e daemon+CLI tests | Manual (Linux+root) | `cargo xtask test-e2e-suite` |
 
 **No compilation in GHA** — pre-commit/prepush handle it before push.

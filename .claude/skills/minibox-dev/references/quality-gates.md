@@ -55,5 +55,5 @@ cargo clippy -p minibox-lib -p minibox-macros -p minibox-cli -p daemonbox -p mac
 ## CI Pipeline
 
 - **GitHub Actions** (macOS): fmt + clippy + test-unit
-- **Gitea Actions** (jobrien-vm): `cargo deny check` + `cargo audit` only (no compilation — VPS too small)
+- **Gitea Actions** ($INFRA_VPS_HOST): `cargo deny check` + `cargo audit` only (no compilation — VPS too small)
 - **Local hooks**: pre-commit runs `cargo xtask pre-commit`, pre-push runs `cargo xtask prepush`

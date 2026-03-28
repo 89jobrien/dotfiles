@@ -37,7 +37,7 @@ If this fails with "not signed in" or "authorization prompt":
 2. Wait for confirmation. Do NOT proceed until `op whoami` succeeds.
 3. This is the ONE AND ONLY auth prompt for the entire orchestration run.
 
-SSH auth uses the native macOS agent (no Touch ID needed). The `~/.ssh/config` routes only `jobrien-vm` and `mac-mini` through 1Password's agent.
+SSH auth uses the native macOS agent (no Touch ID needed). The `~/.ssh/config` routes only `$INFRA_VPS_HOST` and `$INFRA_MAC_MINI_HOST` through 1Password's agent.
 
 **After Phase 0 succeeds, no further auth prompts.** If auth fails mid-run (e.g., 1Password auto-locked), do NOT re-prompt — report the failure and stop.
 

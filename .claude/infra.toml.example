@@ -1,0 +1,28 @@
+# Personal infrastructure config — copy to infra.toml and fill in real values.
+# infra.toml is gitignored. This example file is committed as a template.
+
+[machines.vps]
+host       = "your-vps-hostname"
+ip         = "100.x.x.x"
+user       = "your-vps-user"
+op_item    = "your-1password-item-name"
+op_account = "your.1password.com"
+
+[machines.dev]
+host = "your-dev-machine-name"
+ip   = "100.x.x.x"
+user = "your-username"
+
+[machines.lab]
+host = "your-lab-machine-name"
+
+[machines.mac_mini]
+host           = "your-mac-mini-hostname"
+user           = "your-mac-mini-user"
+tailscale_addr = "your-mac-mini.your-tailnet.ts.net"
+
+[tailscale]
+suffix = "your-tailnet.ts.net"
+
+[onepassword]
+personal_account = "your.1password.com"

@@ -47,7 +47,7 @@ Personal knowledge base in Obsidian with strict note conventions. Every note nee
 2. **Always include YAML frontmatter** — update `type`, `status`, `project`, `machine`, `tags`
 3. **Use `[[Note Name]]` wikilinks** when referencing other notes
 4. **Maintain backlinks**: projects<->experiments, experiments<->research, knowledge<->projects
-5. **Specify target machine** when suggesting scripts/configs: `m5-max` (dev workstation) or `m1-lab` (M3 homelab/devserver — not yet on Tailscale network, being set up)
+5. **Specify target machine** when suggesting scripts/configs: `$INFRA_DEV_HOST` (dev workstation) or `$INFRA_LAB_HOST` (M3 homelab/devserver — not yet on Tailscale network, being set up)
 6. **Use Tailscale 100.x addresses** for internal service endpoints
 7. **Read existing notes first** — prefer vault context over assumptions about environment/conventions
 

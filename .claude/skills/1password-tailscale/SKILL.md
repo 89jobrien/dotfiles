@@ -5,6 +5,9 @@ description: Use when SSHing into remote machines, looking up credentials, renam
 
 # 1Password + Tailscale System
 
+> **Infra config:** Machine names, IPs, and credentials come from `~/.claude/infra.toml`.
+> See `~/.claude/infra.toml.example` for the template. Load vars in scripts with `source ~/.claude/skills/lib/infra-load.sh`.
+
 ## Overview
 
 Joe's infrastructure uses 1Password CLI (`op`) for credential management and Tailscale for networking between machines. SSH is configured to use the 1Password agent, which introduces specific quirks that must be handled correctly.
@@ -18,7 +21,7 @@ The `tailscale` command is available two ways:
 | Method | Path | Notes |
 |--------|------|-------|
 | App Store app | `/Applications/Tailscale.app/Contents/MacOS/Tailscale` | Always available on macOS machines. `tailscale ssh` NOT available on App Store builds. |
-| Homebrew CLI | `tailscale` (in PATH) | Installed on m5-max. Provides `tailscale ssh` if using standalone build. |
+| Homebrew CLI | `tailscale` (in PATH) | Installed on `$INFRA_DEV_HOST`. Provides `tailscale ssh` if using standalone build. |
 
 **QUIRK:** The bare `tailscale` command may not be in PATH on remote macOS machines. Always try the full app path as fallback:
 ```bash
@@ -45,12 +48,12 @@ tailscale status --json | python3 -c "import sys,json; d=json.load(sys.stdin); p
 
 Joe has two 1Password accounts:
 
-| Account | Email | Use |
-|---------|-------|-----|
-| `my.1password.com` | joeobrien516@gmail.com | Personal — SSH keys, machine credentials, personal services |
-| `toptal.1password.com` | joseph.obrien@toptal.com | Work — work-related credentials |
+| Account | Use |
+|---------|-----|
+| `$INFRA_OP_PERSONAL` | Personal — SSH keys, machine credentials, personal services |
+| `toptal.1password.com` | Work — work-related credentials |
 
-**IMPORTANT:** Always specify `--account=my.1password.com` for infrastructure/machine credentials. The default account may be the work one.
+**IMPORTANT:** Always specify `--account=$INFRA_OP_PERSONAL` for infrastructure/machine credentials. The default account may be the work one.
 
 ### Vaults (Personal Account)
 
@@ -61,19 +64,19 @@ Joe has two 1Password accounts:
 
 **QUIRK:** Items may be in either vault. If you can't find an item, search without vault filter first:
 ```bash
-op item list --account=my.1password.com
+op item list --account=$INFRA_OP_PERSONAL
 ```
 
 Then check which vault it's in:
 ```bash
-op item get "<item-name>" --account=my.1password.com --format=json | python3 -c "import sys,json; print(json.load(sys.stdin).get('vault',{}).get('name',''))"
+op item get "<item-name>" --account=$INFRA_OP_PERSONAL --format=json | python3 -c "import sys,json; print(json.load(sys.stdin).get('vault',{}).get('name',''))"
 ```
 
 ### Finding Credentials
 
 Search by keyword — item titles don't always match device names:
 ```bash
-op item list --account=my.1password.com --format=json | python3 -c "
+op item list --account=$INFRA_OP_PERSONAL --format=json | python3 -c "
 import sys,json
 items=json.load(sys.stdin)
 for i in items:
@@ -92,7 +95,7 @@ for i in items:
 op read "op://vault/item/private key" > /tmp/key
 
 # ✅ CORRECT — extract via JSON with --reveal
-op item get "<item-id>" --account=my.1password.com --reveal --format=json | python3 -c "
+op item get "<item-id>" --account=$INFRA_OP_PERSONAL --reveal --format=json | python3 -c "
 import sys, json
 item = json.load(sys.stdin)
 for f in item.get('fields', []):
@@ -149,12 +152,12 @@ sshpass -p 'password' ssh -o IdentitiesOnly=yes -o IdentityAgent=none user@host 
 To manually restore or back up the age key:
 ```bash
 # Restore key from 1Password
-op item get "age-key-dotfiles" --account=my.1password.com --fields notesPlain > ~/.config/sops/age/keys.txt
+op item get "age-key-dotfiles" --account=$INFRA_OP_PERSONAL --fields notesPlain > ~/.config/sops/age/keys.txt
 chmod 600 ~/.config/sops/age/keys.txt
 
 # Save updated key to 1Password (creates new item)
 op item create --category "Secure Note" --title "age-key-dotfiles" \
-  "notesPlain=$(cat ~/.config/sops/age/keys.txt)" --account=my.1password.com
+  "notesPlain=$(cat ~/.config/sops/age/keys.txt)" --account=$INFRA_OP_PERSONAL
 ```
 
 ## Machine Credentials
@@ -163,35 +166,36 @@ op item create --category "Secure Note" --title "age-key-dotfiles" \
 
 | Machine | Tailscale IP | SSH User | Auth Method | 1Password Item |
 |---------|-------------|----------|-------------|----------------|
-| mac-mini | 100.111.235.46 | rentamac | SSH key (1Password agent) | "rentamac" (secure note), "Rent a Mac" (login) |
-| jobrien-vm | 100.105.75.7 | dev | Password | "jobrien-vm" (login, Personal vault) |
-| m5-max | 100.105.148.117 | joe | Local | N/A |
+| `$INFRA_MAC_MINI_HOST` | (see infra.toml) | `$INFRA_MAC_MINI_USER` | SSH key (1Password agent) | "rentamac" (secure note), "Rent a Mac" (login) |
+| `$INFRA_VPS_HOST` | `$INFRA_VPS_IP` | `$INFRA_VPS_USER` | Password | `$INFRA_VPS_OP_ITEM` (login, Personal vault) |
+| `$INFRA_DEV_HOST` | `$INFRA_DEV_IP` | `$INFRA_DEV_USER` | Local | N/A |
 
 ### Connecting to Each Machine
 
-**mac-mini:**
+**`$INFRA_MAC_MINI_HOST`:**
 ```bash
-ssh rentamac@100.111.235.46 "command"
-# Or via tailnet DNS:
-ssh rentamac@mac-mini.taila01bd5.ts.net "command"
+ssh $INFRA_MAC_MINI_USER@$INFRA_MAC_MINI_ADDR "command"
 ```
 
-**jobrien-vm:**
+**`$INFRA_VPS_HOST`:**
 ```bash
-sshpass -p "$(op item get jobrien-vm --account=my.1password.com --fields password --reveal)" ssh -o IdentitiesOnly=yes -o IdentityAgent=none -o PreferredAuthentications=password dev@100.105.75.7 "command"
+source ~/.claude/skills/lib/infra-load.sh
+sshpass -p "$(op item get $INFRA_VPS_OP_ITEM --account=$INFRA_OP_PERSONAL --fields password --reveal)" \
+  ssh -o IdentitiesOnly=yes -o IdentityAgent=none -o PreferredAuthentications=password \
+  $INFRA_VPS_USER@$INFRA_VPS_IP "command"
 ```
 
 ## op run on m5-max: Shell Env Has Mixed op:// References
 
-**CRITICAL:** The shell environment on m5-max has many `op://` references already set (ANTHROPIC_API_KEY, OPENAI_API_KEY, FIRECRAWL_API_KEY, etc. — all pointing to `Personal` or `cli` vaults in `my.1password.com`). When you run `op run --account=toptal.1password.com`, it tries to resolve ALL `op://` references in the current environment, including those personal vault ones — and fails.
+**CRITICAL:** The shell environment on `$INFRA_DEV_HOST` has many `op://` references already set (ANTHROPIC_API_KEY, OPENAI_API_KEY, FIRECRAWL_API_KEY, etc. — all pointing to `Personal` or `cli` vaults in `$INFRA_OP_PERSONAL`). When you run `op run --account=toptal.1password.com`, it tries to resolve ALL `op://` references in the current environment, including those personal vault ones — and fails.
 
-**Rule:** Always use `--account=my.1password.com` with `--env-file=~/.secrets`. Never use the toptal account from an interactive shell — the shell env and `~/.secrets` only reference personal vaults.
+**Rule:** Always use `--account=$INFRA_OP_PERSONAL` with `--env-file=~/.secrets`. Never use the toptal account from an interactive shell — the shell env and `~/.secrets` only reference personal vaults.
 
 `~/.secrets` is the canonical op:// env file — all `cli` and `Personal` vault references, no work vault refs.
 
 ```bash
 # ✅ CORRECT — personal account + ~/.secrets
-op run --account=my.1password.com --env-file=~/.secrets -- <command>
+op run --account=$INFRA_OP_PERSONAL --env-file=~/.secrets -- <command>
 
 # ❌ WRONG — toptal account can't resolve op://Personal/... or op://cli/... refs
 op run --account=toptal.1password.com --env-file some.env -- <command>
@@ -201,14 +205,14 @@ If a tool has its own `.env` with `op://Employee/...` (toptal vaults), ignore it
 
 ## direnv + op run: How Shell Env Is Loaded
 
-The shell env on m5-max is loaded by direnv via `/Users/joe/dev/.envrc` (and per-project `.envrc` files that call `source_up`). The parent `.envrc` runs `op run --account=my.1password.com --env-file=~/.secrets -- env` and exports all resolved secrets into the shell.
+The shell env on `$INFRA_DEV_HOST` is loaded by direnv via `/Users/joe/dev/.envrc` (and per-project `.envrc` files that call `source_up`). The parent `.envrc` runs `op run --account=$INFRA_OP_PERSONAL --env-file=~/.secrets -- env` and exports all resolved secrets into the shell.
 
 **`~/.secrets` is the canonical secret file** — op:// references for all CLI/Personal vault keys. When you need a secret available in shell (and therefore in `mise run`, `uv run`, etc.), it must be in `~/.secrets`.
 
 ### ANTHROPIC_API_KEY — canonical reference
 
 ```
-ANTHROPIC_API_KEY="op://Personal/vps-anthropic-api/ANTHROPIC_API_KEY"
+ANTHROPIC_API_KEY="op://Personal/<api-key-item>/ANTHROPIC_API_KEY"
 ```
 
 **QUIRK:** The `cli` vault has an item called `Anthropic API Key` whose `credential` field contains `sk-ant-oat01-...` — an **OAuth token, not an API key**. This resolves successfully via `op run` but is rejected by the Anthropic API with "Invalid API key". Always use the `Personal/vps-anthropic-api` item.
@@ -228,7 +232,7 @@ cd .. && cd -
 `mise run` inherits the shell environment, so direnv must be loaded in the calling shell. If running from a shell without direnv (e.g., a CI script, a nushell subprocess, or a `run_in_background` Bash tool call), source the env manually:
 
 ```bash
-eval "$(op run --account=my.1password.com --env-file=~/.secrets -- env | grep -E '^(ANTHROPIC|OPENAI|GEMINI)' | sed 's/^/export /')"
+eval "$(op run --account=$INFRA_OP_PERSONAL --env-file=~/.secrets -- env | grep -E '^(ANTHROPIC|OPENAI|GEMINI)' | sed 's/^/export /')"
 ```
 
 ## Common Mistakes
@@ -243,6 +247,6 @@ eval "$(op run --account=my.1password.com --env-file=~/.secrets -- env | grep -E
 | `tailscale ssh` on macOS App Store build | Not available — use regular `ssh` instead |
 | Forgetting to clean up temp key files | Always `rm -f /tmp/keyfile` after use |
 | `sudo` over SSH without TTY | Use `sudo -S command <<< 'password'` or avoid sudo when possible |
-| `op run --account=toptal` from interactive shell | Shell has `op://Personal/...` env vars; use `--account=my.1password.com` instead |
-| `op://cli/Anthropic API Key/credential` | Returns OAuth token (`oat01`), not API key — use `op://Personal/vps-anthropic-api/ANTHROPIC_API_KEY` |
+| `op run --account=toptal` from interactive shell | Shell has `op://Personal/...` env vars; use `--account=$INFRA_OP_PERSONAL` instead |
+| `op://cli/Anthropic API Key/credential` | Returns OAuth token (`oat01`), not API key — use the `Personal` vault API key item |
 | env vars missing in `mise run` | direnv must be loaded in the calling shell; check with `direnv status` |

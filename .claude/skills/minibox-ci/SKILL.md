@@ -1,6 +1,6 @@
 ---
 name: minibox-ci
-description: Use when working on minibox CI, managing the self-hosted GHA runner on jobrien-vm, running xtask gates, or diagnosing CI failures. Symptoms - CI failing, runner offline, mise not found, xtask error, need to SSH into jobrien-vm.
+description: Use when working on minibox CI, managing the self-hosted GHA runner on $INFRA_VPS_HOST, running xtask gates, or diagnosing CI failures. Symptoms - CI failing, runner offline, mise not found, xtask error, need to SSH into $INFRA_VPS_HOST.
 ---
 
 # Minibox CI & Runner Ops
@@ -12,20 +12,20 @@ description: Use when working on minibox CI, managing the self-hosted GHA runner
 
 ## Tools
 
-- [tools/ssh-jobrien.sh](tools/ssh-jobrien.sh) — SSH to jobrien-vm via 1Password. `./ssh-jobrien.sh "command"` or interactive.
+- [tools/ssh-jobrien.sh](tools/ssh-jobrien.sh) — SSH to $INFRA_VPS_HOST via 1Password. `./ssh-jobrien.sh "command"` or interactive.
 - [tools/runner-status.sh](tools/runner-status.sh) — Check GHA runner units/status. `./runner-status.sh [logs]`
 - [tools/ci-status.sh](tools/ci-status.sh) — Latest CI run status. `./ci-status.sh [watch|logs [ID]]`
 
 ## Quick Reference
 
-### SSH to jobrien-vm
+### SSH to $INFRA_VPS_HOST
 
 ```bash
 # Via tool (preferred)
 ~/.claude/skills/mbx/minibox-ci/tools/ssh-jobrien.sh "COMMAND"
 
 # Inline (when tool not convenient)
-sshpass -p "$(op item get jobrien-vm --account=my.1password.com --fields password --reveal)" \
+sshpass -p "$(op item get $INFRA_VPS_HOST --account=my.1password.com --fields password --reveal)" \
   ssh -o IdentitiesOnly=yes -o IdentityAgent=none -o PreferredAuthentications=password \
   dev@100.105.75.7 "COMMAND"
 ```

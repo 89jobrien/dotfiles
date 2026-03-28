@@ -10,7 +10,7 @@ description: Use when developing minibox — quality gates, adding crates/adapte
 - [references/quality-gates.md](references/quality-gates.md) — What to run, when, and where (macOS vs Linux vs VPS)
 - [references/new-crate-workflow.md](references/new-crate-workflow.md) — End-to-end workflow for adding a new workspace crate
 - [references/adapter-workflow.md](references/adapter-workflow.md) — Adding or modifying hexagonal architecture adapters
-- [references/vps-ops.md](references/vps-ops.md) — VPS (jobrien-vm) operations: SSH, bench, Linux testing, Gitea CI
+- [references/vps-ops.md](references/vps-ops.md) — VPS ($INFRA_VPS_HOST) operations: SSH, bench, Linux testing, Gitea CI
 - [references/ecosystem.md](references/ecosystem.md) — Joe's related Rust projects (doob, devloop, obfsck) and how they connect
 
 ## Helper Scripts
@@ -71,7 +71,7 @@ just commit-msg [-a] [-c]       # AI-generated commit message
 ### VPS Operations
 
 ```bash
-mise run all:ssh-vps            # SSH into jobrien-vm
+mise run all:ssh-vps            # SSH into $INFRA_VPS_HOST
 mise run all:bench              # Run benchmarks on VPS (cargo xtask bench-vps)
 mise run all:bench:setup        # One-time VPS bench setup
 mise run all:ci                 # Check Gitea CI status

@@ -110,7 +110,7 @@ brew install socat
 # See scripts/pieces-proxy-launchagent.sh to generate it
 ```
 
-Then on m5-max:
+Then on `$INFRA_DEV_HOST`:
 ```bash
 claude mcp add --transport http pieces "http://<tailscale-ip>:39301/model_context_protocol/2025-03-26/mcp"
 ```

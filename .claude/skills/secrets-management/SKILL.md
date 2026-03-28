@@ -5,6 +5,9 @@ description: Use when managing encrypted secrets, extracting SSH keys, accessing
 
 # Secrets Management
 
+> **Infra config:** Machine names, IPs, and credentials come from `~/.claude/infra.toml`.
+> See `~/.claude/infra.toml.example` for the template. Load vars in scripts with `source ~/.claude/skills/lib/infra-load.sh`.
+
 ## Stack Overview
 
 | Tool | Role |
@@ -28,12 +31,12 @@ Private key: `~/.config/sops/age/keys.txt` (override with `$SOPS_AGE_KEY_FILE`)
 age-keygen -o ~/.config/sops/age/keys.txt
 
 # Restore from 1Password (item: "age-key-dotfiles", vault: cli)
-op item get "age-key-dotfiles" --account=my.1password.com --fields notesPlain \
+op item get "age-key-dotfiles" --account=$INFRA_OP_PERSONAL --fields notesPlain \
   > ~/.config/sops/age/keys.txt && chmod 600 ~/.config/sops/age/keys.txt
 
 # Back up to 1Password
 op item create --category "Secure Note" --title "age-key-dotfiles" \
-  "notesPlain=$(cat ~/.config/sops/age/keys.txt)" --account=my.1password.com
+  "notesPlain=$(cat ~/.config/sops/age/keys.txt)" --account=$INFRA_OP_PERSONAL
 ```
 
 The dotfiles `setup-secrets.sh` auto-restores from 1Password if the key is missing during bootstrap.
@@ -77,12 +80,12 @@ Decrypted secrets land at: `~/.config/dev-bootstrap/secrets.env`
 
 ### Accounts
 
-| Account | Email | Use |
-|---------|-------|-----|
-| `my.1password.com` | joeobrien516@gmail.com | Personal — SSH keys, infra, age key |
-| `toptal.1password.com` | joseph.obrien@toptal.com | Work credentials |
+| Account | Use |
+|---------|-----|
+| `$INFRA_OP_PERSONAL` | Personal — SSH keys, infra, age key |
+| `toptal.1password.com` | Work credentials |
 
-**Always specify `--account=my.1password.com` for infra/machine credentials.**
+**Always specify `--account=$INFRA_OP_PERSONAL` for infra/machine credentials.**
 
 ### Vaults
 
@@ -93,7 +96,7 @@ Decrypted secrets land at: `~/.config/dev-bootstrap/secrets.env`
 
 Items may be in either vault. Search without vault filter if not found:
 ```bash
-op item list --account=my.1password.com
+op item list --account=$INFRA_OP_PERSONAL
 ```
 
 ### Known Items
@@ -108,19 +111,19 @@ op item list --account=my.1password.com
 
 ```bash
 # List items
-op item list --account=my.1password.com
+op item list --account=$INFRA_OP_PERSONAL
 
 # Get full item as JSON
-op item get "<name>" --account=my.1password.com --format=json
+op item get "<name>" --account=$INFRA_OP_PERSONAL --format=json
 
 # Get specific field
-op item get "<name>" --account=my.1password.com --fields <field>
+op item get "<name>" --account=$INFRA_OP_PERSONAL --fields <field>
 
 # Inject secrets into a command's environment
 op run --env-file .env -- <command>
 
 # Find item by keyword (titles are inconsistent)
-op item list --account=my.1password.com --format=json | python3 -c "
+op item list --account=$INFRA_OP_PERSONAL --format=json | python3 -c "
 import sys, json
 for i in json.load(sys.stdin):
     if 'keyword' in i.get('title','').lower():
@@ -137,7 +140,7 @@ for i in json.load(sys.stdin):
 op read "op://vault/item/private key" > /tmp/key
 
 # ✅ CORRECT
-op item get "<item-id>" --account=my.1password.com --reveal --format=json | python3 -c "
+op item get "<item-id>" --account=$INFRA_OP_PERSONAL --reveal --format=json | python3 -c "
 import sys, json
 item = json.load(sys.stdin)
 for f in item.get('fields', []):
@@ -201,21 +204,22 @@ import sys, json; d=json.load(sys.stdin); print(d.get('MagicDNSSuffix',''))"
 
 | Machine | Tailscale IP | SSH User | Auth | 1P Item |
 |---------|-------------|----------|------|---------|
-| mac-mini | 100.111.235.46 | rentamac | SSH key (1P agent) | "rentamac" / "Rent a Mac" |
-| jobrien-vm | 100.105.75.7 | dev | Password | (store in 1P) |
-| m5-max | 100.105.148.117 | joe | Local | N/A |
-| m1-lab (M3) | not yet on network | — | — | — |
+| `$INFRA_MAC_MINI_HOST` | (see infra.toml) | `$INFRA_MAC_MINI_USER` | SSH key (1P agent) | "rentamac" / "Rent a Mac" |
+| `$INFRA_VPS_HOST` | `$INFRA_VPS_IP` | `$INFRA_VPS_USER` | Password | `$INFRA_VPS_OP_ITEM` |
+| `$INFRA_DEV_HOST` | `$INFRA_DEV_IP` | `$INFRA_DEV_USER` | Local | N/A |
+| `$INFRA_LAB_HOST` | not yet on network | — | — | — |
 
 ### Connecting
 
 ```bash
-# mac-mini
-ssh rentamac@100.111.235.46 "command"
-# or via MagicDNS:
-ssh rentamac@mac-mini.taila01bd5.ts.net "command"
+source ~/.claude/skills/lib/infra-load.sh
 
-# jobrien-vm (password auth)
-sshpass -p 'user-binary' ssh -o IdentitiesOnly=yes -o IdentityAgent=none dev@100.105.75.7 "command"
+# mac-mini
+ssh $INFRA_MAC_MINI_USER@$INFRA_MAC_MINI_ADDR "command"
+
+# VPS (password auth)
+sshpass -p "$(op item get $INFRA_VPS_OP_ITEM --account=$INFRA_OP_PERSONAL --fields password --reveal)" \
+  ssh -o IdentitiesOnly=yes -o IdentityAgent=none $INFRA_VPS_USER@$INFRA_VPS_IP "command"
 ```
 
 ---
@@ -227,7 +231,7 @@ sshpass -p 'user-binary' ssh -o IdentitiesOnly=yes -o IdentityAgent=none dev@100
 | `sops` decrypt fails | Verify `~/.config/sops/age/keys.txt` exists; restore from 1P if missing |
 | Age key missing on new machine | `op item get "age-key-dotfiles" --fields notesPlain > ~/.config/sops/age/keys.txt` |
 | `op read` SSH key invalid format | Use `op item get --reveal --format=json` + python extraction |
-| Wrong 1P account | Always `--account=my.1password.com` for personal/infra |
+| Wrong 1P account | Always `--account=$INFRA_OP_PERSONAL` for personal/infra |
 | SSH "too many auth failures" | `-o IdentitiesOnly=yes -o IdentityAgent=none -i /key` |
 | `tailscale ssh` not working on macOS | App Store build lacks it — use regular `ssh` |
 | Item not found by name | Titles are inconsistent — search broadly with `op item list` |

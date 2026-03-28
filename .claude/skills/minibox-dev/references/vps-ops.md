@@ -1,8 +1,8 @@
-# VPS Operations (jobrien-vm)
+# VPS Operations ($INFRA_VPS_HOST)
 
 ## Connection
 
-The VPS (`jobrien-vm`) is a Tailscale node at `100.105.75.7`. SSH password is stored in 1Password.
+The VPS (`$INFRA_VPS_HOST`) is a Tailscale node at `$INFRA_VPS_IP`. SSH password is stored in 1Password (`$INFRA_VPS_OP_ITEM`).
 
 ```bash
 # Interactive SSH (preferred — uses Tailscale hostname alias)
@@ -12,9 +12,10 @@ mise run all:ssh-vps
 ~/.claude/skills/mbx/minibox-ci/tools/ssh-jobrien.sh "command"
 
 # Direct (when tools unavailable)
-sshpass -p "$(op item get jobrien-vm --account=my.1password.com --fields password --reveal)" \
+source ~/.claude/skills/lib/infra-load.sh
+sshpass -p "$(op item get $INFRA_VPS_OP_ITEM --account=$INFRA_OP_PERSONAL --fields password --reveal)" \
   ssh -o IdentitiesOnly=yes -o IdentityAgent=none -o PreferredAuthentications=password \
-  dev@100.105.75.7 "COMMAND"
+  $INFRA_VPS_USER@$INFRA_VPS_IP "COMMAND"
 ```
 
 ## What Runs on VPS
