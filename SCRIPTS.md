@@ -22,16 +22,17 @@ scripts/
 
 Foundation layer providing reusable utilities for all scripts:
 
-| Library | Purpose | Functions |
-|---------|---------|-----------|
-| `log.sh` | Logging & output | `log`, `log_ok`, `log_warn`, `log_err`, `section`, `spin` |
-| `cmd.sh` | Command checking | `has_cmd`, `require_cmd`, `check_cmd`, `ensure_cmd` |
-| `pkg.sh` | Package managers | `detect_pkg_manager`, `ensure_homebrew`, `bundle_install` |
-| `dryrun.sh` | Dry-run mode | `set_dryrun_mode`, `is_dryrun`, `dryrun_exec` |
-| `json.sh` | JSON manipulation | `merge_json_config`, `read_json_value`, `validate_json` |
+| Library      | Purpose                  | Functions                                                              |
+| ------------ | ------------------------ | ---------------------------------------------------------------------- |
+| `log.sh`     | Logging & output         | `log`, `log_ok`, `log_warn`, `log_err`, `section`, `spin`              |
+| `cmd.sh`     | Command checking         | `has_cmd`, `require_cmd`, `check_cmd`, `ensure_cmd`                    |
+| `pkg.sh`     | Package managers         | `detect_pkg_manager`, `ensure_homebrew`, `bundle_install`              |
+| `dryrun.sh`  | Dry-run mode             | `set_dryrun_mode`, `is_dryrun`, `dryrun_exec`                          |
+| `json.sh`    | JSON manipulation        | `merge_json_config`, `read_json_value`, `validate_json`                |
 | `launchd.sh` | macOS services (launchd) | `launchd_is_loaded`, `launchd_start`, `launchd_stop`, `launchd_status` |
 
 **Design Principles:**
+
 - Single responsibility per library
 - No interdependencies (except log.sh dependency)
 - Comprehensive test coverage (82 bats tests)
@@ -43,14 +44,15 @@ See [`scripts/lib/README.md`](scripts/lib/README.md) for detailed library docume
 
 Entry points and orchestration:
 
-| Script | Purpose | Layer |
-|--------|---------|-------|
-| `bootstrap.sh` | Main orchestrator - runs package install, stow, post-hooks | Bootstrap |
-| `install.sh` (root) | Entry point - delegates to `pj dot install` or `bootstrap.sh` | Entry |
-| `drift-check.sh` | Detect uncommitted changes & stow conflicts | Validation |
-| `doctor.sh` | Validate required tools are installed | Validation |
+| Script              | Purpose                                                       | Layer      |
+| ------------------- | ------------------------------------------------------------- | ---------- |
+| `bootstrap.sh`      | Main orchestrator - runs package install, stow, post-hooks    | Bootstrap  |
+| `install.sh` (root) | Entry point - delegates to `pj dot install` or `bootstrap.sh` | Entry      |
+| `drift-check.sh`    | Detect uncommitted changes & stow conflicts                   | Validation |
+| `doctor.sh`         | Validate required tools are installed                         | Validation |
 
 **Bootstrap Flow:**
+
 1. `install.sh` → `pj dot install` → `bootstrap.sh`
 2. Zerobrew/Homebrew package installation
 3. Mise runtime installation
@@ -62,21 +64,22 @@ Entry points and orchestration:
 
 Post-bootstrap configuration scripts run by `bootstrap.sh`:
 
-| Script | Purpose | Hook Section |
-|--------|---------|--------------|
-| `setup-git-config.sh` | Git configuration | Shell |
-| `setup-oh-my-zsh.sh` | Oh My Zsh installation | Shell |
-| `setup-secrets.sh` | SOPS secret decryption | Secrets |
-| `setup-nix.sh` | Nix installation & flake packages | Nix |
-| `setup-macos.sh` | macOS defaults & Raycast scripts | macOS |
-| `setup-ai-tools.sh` | AI tool configs (Claude, Cursor, Zed, etc.) | AI Tools |
-| `setup-maestro.sh` | Maestro project setup | Maestro |
-| `setup-companion-repos.sh` | Clone companion projects | Companion Repos |
-| `setup-dev-tools.sh` | Cargo/Bun tool installation | Dev Tools |
-| `setup-nvchad-avante.sh` | Neovim configuration | Editor |
-| `setup-zerobrew.sh` | Zerobrew installation (pre-hook) | Pre-Homebrew |
+| Script                     | Purpose                                     | Hook Section    |
+| -------------------------- | ------------------------------------------- | --------------- |
+| `setup-git-config.sh`      | Git configuration                           | Shell           |
+| `setup-oh-my-zsh.sh`       | Oh My Zsh installation                      | Shell           |
+| `setup-secrets.sh`         | SOPS secret decryption                      | Secrets         |
+| `setup-nix.sh`             | Nix installation & flake packages           | Nix             |
+| `setup-macos.sh`           | macOS defaults & Raycast scripts            | macOS           |
+| `setup-ai-tools.sh`        | AI tool configs (Claude, Cursor, Zed, etc.) | AI Tools        |
+| `setup-maestro.sh`         | Maestro project setup                       | Maestro         |
+| `setup-companion-repos.sh` | Clone companion projects                    | Companion Repos |
+| `setup-dev-tools.sh`       | Cargo/Bun tool installation                 | Dev Tools       |
+| `setup-nvchad-avante.sh`   | Neovim configuration                        | Editor          |
+| `setup-zerobrew.sh`        | Zerobrew installation (pre-hook)            | Pre-Homebrew    |
 
 **Conventions:**
+
 - Exit 0 on skip (not failure) to allow bootstrap to continue
 - Use `log_skip` for non-critical missing dependencies
 - Source required libraries (log.sh, cmd.sh, etc.)
@@ -86,25 +89,26 @@ Post-bootstrap configuration scripts run by `bootstrap.sh`:
 
 Development environment management:
 
-| Script | Purpose | Dependencies |
-|--------|---------|--------------|
-| `compose-dev.sh` | Docker Compose development environment | docker, docker-compose |
-| `container-dev.sh` | Container runtime management (colima) | colima, docker |
-| `maestro-dev.sh` | Maestro project development workflow | make, git |
-| `observe-dev.sh` | Observability stack (Vector, etc.) | docker-compose |
+| Script             | Purpose                                | Dependencies           |
+| ------------------ | -------------------------------------- | ---------------------- |
+| `compose-dev.sh`   | Docker Compose development environment | docker, docker-compose |
+| `container-dev.sh` | Container runtime management (colima)  | colima, docker         |
+| `maestro-dev.sh`   | Maestro project development workflow   | make, git              |
+| `observe-dev.sh`   | Observability stack (Vector, etc.)     | docker-compose         |
 
 ### Layer 5: Service Scripts (`*-service.sh`)
 
 LaunchDaemon/systemd service managers:
 
-| Script | Purpose | Platform |
-|--------|---------|----------|
-| `vector-service.sh` | Vector log collection daemon | macOS (launchd) |
-| `rust-clean-service.sh` | Rust artifact cleanup daemon | macOS (launchd) |
-| `vector-retention-service.sh` | Log retention cleanup | macOS (launchd) |
-| `claude-log-retention.sh` | Claude log cleanup | Cross-platform |
+| Script                        | Purpose                      | Platform        |
+| ----------------------------- | ---------------------------- | --------------- |
+| `vector-service.sh`           | Vector log collection daemon | macOS (launchd) |
+| `rust-clean-service.sh`       | Rust artifact cleanup daemon | macOS (launchd) |
+| `vector-retention-service.sh` | Log retention cleanup        | macOS (launchd) |
+| `claude-log-retention.sh`     | Claude log cleanup           | Cross-platform  |
 
 **Service Commands:**
+
 - `install` - Write plist and bootstrap service
 - `uninstall` - Stop and remove service
 - `start/stop/restart` - Service control
@@ -115,8 +119,8 @@ LaunchDaemon/systemd service managers:
 
 Standalone utilities:
 
-| Script | Purpose |
-|--------|---------|
+| Script          | Purpose                                         |
+| --------------- | ----------------------------------------------- |
 | `rust-clean.sh` | Manual Rust artifact cleanup (uses cargo-sweep) |
 
 ## Script Conventions
@@ -137,6 +141,7 @@ TAG="script-name"
 ```
 
 **Flags:**
+
 - `set -e` - Exit on error
 - `set -u` - Error on undefined variables
 - `set -o pipefail` - Catch errors in pipes
@@ -144,6 +149,7 @@ TAG="script-name"
 ### 2. Library Usage
 
 **Always source in order:**
+
 1. `log.sh` - Required first (other libraries may log)
 2. `cmd.sh` - Command checking
 3. `pkg.sh` - Package managers (if needed)
@@ -188,15 +194,18 @@ ensure_cmd bacon "cargo install --locked bacon" failed
 ### 5. Error Handling
 
 **Post-hook scripts:**
+
 - Exit 0 on skip to allow bootstrap to continue
 - Exit 1 only for critical errors
 - Use `log_skip` for non-critical missing dependencies
 
 **Service scripts:**
+
 - Exit 1 for errors
 - Use `|| true` for non-critical failures in service management
 
 **Utility scripts:**
+
 - Exit 1 for errors
 - Provide clear error messages with `log_err`
 
@@ -221,17 +230,18 @@ dryrun_exec docker system prune -af
 
 ### Completed Migrations
 
-| Migration | Status | Scripts |
-|-----------|--------|---------|
-| log.sh adoption | ✅ 100% | All scripts use standardized logging |
-| cmd.sh adoption | ✅ 100% | 21 scripts use shared command checking |
-| pkg.sh adoption | ✅ Done | setup-ai-tools.sh, bootstrap.sh |
-| json.sh adoption | ✅ Done | setup-ai-tools.sh |
-| dryrun.sh adoption | ✅ Done | setup-maestro.sh, rust-clean.sh, etc. |
+| Migration          | Status  | Scripts                                |
+| ------------------ | ------- | -------------------------------------- |
+| log.sh adoption    | ✅ 100% | All scripts use standardized logging   |
+| cmd.sh adoption    | ✅ 100% | 21 scripts use shared command checking |
+| pkg.sh adoption    | ✅ Done | setup-ai-tools.sh, bootstrap.sh        |
+| json.sh adoption   | ✅ Done | setup-ai-tools.sh                      |
+| dryrun.sh adoption | ✅ Done | setup-maestro.sh, rust-clean.sh, etc.  |
 
 ### Test Coverage
 
 All shared libraries have comprehensive bats test coverage:
+
 - ✅ cmd.sh - 20 tests
 - ✅ dryrun.sh - 19 tests
 - ✅ json.sh - 25 tests
@@ -352,6 +362,7 @@ main "$@"
 ### Adding New Libraries
 
 When creating new shared libraries:
+
 1. Create `scripts/lib/newlib.sh` with clear function documentation
 2. Add comprehensive bats tests in `tests/lib/newlib.bats`
 3. Document in `scripts/lib/README.md`
@@ -361,6 +372,7 @@ When creating new shared libraries:
 ### Refactoring
 
 When refactoring scripts to use new patterns:
+
 1. Verify existing functionality first
 2. Update one pattern at a time
 3. Test after each change (`bash -n script.sh`)
@@ -371,6 +383,7 @@ When refactoring scripts to use new patterns:
 ### Quality Standards
 
 All scripts must:
+
 - Pass shellcheck (or document exceptions)
 - Follow consistent style (see Conventions)
 - Use shared libraries (no duplicate code)

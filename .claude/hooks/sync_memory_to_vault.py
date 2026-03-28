@@ -10,6 +10,7 @@ For memory writes, regenerates the CONTEXT.<project>.md note in the vault.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -17,7 +18,7 @@ from pathlib import Path
 # Config
 # ---------------------------------------------------------------------------
 
-VAULT_ROOT = Path("/Users/joe/Documents/Obsidian Vault")
+VAULT_ROOT = Path(os.environ.get("OBSIDIAN_VAULT_PATH", "~/Documents/Obsidian Vault")).expanduser()
 PROJECTS_ROOT = Path.home() / ".claude/projects"
 
 # slug -> (vault_note_path_relative, project_name, related_wikilinks)
@@ -157,21 +158,24 @@ def main() -> int:
 
     slug = extract_slug(file_path)
 
-    if slug not in PROJECT_MAP:
-        print(
-            f"sync_memory_to_vault: unknown project slug '{slug}' — add to PROJECT_MAP to enable sync",
-            file=sys.stderr,
-        )
-        return 0
-
-    vault_rel, project_name, wikilinks = PROJECT_MAP[slug]
+    if slug in PROJECT_MAP:
+        vault_rel, project_name, wikilinks = PROJECT_MAP[slug]
+    else:
+        # Auto-derive: split slug on "-" and take the last non-empty component
+        project_name = slug.split("-")[-1] if slug else slug
+        vault_rel = f"02_Projects/{project_name}/CONTEXT.{project_name}.md"
+        wikilinks = []
     memory_dir = PROJECTS_ROOT / slug / "memory"
 
     files = read_memory_files(memory_dir)
     if files is None:
+        print(f"sync_memory_to_vault: no memory files found in {memory_dir}, skipping", file=sys.stderr)
         return 0
 
     note_content = render_context_note(slug, project_name, files, wikilinks)
+
+    if not VAULT_ROOT.exists():
+        return 0
 
     vault_path = VAULT_ROOT / vault_rel
     vault_path.parent.mkdir(parents=True, exist_ok=True)

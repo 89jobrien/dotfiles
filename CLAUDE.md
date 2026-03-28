@@ -87,8 +87,11 @@ bd sync               # sync with git
 3. `setup-npm-tools.sh` (npm packages via standard Homebrew — runs immediately after packages)
 4. `mise install` (language runtimes from `.mise.toml`)
 5. Stow symlinks (packages from `config/stow-packages.txt`)
-6. Post-hooks in section order: Shell (`setup-git-config.sh` then `setup-oh-my-zsh.sh`) → Secrets → Nix → macOS → AI Tools (`setup-ai-tools.sh` + `setup-hooks.sh`) → Maestro → Companion Repos → Dev Tools → Editor → Local (if `scripts/post-bootstrap.local.sh` exists)
-7. Summary table printed at end
+6. **Dot hooks** (`run_dot_hooks` — fast, ~seconds, re-runnable): Shell (`setup-git-config.sh` → `setup-oh-my-zsh.sh`) → Secrets → macOS (Darwin only) → AI Tools (`setup-ai-tools.sh` + `setup-hooks.sh`)
+7. **Setup hooks** (`run_setup_hooks` — slow, run once): Nix → Maestro → Companion Repos → Dev Tools → Editor → Local (if `scripts/post-bootstrap.local.sh` exists)
+   - `--dot-only` flag skips steps 2–4 and only runs dot hooks (step 6); use for config-only re-runs
+   - `mise run rust-tools` is a separate step (not in setup hooks) — run once after bootstrap or in background
+8. Summary table printed at end
 
 ### `brew()` Shell Shim
 
