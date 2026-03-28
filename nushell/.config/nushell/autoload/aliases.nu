@@ -25,6 +25,7 @@ alias gd  = git diff
 alias gl  = git pull --ff-only
 alias gp  = git push
 alias gpf = git push --force-with-lease
+def gitgood [] { git stash; git pull --rebase; git stash pop; git push }
 
 # ── GitHub CLI ───────────────────────────────────────────────────────────────
 alias ghst   = gh auth status
