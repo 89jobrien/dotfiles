@@ -29,8 +29,8 @@ $env.ENV_CONVERSIONS = {
     to_string:   { |v| $v | str join (char esep) }
   }
   XDG_DATA_DIRS: {
-    from_string: { |s| $s | split row ':' }
-    to_string:   { |v| $v | str join ':' }
+    from_string: { |s| $s | split row (char esep) }
+    to_string:   { |v| $v | str join (char esep) }
   }
 }
 
@@ -107,6 +107,7 @@ $env.HOMEBREW_CELLAR     = "/opt/homebrew/Cellar"
 $env.HOMEBREW_REPOSITORY = "/opt/homebrew"
 
 # ── 1Password SSH agent ───────────────────────────────────────────────────────
-$env.SSH_AUTH_SOCK = (
-  $env.HOME | path join "Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
-)
+let op_sock = ($env.HOME | path join "Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock")
+if ($op_sock | path exists) {
+    $env.SSH_AUTH_SOCK = $op_sock
+}
