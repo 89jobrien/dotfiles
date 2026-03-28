@@ -61,6 +61,9 @@
             tmux
             neovim
             stow
+            nil
+            atuin
+            carapace
 
             # Git
             gh
