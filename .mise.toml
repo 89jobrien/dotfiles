@@ -58,11 +58,11 @@ run = "./scripts/setup-rust-tools.sh"
 
 [tasks.nix-install]
 description = "Install Nix and apply flake packages"
-run = "./scripts/setup-nix.sh"
+run = ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && ./scripts/setup-nix.sh"
 
 [tasks.nix-update]
 description = "Update nixpkgs lock and reinstall packages"
-run = "nix flake update && ./scripts/setup-nix.sh"
+run = ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix flake update && ./scripts/setup-nix.sh"
 
 [tasks.nix-check]
 description = "Verify Nix installation and package availability"
