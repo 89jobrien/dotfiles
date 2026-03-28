@@ -1,4 +1,20 @@
 {
+  "agent_servers": {
+    "corust-agent": {
+      "type": "registry"
+    },
+    "codex-acp": {
+      "type": "registry"
+    },
+    "claude-acp": {
+      "type": "registry"
+    }
+  },
+  "terminal": {
+    "shell": {
+      "program": "/Users/joe/.local/bin/nu-login"
+    }
+  },
   "project_panel": {
     "dock": "right"
   },

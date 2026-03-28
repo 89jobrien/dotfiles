@@ -20,6 +20,15 @@ try { ^mise     activate nu       | save -f ($vendor | path join "mise.nu") }
 try { atuin     init nu           | save -f ($vendor | path join "atuin.nu") }
 try { carapace  _carapace nushell | save -f ($vendor | path join "carapace.nu") }
 
+
+# ── User autoload ────────────────────────────────────────────────────────────
+# Sourced explicitly so they are available immediately (vendor/autoload is
+# sourced before config.nu, so copying there only takes effect next session).
+source autoload/settings.nu
+source autoload/aliases.nu
+source autoload/functions.nu
+source autoload/audit.nu
+
 # ── Keybindings ───────────────────────────────────────────────────────────────
 
 $env.config.keybindings = ($env.config.keybindings? | default [] | append [

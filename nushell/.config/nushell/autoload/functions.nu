@@ -36,10 +36,11 @@ def klogs [pattern: string = "."] {
 
 # ── Secrets / redaction ──────────────────────────────────────────────────────
 
-# Run a command and pipe output through pj secret redact
+# Run a command and pipe its output through obfsck redact
 def obfsrun [...args: string] {
-    if (which pj | is-not-empty) {
-        ^$args.0 ...($args | skip 1) | ^pj secret redact
+    let config = ($nu.home-path | path join "dotfiles/config/obfsck-secrets.yaml")
+    if (which obfsck | is-not-empty) {
+        ^$args.0 ...($args | skip 1) | ^obfsck --config $config
     } else {
         ^$args.0 ...($args | skip 1)
     }

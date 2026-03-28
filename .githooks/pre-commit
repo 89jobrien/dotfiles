@@ -9,3 +9,9 @@ if has_cmd pj; then
     echo "         the primary check (check-no-plaintext.sh) passed — continuing" >&2
   fi
 fi
+
+# Redaction audit — scan staged text files, log findings to .logs/redact-audit.jsonl
+# Never blocks; pass --verbose to see findings in terminal
+if has_cmd obfsck; then
+  "${ROOT_DIR}/scripts/redact-audit.sh" --hook pre-commit --staged
+fi

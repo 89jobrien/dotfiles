@@ -337,6 +337,7 @@ run_dot_hooks() {
   section "Shell"
   run_hook "Shell" "${ROOT_DIR}/scripts/setup-git-config.sh"
   run_hook "Oh-My-Zsh" "${ROOT_DIR}/scripts/setup-oh-my-zsh.sh"
+  run_hook "Nushell" "${ROOT_DIR}/scripts/setup-nushell.sh"
 
   section "Secrets"
   run_hook "Secrets" "${ROOT_DIR}/scripts/setup-secrets.sh"

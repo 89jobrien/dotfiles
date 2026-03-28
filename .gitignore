@@ -73,6 +73,10 @@ zed/.config/zed/settings_backup.json
 # Claude Code local artifacts
 .claude/review-loop.log
 
+# Audit logs (accumulated redaction scan results)
+.logs/*.jsonl
+.logs/*.log
+
 # Beads and local markdown
 .beads/
 *.local.md

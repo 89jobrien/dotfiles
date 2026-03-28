@@ -1,8 +1,5 @@
 # Aliases
 
-# ── Shell ────────────────────────────────────────────────────────────────────
-alias nunu = exec nu   # reload nushell config (replaces current process)
-
 # ── Files ────────────────────────────────────────────────────────────────────
 alias ll = ls -l
 alias la = ls -la
@@ -56,11 +53,11 @@ alias zbl = zb list
 alias zbu = zb update
 
 # ── Dotfiles ─────────────────────────────────────────────────────────────────
-alias dot      = cd ~/dotfiles
-alias dotgs    = (cd ~/dotfiles; git status -sb)
-alias dotpull  = (cd ~/dotfiles; git pull --ff-only)
-alias dotpush  = (cd ~/dotfiles; git push)
-alias dotopen  = (cd ~/dotfiles; gh repo view --web)
+alias dot = cd ~/dotfiles
+def --env dotgs   [] { cd ~/dotfiles; git status -sb }
+def --env dotpull [] { cd ~/dotfiles; git pull --ff-only }
+def --env dotpush [] { cd ~/dotfiles; git push }
+def --env dotopen [] { cd ~/dotfiles; gh repo view --web }
 
 # ── Docker / Colima ──────────────────────────────────────────────────────────
 alias dps           = docker ps
