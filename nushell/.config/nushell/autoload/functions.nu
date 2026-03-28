@@ -39,9 +39,9 @@ def klogs [pattern: string = "."] {
 # Run a command and pipe output through pj secret redact
 def obfsrun [...args: string] {
     if (which pj | is-not-empty) {
-        ^$args.0 ...$args | skip 1 | ^pj secret redact
+        ^$args.0 ...($args | skip 1) | ^pj secret redact
     } else {
-        ^$args.0 ...$args | skip 1
+        ^$args.0 ...($args | skip 1)
     }
 }
 
@@ -79,7 +79,10 @@ def --wrapped docker-compose [...args: string] {
     ^docker-compose ...$args
 }
 
-alias colima-restart = (colima-stop; colima-start)
+def colima-restart [] {
+    colima-stop
+    colima-start
+}
 
 # ── JS ───────────────────────────────────────────────────────────────────────
 
