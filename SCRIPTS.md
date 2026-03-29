@@ -13,7 +13,8 @@ scripts/
 ├── setup-*.sh              # Post-bootstrap setup scripts
 ├── *-dev.sh                # Development environment scripts
 ├── *-service.sh            # LaunchDaemon/systemd service managers
-└── *.sh                    # Utility scripts (doctor, drift-check, etc.)
+├── *.sh                    # Utility scripts (doctor, etc.)
+└── *.rs / *.py             # Rust/Python standalone scripts (run via rust-script / uv)
 ```
 
 ## Architecture Layers
@@ -390,3 +391,47 @@ All scripts must:
 - Have clear error messages
 - Document non-obvious behavior
 - Use proper exit codes
+
+---
+
+## Rust Scripts (`scripts/*.rs`) and Python Scripts (`scripts/*.py`)
+
+Standalone scripts run via `rust-script` or `uv run`. These are the **canonical** implementations — any `.sh` equivalents are legacy.
+
+Each `.rs` file embeds its own `[dependencies]` in a `//! ```cargo` block (PEP 723-style for Rust). Each `.py` file uses a `# /// script` block for `uv run`.
+
+### Execution Contract
+
+| Script | Runner | Mise task | Env vars | Log output |
+|--------|--------|-----------|----------|------------|
+| `drift-check.rs` | `rust-script` | `mise run drift` | none | stderr |
+| `system-health.rs` | `rust-script` | `mise run health [summary\|live\|procs\|disk]` | none | stdout |
+| `check-updates.rs` | `rust-script` | `mise run update-check` | `INFRA_DOTFILES_ROOT`, `DOTFILES_CHECK_CACHE` (optional) | stderr |
+| `rust-clean.rs` | `rust-script` | `mise run rust-clean [--dry-run]` | `RUST_CLEAN_DIR` (default: `$HOME/dev`), `RUST_CLEAN_DAYS` (default: 14), `DRY_RUN` | stderr |
+| `redact-audit.rs` | `rust-script` | `mise run redact-audit [--verbose]` | none | JSONL → `.logs/redact-audit.jsonl`, findings to stderr with `--verbose` |
+| `claude-sessions.rs` | `rust-script` | `mise run logs-sessions\|logs-tools\|logs-agents` | `INFRA_VECTOR_LOG_ROOT` (default: `~/logs/ai/vector`) | stdout table |
+| `claude-session-notes.py` | `uv run` | `mise run logs-session-notes` | none | writes to `$VAULT/03_Area-Systems/claude-sessions/` |
+
+### Architecture Pattern
+
+All `.rs` scripts follow hexagonal architecture:
+
+```
+Domain layer (pure logic, generic over traits)
+  ↑
+Ports (traits: Reporter, Sweeper, GitChecker, etc.)
+  ↑
+Adapters (structs implementing traits via real OS/process calls)
+  ↑
+Composition root (main() wires adapters + calls domain)
+```
+
+Tests use in-process stubs (`StubSweeper`, `CapturingReporter`, etc.) — no subprocess mocking, no filesystem side effects.
+
+### Adding a New Rust Script
+
+1. Create `scripts/myscript.rs` with shebang `#!/usr/bin/env rust-script` and `//! ```cargo` manifest block
+2. Define ports as traits, domain logic generic over them, adapters as structs
+3. Write tests in `#[cfg(test)]` using stub implementations — run with `rust-script --test scripts/myscript.rs`
+4. Add a `[tasks.mytask]` entry to `.mise.toml` and matching recipe to `Justfile`
+5. Update the execution contract table above

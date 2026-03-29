@@ -1,6 +1,6 @@
 [tools]
 bun = "latest"
-go = "1.25"
+go = "1.24"
 node = "22"
 python = "3.13"
 rust = "1.91"
@@ -95,6 +95,37 @@ run = "rust-script ./scripts/redact-audit.rs --staged"
 [tasks.redact-audit-verbose]
 description = "Scan staged files and print findings to stderr"
 run = "rust-script ./scripts/redact-audit.rs --staged --verbose"
+
+[tasks.mise-pin-check]
+description = "Check for version mismatches between .mise.toml and global mise config"
+run = "uv run ./scripts/mise-pin-check.py"
+
+[tasks.vector-check]
+description = "Verify Vector is ingesting Claude session logs into the sink"
+run = """
+set -euo pipefail
+SINK="$HOME/logs/ai/vector"
+FILE=$(ls -t "$SINK"/*.jsonl 2>/dev/null | head -1)
+if [[ -z "$FILE" ]]; then
+  echo "ERR: no sink files found in $SINK" >&2; exit 1
+fi
+COUNT=$(python3 -c "
+import json
+n=0
+with open('$FILE') as f:
+  for line in f:
+    try:
+      obj=json.loads(line)
+      if obj.get('source') == 'claude-code': n+=1
+    except: pass
+    if n >= 10: break
+print(n)
+")
+if [[ "$COUNT" -eq 0 ]]; then
+  echo "ERR: no claude-code entries found in $FILE" >&2; exit 1
+fi
+echo "ok: $COUNT+ claude-code entries in $(basename $FILE)"
+"""
 
 [tasks.secrets-sops-json]
 description = "Generate encrypted secrets/.env.sops.json from local secrets/.env.json"
