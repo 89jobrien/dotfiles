@@ -340,6 +340,10 @@ run = "python3 ./scripts/claude-log-dashboard.py"
 description = "List Claude Code sessions with tool/token stats"
 run = "rust-script ./scripts/claude-sessions.rs sessions"
 
+[tasks.logs-session-notes]
+description = "Generate Obsidian notes for all Claude Code sessions"
+run = "uv run ./scripts/claude-session-notes.py"
+
 [tasks.logs-tools]
 description = "Tool call frequency across all Claude Code sessions"
 run = "rust-script ./scripts/claude-sessions.rs tools"
