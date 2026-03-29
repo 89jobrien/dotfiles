@@ -41,8 +41,8 @@ description = "Check environment requirements"
 run = "./scripts/doctor.sh"
 
 [tasks.drift]
-description = "Detect local drift from managed dotfiles"
-run = "./scripts/drift-check.sh"
+description = "Detect local drift from managed dotfiles (git changes + stow conflicts)"
+run = "rust-script ./scripts/drift-check.rs"
 
 # ---------------------------------------------------------------------------
 # Dev Environment
