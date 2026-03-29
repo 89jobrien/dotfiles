@@ -197,6 +197,36 @@ rust-clean-service-run-now:
 rust-clean-service-logs:
     ./scripts/rust-clean-service.sh logs
 
+vector-install:
+    ./scripts/vector-service.sh install
+
+vector-start:
+    ./scripts/vector-service.sh start
+
+vector-stop:
+    ./scripts/vector-service.sh stop
+
+vector-restart:
+    ./scripts/vector-service.sh restart
+
+vector-status:
+    ./scripts/vector-service.sh status
+
+vector-logs:
+    ./scripts/vector-service.sh logs
+
+vector-uninstall:
+    ./scripts/vector-service.sh uninstall
+
+vector-retention-install:
+    ./scripts/vector-retention-service.sh install
+
+vector-retention-status:
+    ./scripts/vector-retention-service.sh status
+
+vector-retention-run:
+    ./scripts/vector-retention-service.sh run-now
+
 secrets-sops-json:
     ./scripts/secrets/make-sops-env-json.sh
 
