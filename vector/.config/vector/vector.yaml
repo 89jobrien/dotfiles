@@ -31,6 +31,9 @@ sources:
       - "${HOME}/.claude/projects/**/*.jsonl"
       - "${HOME}/logs/claude/**/*.jsonl"
       - "${HOME}/.claude/logs/**/*.jsonl"
+    exclude:
+      - "${HOME}/.claude/projects/*/subagents/**"
+      - "${HOME}/.claude/projects/*/*/subagents/**"
     read_from: beginning
     max_line_bytes: 1048576  # 1MB max line size for large events
 
