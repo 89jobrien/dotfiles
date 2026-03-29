@@ -298,19 +298,19 @@ run = "./scripts/observe-dev.sh docker-stats"
 
 [tasks.health]
 description = "Show one-shot system health and resource summary"
-run = "./scripts/system-health.sh summary"
+run = "rust-script ./scripts/system-health.rs summary"
 
 [tasks.health-live]
 description = "Open interactive system monitor"
-run = "./scripts/system-health.sh live"
+run = "rust-script ./scripts/system-health.rs live"
 
 [tasks.health-procs]
 description = "Show process resource usage list"
-run = "./scripts/system-health.sh procs"
+run = "rust-script ./scripts/system-health.rs procs"
 
 [tasks.health-disk]
 description = "Show disk usage summary"
-run = "./scripts/system-health.sh disk"
+run = "rust-script ./scripts/system-health.rs disk"
 
 # ---------------------------------------------------------------------------
 # Logs (Vector)
