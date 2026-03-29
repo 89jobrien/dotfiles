@@ -18,3 +18,5 @@
 ^plugins$
 ^security_warnings_state_.*\.json$
 ^ide$
+^\.DS_Store$
+^infra\.toml$
