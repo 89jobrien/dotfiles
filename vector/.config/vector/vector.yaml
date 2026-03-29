@@ -42,7 +42,7 @@ sources:
     type: file
     include:
       - "${HOME}/.codex/sessions/**/*.jsonl"
-    read_from: end
+    read_from: beginning
     max_line_bytes: 524288  # 512KB
 
   # OpenCode prompt history
@@ -50,7 +50,7 @@ sources:
     type: file
     include:
       - "${HOME}/.local/state/opencode/prompt-history.jsonl"
-    read_from: end
+    read_from: beginning
     max_line_bytes: 102400
 
   # OpenCode richer session logs — plaintext with directory/project context
@@ -59,7 +59,7 @@ sources:
     type: file
     include:
       - "${HOME}/.local/share/opencode/log/*.log"
-    read_from: end
+    read_from: beginning
     file_key: "_file"
     max_line_bytes: 102400
 

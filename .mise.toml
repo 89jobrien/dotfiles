@@ -367,6 +367,10 @@ run = "mkdir -p ~/.local/state/vector && vector --config vector/.config/vector/v
 description = "Serve local Claude logs dashboard"
 run = "python3 ./scripts/claude-log-dashboard.py"
 
+[tasks.logs-vector-dashboard]
+description = "Serve Vector pipeline + project activity + analytics dashboard"
+run = "uv run ./scripts/vector-dashboard.py"
+
 [tasks.logs-sessions]
 description = "List Claude Code sessions with tool/token stats"
 run = "rust-script ./scripts/claude-sessions.rs sessions"
@@ -508,3 +512,7 @@ run = "bats tests/lib/*.bats"
 [tasks.menu]
 description = "Open interactive menu to explore and run dotfiles commands"
 run = "./scripts/menu"
+
+[tasks.hooks]
+description = "Manage Claude Code nu hooks (list, status, test, view)"
+run = "nu ./scripts/hooks-menu.nu"
