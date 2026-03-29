@@ -16,7 +16,7 @@ BACKUP_DIR="$SCRIPT_DIR/../backups"
 WARN_DAYS="${WARN_DAYS:-30}"
 
 find_latest_csv() {
-    find "$BACKUP_DIR" -name "devices-*.csv" -type f | sort -r | head -n 1
+    [[ -d "$BACKUP_DIR" ]] && find "$BACKUP_DIR" -name "devices-*.csv" -type f | sort -r | head -n 1
 }
 
 check_expiry() {
@@ -24,7 +24,8 @@ check_expiry() {
     csv_file=$(find_latest_csv)
 
     if [[ -z "$csv_file" ]]; then
-        log_err "No device CSV files found in $BACKUP_DIR"
+        log_err "No device CSV files found in ${BACKUP_DIR}"
+        log "Export devices from the Tailscale admin console and save to tailscale/backups/"
         exit 1
     fi
 
