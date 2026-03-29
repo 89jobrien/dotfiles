@@ -402,11 +402,11 @@ run = "./scripts/vector-retention-service.sh uninstall"
 
 [tasks.rust-clean]
 description = "Sweep Rust build artifacts older than RUST_CLEAN_DAYS days (default: 14) under RUST_CLEAN_DIR (default: ~/dev)"
-run = "./scripts/rust-clean.sh"
+run = "rust-script ./scripts/rust-clean.rs"
 
 [tasks.rust-clean-dry]
 description = "Dry-run Rust artifact sweep — show what would be removed"
-run = "./scripts/rust-clean.sh --dry-run"
+run = "rust-script ./scripts/rust-clean.rs --dry-run"
 
 [tasks.rust-clean-service-install]
 description = "Install weekly launchd schedule for Rust artifact cleanup (macOS only)"
