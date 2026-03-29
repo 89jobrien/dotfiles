@@ -24,10 +24,11 @@ data_dir: "${HOME}/.local/state/vector"
 # ============================================================================
 
 sources:
-  # Claude Code session logs — actual path is ~/logs/claude/, not ~/.claude/logs/
+  # Claude Code session logs — project sessions live at ~/.claude/projects/
   claude_code_logs:
     type: file
     include:
+      - "${HOME}/.claude/projects/**/*.jsonl"
       - "${HOME}/logs/claude/**/*.jsonl"
       - "${HOME}/.claude/logs/**/*.jsonl"
     read_from: beginning
