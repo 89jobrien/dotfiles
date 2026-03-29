@@ -1,20 +1,37 @@
 @RTK.md
 
-## Tooling Preferences
+## General Behavior
 
-- Rust-native CLI tools preferred (`rg`, `fd`, `eza`, `bacon`, `cargo-nextest`)
-- `uv` over `pip` for Python; `bun`/`bunx` over `npm`/`npx` for JS
-- `colima` for containers (not Docker Desktop)
-- `mise` for runtime version management (not nvm/pyenv/rustup directly)
-- `gum` for interactive TUI elements in scripts
+- When asked to fix something, fix it directly. Do not tell the user to fix it themselves unless explicitly asked for instructions only.
+
+## File Paths & Environment
+
+- Always resolve file paths relative to $HOME (not ~) when referencing dotfiles, secrets, or config files outside the project directory.
+- Use $HOME expansion in scripts, not tilde.
+
+## Subagents / Task Agents
+
+- After subagents complete work, always verify their changes were committed. Subagents frequently complete tasks but fail to commit.
+
+## Secrets & Environment Variables
+
+- Claude's shell context cannot resolve `op://` URIs directly. Use `op read` for individual secrets or `op run` to inject them into a command's environment. Never assume direnv resolves `op://` references in Claude's context.
+- Never pass raw op:// URIs to commands that expect actual values.
+
+## Testing & Validation
+
+- Primary languages: Rust (cargo, clippy, cargo-deny), Python, Shell (nu)
+- Always run `cargo clippy` and `cargo test` after Rust changes.
+- Run tests before committing.
+
+## Debugging Guidelines
+
+- When debugging, check environment variables and secrets resolution FIRST before investigating code-level causes.
+- Common root causes: missing env vars, unresolved op:// refs, wrong PATH/toolchain.
 
 ## Development Principles
 
 When implementing changes across multiple files, propose a systemic/architectural solution first (e.g., fallback logic, shared config) rather than per-file repetition. Ask before changing more than 3 files individually.
-
-## Secrets / Environment
-
-Claude's shell context cannot resolve `op://` URIs directly. Use `op read` for individual secrets or `op run` to inject them into a command's environment. Never assume direnv resolves `op://` references in Claude's context.
 
 ## GitHub Actions Workflows
 
@@ -36,6 +53,10 @@ Commits are signed via SSH key through the 1Password agent. If `git commit` fail
 - **PostToolUse/Bash**: `post-tool-track-failures.py` — records failed Bash exit codes for course-correct learning
 - **PostToolUse/Edit|Write**: `post-edit-cargo-fmt.sh` — auto-runs `cargo fmt` on edited Rust files
 - **PostToolUse/Edit|Write**: `sync_memory_to_vault.py` — syncs `~/.claude/…/memory/` files to Obsidian vault
+
+## Secrets Audit
+
+`mise run redact-audit` scans staged files via obfsck and logs findings as JSONL. Add `--verbose` for stderr output. Always exits 0 (non-blocking).
 
 ## Memory System
 

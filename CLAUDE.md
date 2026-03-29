@@ -35,8 +35,16 @@ mise run dev-tools       # cargo/bun tool installs
 mise run rust-tools          # compile alacritty, bacon, toolz, obfsck, etc.
 mise run rust-tools &        # background variant
 
-# Secrets
-mise run secrets-check   # verify no plaintext secrets staged
+# Secrets & audit
+mise run secrets-check        # verify no plaintext secrets staged
+mise run redact-audit         # scan staged files for secrets (JSONL log)
+mise run redact-audit-verbose # same + print findings to stderr
+
+# Logs & session analysis
+mise run logs-sessions        # list all Claude Code sessions with stats
+mise run logs-tools           # tool call frequency breakdown
+mise run logs-agents          # subagent dispatch breakdown
+mise run logs-session-notes   # generate Obsidian notes for all sessions
 
 # Windows (run from elevated PowerShell)
 .\install.ps1                          # full bootstrap (WSL2 + winget + Linux bootstrap)
@@ -207,6 +215,20 @@ Commits are signed via SSH key through the 1Password agent. If `git commit` fail
 - `mise` for runtime version management (not nvm/pyenv/rustup directly)
 - `gum` for interactive TUI elements in scripts
 - `obfsck` for secret redaction and identifier obfuscation in logs (installed from `~/dev/obfsck` during bootstrap)
+
+## Rust Scripts (`scripts/*.rs`)
+
+Single-file Rust programs run via `rust-script`. These are the canonical implementations — any `.sh` equivalents are legacy.
+
+| Script | Mise task | Purpose |
+|--------|-----------|---------|
+| `drift-check.rs` | `mise run drift` | Detect git drift + stow conflicts |
+| `system-health.rs` | `mise run health` | System health summary/live/procs/disk |
+| `check-updates.rs` | `mise run update-check` | Check for dotfiles updates from remote |
+| `rust-clean.rs` | `mise run rust-clean` | Sweep old Rust build artifacts |
+| `redact-audit.rs` | `mise run redact-audit` | Scan staged files for secrets, log JSONL |
+| `claude-sessions.rs` | `mise run logs-sessions` | Analyze Claude Code session logs |
+| `claude-session-notes.py` | `mise run logs-session-notes` | Generate Obsidian notes from sessions |
 
 ## Modifying Scripts
 
