@@ -198,7 +198,7 @@ run = "./scripts/tasks-interactive.sh"
 
 [tasks.update-check]
 description = "Check for dotfiles updates from remote"
-run = "./scripts/check-updates.sh"
+run = "rust-script ./scripts/check-updates.rs"
 
 [tasks.update]
 description = "Update dotfiles from remote and reload config"
