@@ -3,7 +3,7 @@
 # Runs `cargo fmt --all` on the workspace when a .rs file is edited.
 
 def main [] {
-    let input = $in | from json
+    let input = open --raw /dev/stdin | from json
     let file_path = $input | get -i tool_input.file_path | default ""
 
     if not ($file_path | str ends-with ".rs") { exit 0 }
@@ -28,8 +28,9 @@ def main [] {
         $dir = $parent
     }
 
-    if $workspace_root == "" { exit 0 }
+    let root = $workspace_root
+    if $root == "" { exit 0 }
 
     # Run cargo fmt (non-blocking — don't fail if fmt errors)
-    do { cd $workspace_root; ^cargo fmt --all } | ignore
+    do { cd $root; ^cargo fmt --all } | ignore
 }

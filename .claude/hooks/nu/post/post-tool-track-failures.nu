@@ -3,9 +3,8 @@
 # Records Bash commands that exit non-zero into the state file consumed by
 # pre-tool-course-correct.nu for learned course correction.
 
-const HOOKS_DIR = ($nu.current-exe | path dirname)  # resolved at load time
-const RULES_FILE = ($env.HOME | path join ".claude" "hooks" "course-correct-rules.json")
-const DEFAULT_STATE_FILE = ($env.HOME | path join ".claude" "hooks" "course-correct-state.json")
+def rules_file [] { $env.HOME | path join ".claude" "hooks" "course-correct-rules.json" }
+def default_state_file [] { $env.HOME | path join ".claude" "hooks" "course-correct-state.json" }
 
 # Exit codes that mean "user or OS interrupted" — not a logic failure worth tracking
 const SIGNAL_EXIT_CODES = [130, 137, 143]
@@ -23,7 +22,7 @@ const EXCLUDE_PATTERNS = [
 
 def load_rules [] {
     try {
-        open $RULES_FILE | from json
+        open (rules_file) | from json
     } catch {
         {failure_learning: {enabled: false}}
     }
@@ -89,7 +88,7 @@ def prune_state [state: record, window: int, max_entries: int, cleanup_after: in
 }
 
 def main [] {
-    let input = try { $in | from json } catch { exit 0 }
+    let input = try { open --raw /dev/stdin | from json } catch { exit 0 }
 
     if ($input | get -i tool_name | default "") != "Bash" { exit 0 }
 
@@ -108,7 +107,7 @@ def main [] {
     let window = $fl_config | get -i window_seconds | default 300 | into int
     let max_entries = $fl_config | get -i max_tracked_commands | default 200 | into int
     let cleanup_after = $fl_config | get -i cleanup_after_seconds | default 3600 | into int
-    let state_path = $fl_config | get -i state_file | default $DEFAULT_STATE_FILE
+    let state_path = $fl_config | get -i state_file | default (default_state_file)
 
     mut state = load_state $state_path
     let now = (date now | into int) / 1_000_000_000

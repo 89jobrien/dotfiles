@@ -3,7 +3,7 @@
 # Detects and redacts secrets in bash tool output using the `redact` utility.
 
 def main [] {
-    let input = $in | from json
+    let input = open --raw /dev/stdin | from json
 
     let resp = $input | get -i tool_response | default {}
     let output = ($resp | get -i stdout | default "") + ($resp | get -i output | default "")

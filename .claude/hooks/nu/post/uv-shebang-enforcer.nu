@@ -30,10 +30,7 @@ def has_old_shebang [lines: list<string>] {
     let first3 = $lines | first 3
     $first3 | any { |line|
         let s = $line | str trim
-        ($s | str starts-with "#!/usr/bin/env python") or
-        ($s | str starts-with "#!/usr/bin/python") or
-        ($s | str starts-with "#!/usr/local/bin/python") or
-        ($s =~ '^#!.*(python3\.\d+|python\d*)')
+        (($s | str starts-with "#!/usr/bin/env python") or ($s | str starts-with "#!/usr/bin/python") or ($s | str starts-with "#!/usr/local/bin/python") or ($s =~ '^#!.*(python3\.\d+|python\d*)'))
     }
 }
 
@@ -46,7 +43,7 @@ def is_hooks_file [file_path: string] {
 }
 
 def main [] {
-    let input = try { $in | from json } catch { exit 0 }
+    let input = try { open --raw /dev/stdin | from json } catch { exit 0 }
 
     let tool_name = $input | get -i tool_name | default ""
     if $tool_name not-in ["Write" "Edit"] { exit 0 }

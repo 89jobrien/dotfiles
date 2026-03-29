@@ -23,7 +23,7 @@ def deny [message: string] {
 }
 
 def main [] {
-    let input = try { $in | from json } catch { exit 0 }
+    let input = try { open --raw /dev/stdin | from json } catch { exit 0 }
 
     if ($input | get -i tool_name | default "") != "Bash" { exit 0 }
 
@@ -32,7 +32,7 @@ def main [] {
 
     let matched = ($PATTERNS | where { |entry|
         $command =~ $entry.pattern
-    } | first?)
+    } | do { |rows| try { $rows | first } catch { null } } $in)
 
     if $matched == null { exit 0 }
 

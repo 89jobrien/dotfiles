@@ -2,11 +2,11 @@
 # pre-tool-course-correct.nu — PreToolUse hook
 # Checks Bash tool calls against predefined rules and learned repeated failures.
 
-const RULES_FILE = ($env.HOME | path join ".claude" "hooks" "course-correct-rules.json")
-const DEFAULT_STATE_FILE = ($env.HOME | path join ".claude" "hooks" "course-correct-state.json")
+def rules_file [] { $env.HOME | path join ".claude" "hooks" "course-correct-rules.json" }
+def default_state_file [] { $env.HOME | path join ".claude" "hooks" "course-correct-state.json" }
 
 def load_rules [] {
-    try { open $RULES_FILE | from json } catch { {rules: [], failure_learning: {enabled: false}} }
+    try { open (rules_file) | from json } catch { {rules: [], failure_learning: {enabled: false}} }
 }
 
 def load_state [state_path: string] {
@@ -77,7 +77,7 @@ def check_learned_failures [command: string, fl_config: record, state: record] {
 }
 
 def main [] {
-    let input = try { $in | from json } catch { exit 0 }
+    let input = try { open --raw /dev/stdin | from json } catch { exit 0 }
 
     if ($input | get -i tool_name | default "") != "Bash" { exit 0 }
 
@@ -94,7 +94,7 @@ def main [] {
 
     # 2. Learned failures
     if ($fl_config | get -i enabled | default true) {
-        let state_path = $fl_config | get -i state_file | default $DEFAULT_STATE_FILE
+        let state_path = $fl_config | get -i state_file | default (default_state_file)
         let state = load_state $state_path
         let learned_msg = check_learned_failures $command $fl_config $state
         if $learned_msg != null { deny $learned_msg }

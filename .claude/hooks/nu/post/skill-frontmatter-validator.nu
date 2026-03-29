@@ -9,7 +9,7 @@ def has_valid_frontmatter [content: string] {
 
     # Collect lines until the closing fence
     let rest = $lines | skip 1
-    let close_idx = $rest | enumerate | where { |e| $e.item | str trim | $in == "---" } | first?
+    let close_idx = try { $rest | enumerate | where { |e| $e.item | str trim | $in == "---" } | first } catch { null }
 
     if $close_idx == null { return false }
 
@@ -22,7 +22,7 @@ def has_valid_frontmatter [content: string] {
 }
 
 def main [] {
-    let input = try { $in | from json } catch { exit 0 }
+    let input = try { open --raw /dev/stdin | from json } catch { exit 0 }
 
     let tool_name = $input | get -i tool_name | default ""
     if $tool_name not-in ["Write" "Edit"] { exit 0 }

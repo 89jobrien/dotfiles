@@ -5,7 +5,7 @@
 # matching doob todos as completed.
 
 def main [] {
-    let input = $in | from json
+    let input = open --raw /dev/stdin | from json
     let cmd = $input | get -i tool_input.command | default ""
     let exit_code = $input | get -i exit_code | default ""
 

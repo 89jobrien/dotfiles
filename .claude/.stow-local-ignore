@@ -3,7 +3,6 @@
 ^cache$
 ^logs$
 ^history\.jsonl$
-^settings\.json$
 ^settings\.local\.json$
 ^telemetry$
 ^usage-data$
