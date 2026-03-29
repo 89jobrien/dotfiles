@@ -88,6 +88,14 @@ run = "./scripts/setup-macos.sh"
 description = "Fail if plaintext secret files/content are staged"
 run = "./scripts/secrets/check-no-plaintext.sh"
 
+[tasks.redact-audit]
+description = "Scan staged files for sensitive data and log findings as JSONL"
+run = "rust-script ./scripts/redact-audit.rs --staged"
+
+[tasks.redact-audit-verbose]
+description = "Scan staged files and print findings to stderr"
+run = "rust-script ./scripts/redact-audit.rs --staged --verbose"
+
 [tasks.secrets-sops-json]
 description = "Generate encrypted secrets/.env.sops.json from local secrets/.env.json"
 run = "./scripts/secrets/make-sops-env-json.sh"
