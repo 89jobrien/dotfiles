@@ -9,3 +9,13 @@ if has_cmd pj; then
     echo "         the primary check (check-no-plaintext.sh) passed — continuing" >&2
   fi
 fi
+
+# devkit review: static analysis on staged diff (blocking)
+if has_cmd devkit; then
+  echo "Running devkit review..." >&2
+  if ! devkit review --base HEAD; then
+    echo "❌ devkit review found issues — commit aborted" >&2
+    echo "   Fix the issues above, or run: git commit --no-verify to bypass" >&2
+    exit 1
+  fi
+fi
