@@ -128,7 +128,8 @@ fi
 export PATH="$HOME/.local/share/mise/shims:$PATH"
 
 if [ -f "$HOME/.config/sops/age/keys.txt" ]; then
-  export MISE_SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+  export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+  export MISE_SOPS_AGE_KEY_FILE="$SOPS_AGE_KEY_FILE"
 fi
 
 if command -v zb >/dev/null 2>&1; then
@@ -288,6 +289,15 @@ if [ -f "$HOME/.config/dev-bootstrap/secrets.env" ]; then
   set +a
 fi
 
+# Load local secrets (API keys, etc.) — resolve op:// URIs via op inject.
+if [ -f "$HOME/.secrets" ] && command -v op >/dev/null 2>&1; then
+  eval "$(sed '/^[[:space:]]*#/d;/^[[:space:]]*$/d' "$HOME/.secrets" | op inject 2>/dev/null | sed 's/^/export /')"
+elif [ -f "$HOME/.secrets" ]; then
+  set -a
+  . "$HOME/.secrets"
+  set +a
+fi
+
 if command -v zoxide >/dev/null 2>&1; then
   eval "$(zoxide init zsh)"
 fi
@@ -408,3 +418,17 @@ mnpm() { command npm "$@"; }
 [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
 export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export JAVA_HOME="/opt/homebrew/opt/openjdk"
+
+# Google Cloud SDK
+export PATH="/opt/homebrew/share/google-cloud-sdk/bin:$PATH"
+
+# Added by GitLab Knowledge Graph installer
+export PATH="$HOME/.local/bin:$PATH"
+if command -v direnv >/dev/null 2>&1; then
+  eval "$(direnv hook zsh)"
+fi
+unset RUSTC_WRAPPER  # Disable sccache - causes "Operation not permitted" errors in some projects
+
+alias ocm='opencode -m ollama/gpt-mbx'
+
+export RTK_HOOK_AUDIT=1

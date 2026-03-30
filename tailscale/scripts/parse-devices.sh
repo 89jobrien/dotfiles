@@ -13,10 +13,16 @@ LATEST_CSV=""
 
 find_latest_csv() {
     local backup_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/backups"
+    if [[ ! -d "$backup_dir" ]]; then
+        log_err "backups directory not found: $backup_dir"
+        log "Export devices from the Tailscale admin console and save to tailscale/backups/"
+        exit 1
+    fi
     LATEST_CSV=$(find "$backup_dir" -name "devices-*.csv" -type f | sort -r | head -n 1)
 
     if [[ -z "$LATEST_CSV" ]]; then
         log_err "No device CSV files found in $backup_dir"
+        log "Export devices from the Tailscale admin console and save to tailscale/backups/"
         exit 1
     fi
 

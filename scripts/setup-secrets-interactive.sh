@@ -11,7 +11,7 @@ AGE_KEY_FILE="${HOME}/.config/sops/age/keys.txt"
 TEMP_SECRETS=$(mktemp)
 
 # Cleanup temp file on exit
-trap "rm -f ${TEMP_SECRETS}" EXIT
+trap 'rm -f "${TEMP_SECRETS}"' EXIT
 
 # Check prerequisites
 if [[ ! -f "${AGE_KEY_FILE}" ]]; then
@@ -46,8 +46,8 @@ log ""
 
 # Prompt for each secret
 for key in "${!SECRETS[@]}"; do
-  local prompt="${SECRETS[$key]}"
-  local value=""
+  prompt="${SECRETS[$key]}"
+  value=""
 
   # Handle optional vs required
   if [[ "$key" == AWS* ]]; then
@@ -83,7 +83,7 @@ log ""
 
 # Encrypt with sops
 log "Encrypting secrets..."
-EDITOR=cat sops "${SECRETS_FILE}" 2>/dev/null || true
+EDITOR="cat" sops "${SECRETS_FILE}" 2>/dev/null || true
 
 # Copy secrets to encrypted file
 cp "${TEMP_SECRETS}" "${SECRETS_FILE}"

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016  # $vars in jq single-quoted filters are jq variables, not bash
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -60,6 +61,11 @@ install_binary() {
     log_skip "repo not found at ${MCP_REPO}; skipping binary install"
     return 0
   fi
+  # BAML generates openapi.yaml that build.rs needs at compile time
+  if [[ -d "${MCP_REPO}/baml_src" ]] && has_cmd baml-cli; then
+    log "generating BAML clients..."
+    baml-cli generate --from "${MCP_REPO}/baml_src/" || log_warn "BAML generation failed; build may fail"
+  fi
   spin_with_msg "installing personal-mcp to ~/.local/bin" cargo install --path "${MCP_REPO}" --root "${HOME_DIR}/.local" --force || {
     if [[ -x "${MCP_BIN}" ]]; then
       log_warn "cargo install failed; using existing binary at ${MCP_BIN}"
@@ -82,30 +88,12 @@ install_opencode_if_missing() {
     return 0
   fi
 
-  local pkg_mgr
-  pkg_mgr="$(detect_pkg_manager)"
+  if has_cmd mise; then
+    log_skip "opencode is managed via global mise config; run 'mise install -g' if missing"
+    return 0
+  fi
 
-  case "${pkg_mgr}" in
-    zerobrew)
-      log "installing opencode via zerobrew ..."
-      zb install opencode || {
-        log_warn "failed to install opencode via zerobrew; continuing"
-        return 0
-      }
-      log_ok "opencode installed: $(find_cmd opencode)"
-      ;;
-    homebrew)
-      log "installing opencode via brew ..."
-      brew install opencode || {
-        log_warn "failed to install opencode via brew; continuing"
-        return 0
-      }
-      log_ok "opencode installed: $(find_cmd opencode)"
-      ;;
-    *)
-      log_skip "opencode not found and no package manager available"
-      ;;
-  esac
+  log_skip "opencode not found and mise is unavailable"
 }
 
 # ---------------------------------------------------------------------------
@@ -279,7 +267,11 @@ sync_catalog() {
     log_skip "personal-mcp not found at ${MCP_BIN}; skipping catalog sync"
     return 0
   fi
-  "${MCP_BIN}" sync --global && log_ok "synced catalog to ${HOME_DIR}/.claude/" || log_warn "catalog sync failed; continuing"
+  if "${MCP_BIN}" sync --global; then
+    log_ok "synced catalog to ${HOME_DIR}/.claude/"
+  else
+    log_warn "catalog sync failed; continuing"
+  fi
 }
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,29 @@
+[tasks."global:ssh-vps"]
+description = "SSH into jobrien-vm (VPS)"
+run = "ssh $INFRA_VPS_USER@$INFRA_VPS_IP"
+
+[tasks."global:ssh-mac-mini"]
+description = "SSH into mac-mini"
+run = "ssh $INFRA_MAC_MINI_USER@$INFRA_MAC_MINI_ADDR"
+
+[tools]
+node = "22.22.1"
+python = "3.13.12"
+uv = "0.10.9"
+rust = "1.91.1"
+go = "1.24.2"
+just = "1.40.0"
+"npm:@google/gemini-cli" = "0.33.1"
+"npm:opencode-ai" = "1.2.26"
+"npm:claude-code-templates" = "1.28.16"
+"cargo:rust-script" = "0.36.0"
+"cargo:cargo-nextest" = "0.9.130"
+"cargo:cargo-watch" = "8.5.3"
+"cargo:cargo-expand" = "1.0.121"
+"cargo:cargo-audit" = "0.21.2"
+"cargo:cargo-deny" = "0.18.3"
+"cargo:cargo-machete" = "0.8.0"
+"cargo:cargo-edit" = "0.13.4"
+"cargo:nu" = "0.104.1"
+"pipx:glances" = "4.5.1"
+gcloud = "560.0.0"

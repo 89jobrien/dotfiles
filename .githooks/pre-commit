@@ -10,12 +10,8 @@ if has_cmd pj; then
   fi
 fi
 
-# devkit review: static analysis on staged diff (blocking)
-if has_cmd devkit; then
-  echo "Running devkit review..." >&2
-  if ! devkit review --base HEAD; then
-    echo "❌ devkit review found issues — commit aborted" >&2
-    echo "   Fix the issues above, or run: git commit --no-verify to bypass" >&2
-    exit 1
-  fi
+# Redaction audit — scan staged text files, log findings to .logs/redact-audit.jsonl
+# Never blocks; pass --verbose to see findings in terminal
+if has_cmd obfsck; then
+  "${ROOT_DIR}/scripts/redact-audit.sh" --hook pre-commit --staged
 fi

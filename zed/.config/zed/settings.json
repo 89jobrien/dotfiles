@@ -1,4 +1,20 @@
 {
+  "agent_servers": {
+    "corust-agent": {
+      "type": "registry"
+    },
+    "codex-acp": {
+      "type": "registry"
+    },
+    "claude-acp": {
+      "type": "registry"
+    }
+  },
+  "terminal": {
+    "shell": {
+      "program": "/Users/joe/.local/bin/nu-login"
+    }
+  },
   "project_panel": {
     "dock": "right"
   },
@@ -30,11 +46,11 @@
       }
     },
     "personal": {
-      "command": "/Users/rentamac/.local/bin/personal-mcp",
+      "command": "/Users/joe/.local/bin/personal-mcp",
       "args": [],
       "env": {
-        "MCP_CTX_DIR": "/Users/rentamac/.ctx",
-        "MCP_ENV_FILE": "/Users/rentamac/.config/dev-bootstrap/secrets.env",
+        "MCP_CTX_DIR": "/Users/joe/.ctx",
+        "MCP_ENV_FILE": "/Users/joe/.config/dev-bootstrap/secrets.env",
         "BAML_LOG": "info",
         "BOUNDARY_MAX_LOG_CHUNK_CHARS": "3000"
       }

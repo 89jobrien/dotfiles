@@ -42,6 +42,12 @@ install_nix() {
     return 0
   fi
 
+  if [[ ! -t 0 ]]; then
+    log_warn "nix install requires an interactive terminal (sudo prompt)"
+    log "run manually: curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install"
+    return 1
+  fi
+
   log "installing Nix via Determinate Systems installer..."
   curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix \
     | sh -s -- install --no-confirm

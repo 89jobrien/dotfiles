@@ -61,6 +61,10 @@
             tmux
             neovim
             stow
+            nil
+            atuin
+            carapace
+            starship
 
             # Git
             gh

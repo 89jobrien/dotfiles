@@ -24,12 +24,16 @@ data_dir: "${HOME}/.local/state/vector"
 # ============================================================================
 
 sources:
-  # Claude Code session logs — actual path is ~/logs/claude/, not ~/.claude/logs/
+  # Claude Code session logs — project sessions live at ~/.claude/projects/
   claude_code_logs:
     type: file
     include:
+      - "${HOME}/.claude/projects/**/*.jsonl"
       - "${HOME}/logs/claude/**/*.jsonl"
       - "${HOME}/.claude/logs/**/*.jsonl"
+    exclude:
+      - "${HOME}/.claude/projects/*/subagents/**"
+      - "${HOME}/.claude/projects/*/*/subagents/**"
     read_from: beginning
     max_line_bytes: 1048576  # 1MB max line size for large events
 

@@ -80,6 +80,16 @@ write_plist() {
   <string>${STDOUT_LOG}</string>
   <key>StandardErrorPath</key>
   <string>${STDERR_LOG}</string>
+  <key>SoftResourceLimits</key>
+  <dict>
+    <key>NumberOfFiles</key>
+    <integer>4096</integer>
+  </dict>
+  <key>HardResourceLimits</key>
+  <dict>
+    <key>NumberOfFiles</key>
+    <integer>4096</integer>
+  </dict>
 </dict>
 </plist>
 EOF
@@ -119,6 +129,7 @@ do_stop() {
 }
 
 do_restart() {
+  # shellcheck disable=SC2119  # launchd_restart takes no args; $@ intentionally not passed
   launchd_restart
 }
 

@@ -18,6 +18,9 @@ stow:
 post:
     ./install.sh --no-packages --no-stow
 
+dot:
+    ./install.sh --dot-only
+
 nvim:
     ./scripts/setup-nvchad-avante.sh
 
@@ -194,6 +197,36 @@ rust-clean-service-run-now:
 rust-clean-service-logs:
     ./scripts/rust-clean-service.sh logs
 
+vector-install:
+    ./scripts/vector-service.sh install
+
+vector-start:
+    ./scripts/vector-service.sh start
+
+vector-stop:
+    ./scripts/vector-service.sh stop
+
+vector-restart:
+    ./scripts/vector-service.sh restart
+
+vector-status:
+    ./scripts/vector-service.sh status
+
+vector-logs:
+    ./scripts/vector-service.sh logs
+
+vector-uninstall:
+    ./scripts/vector-service.sh uninstall
+
+vector-retention-install:
+    ./scripts/vector-retention-service.sh install
+
+vector-retention-status:
+    ./scripts/vector-retention-service.sh status
+
+vector-retention-run:
+    ./scripts/vector-retention-service.sh run-now
+
 secrets-sops-json:
     ./scripts/secrets/make-sops-env-json.sh
 
@@ -204,10 +237,13 @@ secrets-setup:
     ./scripts/setup-secrets-interactive.sh
 
 toolz-install:
-    cargo install --path toolz --root "${HOME}/.local" --force
+    cargo install --path ~/dev/tools --root "${HOME}/.local" --force
 
 toolz-dev:
-    cd toolz && cargo build
+    cd ~/dev/tools && cargo build
+
+rust-tools:
+    ./scripts/setup-rust-tools.sh
 
 menu:
     ./scripts/menu

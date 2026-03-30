@@ -73,6 +73,10 @@ zed/.config/zed/settings_backup.json
 # Claude Code local artifacts
 .claude/review-loop.log
 
+# Audit logs (accumulated redaction scan results)
+.logs/*.jsonl
+.logs/*.log
+
 # Beads and local markdown
 .beads/
 *.local.md
@@ -80,3 +84,6 @@ zed/.config/zed/settings_backup.json
 # Tailscale device exports (contain network topology)
 tailscale/backups/
 tailscale/ssh-config.generated
+
+# Personal infra config (machine names, IPs, 1P item names)
+.claude/infra.toml

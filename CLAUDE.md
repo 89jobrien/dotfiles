@@ -9,6 +9,10 @@ A dotfiles repo that bootstraps a reproducible dev environment on macOS/Linux/Wi
 ## Key Commands
 
 ```bash
+# Fast path — configs & dotfiles only (seconds, re-run anytime)
+mise run dot                              # stow + shell/AI/macOS configs
+ALLOW_DIRECT_DOTFILES_INSTALL=1 ./install.sh --dot-only
+
 # Full bootstrap (preferred entry)
 pj dot install
 # Bypass pj requirement
@@ -27,8 +31,20 @@ mise run ai-tools        # install personal-mcp + configure all AI tool configs
 mise run macos           # macOS defaults + Raycast script linking
 mise run dev-tools       # cargo/bun tool installs
 
-# Secrets
-mise run secrets-check   # verify no plaintext secrets staged
+# Rust tools (slow — run once after bootstrap, or in background)
+mise run rust-tools          # compile alacritty, bacon, toolz, obfsck, etc.
+mise run rust-tools &        # background variant
+
+# Secrets & audit
+mise run secrets-check        # verify no plaintext secrets staged
+mise run redact-audit         # scan staged files for secrets (JSONL log)
+mise run redact-audit-verbose # same + print findings to stderr
+
+# Logs & session analysis
+mise run logs-sessions        # list all Claude Code sessions with stats
+mise run logs-tools           # tool call frequency breakdown
+mise run logs-agents          # subagent dispatch breakdown
+mise run logs-session-notes   # generate Obsidian notes for all sessions
 
 # Windows (run from elevated PowerShell)
 .\install.ps1                          # full bootstrap (WSL2 + winget + Linux bootstrap)
@@ -45,12 +61,13 @@ mise run test            # run all bats unit tests
 mise run test-lib        # run library tests only (tests/lib/*.bats)
 mise run shellcheck      # shellcheck all scripts in scripts/
 
-# toolz crate
+# toolz (companion repo at ~/dev/tools)
 mise run toolz-install   # build + install toolz to ~/.local/bin/toolz
 mise run toolz-dev       # cargo build (no install)
 
 # Interactive
 mise run menu            # interactive TUI to explore and run commands
+
 ```
 
 Three equivalent task runners: `mise run <task>` (interactive), `just <recipe>` (automation/agents), `make <target>` (compat wrapper). Task definitions live in `.mise.toml`, `Justfile`, and `Makefile` respectively.
@@ -78,8 +95,11 @@ bd sync               # sync with git
 3. `setup-npm-tools.sh` (npm packages via standard Homebrew — runs immediately after packages)
 4. `mise install` (language runtimes from `.mise.toml`)
 5. Stow symlinks (packages from `config/stow-packages.txt`)
-6. Post-hooks in section order: Shell (`setup-git-config.sh` then `setup-oh-my-zsh.sh`) → Secrets → Nix → macOS → AI Tools (`setup-ai-tools.sh` + `setup-hooks.sh`) → Maestro → Companion Repos → Dev Tools → Editor → Local (if `scripts/post-bootstrap.local.sh` exists)
-7. Summary table printed at end
+6. **Dot hooks** (`run_dot_hooks` — fast, ~seconds, re-runnable): Shell (`setup-git-config.sh` → `setup-oh-my-zsh.sh`) → Secrets → macOS (Darwin only) → AI Tools (`setup-ai-tools.sh` + `setup-hooks.sh`)
+7. **Setup hooks** (`run_setup_hooks` — slow, run once): Nix → Maestro → Companion Repos → Dev Tools → Editor → Local (if `scripts/post-bootstrap.local.sh` exists)
+   - `--dot-only` flag skips steps 2–4 and only runs dot hooks (step 6); use for config-only re-runs
+   - `mise run rust-tools` is a separate step (not in setup hooks) — run once after bootstrap or in background
+8. Summary table printed at end
 
 ### `brew()` Shell Shim
 
@@ -99,12 +119,13 @@ All scripts source `scripts/lib/log.sh` and set `TAG="name"` at the top. Availab
 **Library source order** (log.sh must be first; others as needed):
 1. `log.sh` — logging (required; others may call it)
 2. `cmd.sh` — `has_cmd`, `require_cmd`, `check_cmd`, `ensure_cmd`
-3. `pkg.sh` — package manager detection
-4. `dryrun.sh` — `set_dryrun_mode`, `dryrun_exec` (for destructive ops)
-5. `json.sh` — `merge_json_config` for jq-based read-modify-write
-6. `launchd.sh` — macOS service management (`launchd_start`, `launchd_stop`, `launchd_status`)
-7. `obfuscate.sh` — secret redaction (`obfuscate_text`, `obfuscate_file`); auto-used by `log.sh` bootstrap output
-8. `common.sh` — shared utility functions
+3. `onepassword.sh` — `op_restore_file`, `op_save_file`; requires `log.sh` + `cmd.sh`
+4. `pkg.sh` — package manager detection
+5. `dryrun.sh` — `set_dryrun_mode`, `dryrun_exec` (for destructive ops)
+6. `json.sh` — `merge_json_config` for jq-based read-modify-write
+7. `launchd.sh` — macOS service management (`launchd_start`, `launchd_stop`, `launchd_status`)
+8. `obfuscate.sh` — secret redaction (`obfuscate_text`, `obfuscate_file`); auto-used by `log.sh` bootstrap output
+9. `common.sh` — shared utility functions
 
 See `SCRIPTS.md` for the full library reference and script template.
 
@@ -114,6 +135,10 @@ Committed (immutable): `config/stow-packages.txt`, `Brewfile.*`, dotfile package
 
 Gitignored (mutable): `config/stow-packages.local.txt`, `mise.local.toml`, `scripts/post-bootstrap.local.sh`, `secrets/*.env`
 
+### `mise/` Stow Package
+
+`mise/.config/mise/config.toml` is a stow package that installs the **global** mise config to `~/.config/mise/config.toml`. It pins global tool versions used across all projects (e.g., `gemini-cli`, `opencode-ai`, `gcloud`, `cargo-nextest`). This is separate from `.mise.toml` (repo-local tasks and runtimes). When debugging toolchain issues, check this file first — global pins here override project-level `.mise.toml` entries.
+
 ### Stow Packages
 
 Each top-level directory that appears in `config/stow-packages.txt` is a stow package. Its contents mirror `$HOME` structure (e.g., `zsh/.zshrc` becomes `~/.zshrc`). Stow does a dry-run conflict check before linking.
@@ -121,6 +146,8 @@ Each top-level directory that appears in `config/stow-packages.txt` is a stow pa
 ### Secrets
 
 Encrypted with `sops + age`. Decrypted to `~/.config/dev-bootstrap/secrets.env` (chmod 600). A pre-commit hook in `.githooks/pre-commit` blocks plaintext secret files from being committed.
+
+Encryption rules live in `.sops.yaml` — files matching `secrets/.*\.sops(\.json|\.yaml|\.env)?$` use the repo's age public key. The age private key lives at `~/.config/sops/age/keys.txt` (default `SOPS_AGE_KEY_FILE`). If missing during bootstrap, `setup-secrets.sh` auto-restores it from 1Password item `age-key-dotfiles` via `op_restore_file` (requires `op` CLI + interactive terminal). To create/update the encrypted env: `mise run secrets-sops-json`.
 
 ### AI Tool Configuration (`setup-ai-tools.sh`)
 
@@ -160,10 +187,6 @@ sudo nixos-rebuild switch --flake ~/dotfiles/nixos#wsl   # system
 home-manager switch --flake ~/dotfiles/nixos#nixos        # user
 ```
 
-### toolz Crate (`toolz/`)
-
-Embedded Rust crate at `toolz/` — personal swiss-army CLI (sys, log, ai, db subcommands). Uses ratatui for TUI screens, tokio for async, fastembed for ONNX-based RAG. Installed to `~/.local/bin/toolz` via `mise run toolz-install`. First build is slow due to fastembed's ONNX transitive deps.
-
 ### Companion Projects
 
 These projects live outside the dotfiles repo but depend on tools the dotfiles provide:
@@ -173,9 +196,10 @@ These projects live outside the dotfiles repo but depend on tools the dotfiles p
 | personal-mcp | `~/dev/personal-mcp` | `89jobrien/personal-mcp` | Rust | `cargo`/`rust` (mise), `baml-cli` (dev-tools), `jq`, `just` (nix) |
 | dumcp | `~/dev/dumcp` | `89jobrien/dumcp` | Go | `go` (mise) |
 | obfsck | `~/dev/obfsck` | `89jobrien/obfsck` | Rust | `cargo`/`rust` (mise) |
+| tools | `~/dev/tools` | `89jobrien/tools` | Rust | `cargo`/`rust` (mise) |
 | maestro-dev | `~/maestro-dev` | `89jobrien/maestro-dev` | Shell/Docker | `docker`/`colima` (brew), `tmux`, `just` (nix) |
 
-All four are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh`.
+All five are private repos. Bootstrap clones them via `scripts/setup-companion-repos.sh`.
 
 Runtime runtimes (Go, Rust) are managed by mise. CLI tools (`tmux`, `just`, `jq`, etc.) come from the Nix flake. Container tooling (`docker`, `colima`) stays in Homebrew.
 
@@ -192,6 +216,20 @@ Commits are signed via SSH key through the 1Password agent. If `git commit` fail
 - `gum` for interactive TUI elements in scripts
 - `obfsck` for secret redaction and identifier obfuscation in logs (installed from `~/dev/obfsck` during bootstrap)
 
+## Rust Scripts (`scripts/*.rs`)
+
+Single-file Rust programs run via `rust-script`. These are the canonical implementations — any `.sh` equivalents are legacy.
+
+| Script | Mise task | Purpose |
+|--------|-----------|---------|
+| `drift-check.rs` | `mise run drift` | Detect git drift + stow conflicts |
+| `system-health.rs` | `mise run health` | System health summary/live/procs/disk |
+| `check-updates.rs` | `mise run update-check` | Check for dotfiles updates from remote |
+| `rust-clean.rs` | `mise run rust-clean` | Sweep old Rust build artifacts |
+| `redact-audit.rs` | `mise run redact-audit` | Scan staged files for secrets, log JSONL |
+| `claude-sessions.rs` | `mise run logs-sessions` | Analyze Claude Code session logs |
+| `claude-session-notes.py` | `mise run logs-session-notes` | Generate Obsidian notes from sessions |
+
 ## Modifying Scripts
 
 When adding a new post-hook script:
@@ -206,3 +244,16 @@ When adding shared library functions: add bats tests in `tests/lib/` and update 
 When modifying Windows native packages: edit `winget/packages.txt`. When modifying the PowerShell profile or terminal config: edit `windows/powershell/` or `windows/terminal/`.
 
 When modifying the NixOS-WSL system config: edit `nixos/configuration.nix` (system-level) or `nixos/home.nix` (user packages/shell). The `nixos/flake.nix` inputs only need touching when pinning new versions of `nixos-wsl` or `home-manager`.
+
+## Environment Notes
+
+- Shell scripts must be POSIX-compatible or explicitly target bash — macOS ships Bash 3.2 (`/bin/bash`), which lacks associative arrays and many bash 4+ features. Use `#!/usr/bin/env bash` + `set -euo pipefail` but avoid bash 4+ syntax.
+- When debugging toolchain/runtime issues, check `~/.config/mise/config.toml` (global) first — global pins override project-level `.mise.toml`.
+- 1Password SSH signing may time out silently. If git operations hang or fail with signing errors, the `op` agent may need to be relaunched.
+- `sudo` is not always available (NixOS-WSL uses passwordless sudo by design; other environments may differ). Prefer flagging manual steps over failing.
+
+## Behavioral Rules
+
+- NEVER move, rename, or delete files without explicitly confirming first.
+- When a command or tool fails twice with the same approach, stop and try a different method — don't retry the same thing.
+- Read current file/code state before proposing implementation plans — don't assume the codebase matches a prior plan or spec.

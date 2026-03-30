@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# ///
 """Serve a lightweight dashboard for centralized AI CLI logs, with token cost analysis."""
 
 from __future__ import annotations

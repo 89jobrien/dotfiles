@@ -1,6 +1,6 @@
 [tools]
 bun = "latest"
-go = "1.25"
+go = "1.24"
 node = "22"
 python = "3.13"
 rust = "1.91"
@@ -24,6 +24,10 @@ PJ_TUI_EVENT_MAX_CHARS = "140"
 description = "Run full bootstrap install"
 run = "./install.sh"
 
+[tasks.dot]
+description = "Fast install — stow symlinks + configs only (no packages, no compilation)"
+run = "./install.sh --dot-only"
+
 [tasks.stow]
 description = "Restow managed package set only"
 run = "./install.sh --no-packages --no-post"
@@ -37,28 +41,32 @@ description = "Check environment requirements"
 run = "./scripts/doctor.sh"
 
 [tasks.drift]
-description = "Detect local drift from managed dotfiles"
-run = "./scripts/drift-check.sh"
+description = "Detect local drift from managed dotfiles (git changes + stow conflicts)"
+run = "rust-script ./scripts/drift-check.rs"
 
 # ---------------------------------------------------------------------------
 # Dev Environment
 # ---------------------------------------------------------------------------
 
 [tasks.dev-tools]
-description = "Install core global dev tools used across repos"
+description = "Install non-cargo dev tools (baml-cli via bun/npm)"
 run = "./scripts/setup-dev-tools.sh"
+
+[tasks.rust-tools]
+description = "Compile and install Rust tools (alacritty, bacon, toolz, obfsck, etc.) — run after bootstrap"
+run = "./scripts/setup-rust-tools.sh"
 
 [tasks.nix-install]
 description = "Install Nix and apply flake packages"
-run = "./scripts/setup-nix.sh"
+run = ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && ./scripts/setup-nix.sh"
 
 [tasks.nix-update]
 description = "Update nixpkgs lock and reinstall packages"
-run = "nix flake update && ./scripts/setup-nix.sh"
+run = ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix flake update && ./scripts/setup-nix.sh"
 
 [tasks.nix-check]
 description = "Verify Nix installation and package availability"
-run = "nix profile list && nix flake check"
+run = ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix profile list && nix flake check"
 
 [tasks.nvim]
 description = "Run Neovim NvChad + Avante setup"
@@ -79,6 +87,45 @@ run = "./scripts/setup-macos.sh"
 [tasks.secrets-check]
 description = "Fail if plaintext secret files/content are staged"
 run = "./scripts/secrets/check-no-plaintext.sh"
+
+[tasks.redact-audit]
+description = "Scan staged files for sensitive data and log findings as JSONL"
+run = "rust-script ./scripts/redact-audit.rs --staged"
+
+[tasks.redact-audit-verbose]
+description = "Scan staged files and print findings to stderr"
+run = "rust-script ./scripts/redact-audit.rs --staged --verbose"
+
+[tasks.mise-pin-check]
+description = "Check for version mismatches between .mise.toml and global mise config"
+run = "uv run ./scripts/mise-pin-check.py"
+
+[tasks.vector-check]
+description = "Verify Vector is ingesting Claude session logs into the sink"
+run = """
+set -euo pipefail
+SINK="$HOME/logs/ai/vector"
+FILE=$(ls -t "$SINK"/*.jsonl 2>/dev/null | head -1)
+if [[ -z "$FILE" ]]; then
+  echo "ERR: no sink files found in $SINK" >&2; exit 1
+fi
+COUNT=$(python3 -c "
+import json
+n=0
+with open('$FILE') as f:
+  for line in f:
+    try:
+      obj=json.loads(line)
+      if obj.get('source') == 'claude-code': n+=1
+    except: pass
+    if n >= 10: break
+print(n)
+")
+if [[ "$COUNT" -eq 0 ]]; then
+  echo "ERR: no claude-code entries found in $FILE" >&2; exit 1
+fi
+echo "ok: $COUNT+ claude-code entries in $(basename $FILE)"
+"""
 
 [tasks.secrets-sops-json]
 description = "Generate encrypted secrets/.env.sops.json from local secrets/.env.json"
@@ -190,7 +237,7 @@ run = "./scripts/tasks-interactive.sh"
 
 [tasks.update-check]
 description = "Check for dotfiles updates from remote"
-run = "./scripts/check-updates.sh"
+run = "rust-script ./scripts/check-updates.rs"
 
 [tasks.update]
 description = "Update dotfiles from remote and reload config"
@@ -290,19 +337,19 @@ run = "./scripts/observe-dev.sh docker-stats"
 
 [tasks.health]
 description = "Show one-shot system health and resource summary"
-run = "./scripts/system-health.sh summary"
+run = "rust-script ./scripts/system-health.rs summary"
 
 [tasks.health-live]
 description = "Open interactive system monitor"
-run = "./scripts/system-health.sh live"
+run = "rust-script ./scripts/system-health.rs live"
 
 [tasks.health-procs]
 description = "Show process resource usage list"
-run = "./scripts/system-health.sh procs"
+run = "rust-script ./scripts/system-health.rs procs"
 
 [tasks.health-disk]
 description = "Show disk usage summary"
-run = "./scripts/system-health.sh disk"
+run = "rust-script ./scripts/system-health.rs disk"
 
 # ---------------------------------------------------------------------------
 # Logs (Vector)
@@ -322,15 +369,19 @@ run = "python3 ./scripts/claude-log-dashboard.py"
 
 [tasks.logs-sessions]
 description = "List Claude Code sessions with tool/token stats"
-run = "python3 ./scripts/claude-sessions.py sessions"
+run = "rust-script ./scripts/claude-sessions.rs sessions"
+
+[tasks.logs-session-notes]
+description = "Generate Obsidian notes for all Claude Code sessions"
+run = "uv run ./scripts/claude-session-notes.py"
 
 [tasks.logs-tools]
 description = "Tool call frequency across all Claude Code sessions"
-run = "python3 ./scripts/claude-sessions.py tools"
+run = "rust-script ./scripts/claude-sessions.rs tools"
 
 [tasks.logs-agents]
 description = "Subagent dispatch breakdown by type"
-run = "python3 ./scripts/claude-sessions.py agents --detail"
+run = "rust-script ./scripts/claude-sessions.rs agents --detail"
 
 [tasks.logs-central-retention]
 description = "Apply retention/compression to centralized Claude logs"
@@ -394,11 +445,11 @@ run = "./scripts/vector-retention-service.sh uninstall"
 
 [tasks.rust-clean]
 description = "Sweep Rust build artifacts older than RUST_CLEAN_DAYS days (default: 14) under RUST_CLEAN_DIR (default: ~/dev)"
-run = "./scripts/rust-clean.sh"
+run = "rust-script ./scripts/rust-clean.rs"
 
 [tasks.rust-clean-dry]
 description = "Dry-run Rust artifact sweep — show what would be removed"
-run = "./scripts/rust-clean.sh --dry-run"
+run = "rust-script ./scripts/rust-clean.rs --dry-run"
 
 [tasks.rust-clean-service-install]
 description = "Install weekly launchd schedule for Rust artifact cleanup (macOS only)"
@@ -424,12 +475,12 @@ run = "./scripts/rust-clean-service.sh logs"
 # ---------------------------------------------------------------------------
 
 [tasks.toolz-install]
-description = "Build and install toolz CLI from local crate to ~/.local/bin/toolz"
-run = "cargo install --path ${ROOT_DIR}/toolz --root ${HOME}/.local --force"
+description = "Build and install toolz CLI from ~/dev/tools to ~/.local/bin/toolz"
+run = "cargo install --path ${HOME}/dev/tools --root ${HOME}/.local --force"
 
 [tasks.toolz-dev]
 description = "Build toolz in dev mode (no install)"
-run = "cd ${ROOT_DIR}/toolz && cargo build"
+run = "cd ${HOME}/dev/tools && cargo build"
 
 # ---------------------------------------------------------------------------
 # Code Quality

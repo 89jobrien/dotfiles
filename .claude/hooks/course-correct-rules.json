@@ -1,0 +1,163 @@
+{
+  "_comment": "User-editable anti-pattern rules for pre-tool-course-correct.py. Set enabled=false to disable a rule.",
+  "_version": 1,
+
+  "rules": [
+    {
+      "id": "no-grep-use-tool",
+      "enabled": true,
+      "description": "Use the Grep tool instead of grep/rg in Bash",
+      "pattern": "\\bgrep\\b|\\brg\\b",
+      "pattern_flags": "",
+      "exceptions": [
+        "\\|\\s*grep",
+        "\\|\\s*rg\\b",
+        "2>/dev/null.*grep",
+        "grep.*--include",
+        "grep.*--exclude",
+        "grep.*-P\\b",
+        "grep.*-A\\b",
+        "grep.*-B\\b",
+        "grep.*-C\\b",
+        "grep.*--color"
+      ],
+      "exception_policy": "allow_if_any_match",
+      "message": "Use the Grep tool instead of `grep`/`rg` in Bash — better UX, token-efficient, respects .gitignore. Exception: pipeline filtering (`cmd | grep pattern`) and advanced modes (-P PCRE, -A/-B/-C context) are fine in Bash."
+    },
+    {
+      "id": "no-cat-use-read",
+      "enabled": true,
+      "description": "Use the Read tool instead of cat for reading files",
+      "pattern": "\\bcat\\s+[^|<]",
+      "pattern_flags": "",
+      "exceptions": [
+        "cat\\s+<<",
+        "cat\\s+<<<",
+        "\\|\\s*cat",
+        "cat\\s+-n\\b",
+        "cat\\s+-A\\b",
+        "cat\\s+/dev/"
+      ],
+      "exception_policy": "allow_if_any_match",
+      "message": "Use the Read tool instead of `cat` to read files — it provides line numbers and is token-efficient. `cat` is fine in heredocs (`cat << EOF`) and pipelines (`cmd | cat`)."
+    },
+    {
+      "id": "no-head-tail-use-read",
+      "enabled": true,
+      "description": "Use the Read tool with offset/limit instead of head/tail",
+      "pattern": "\\b(head|tail)\\s+-[0-9n]",
+      "pattern_flags": "",
+      "exceptions": [
+        "\\|\\s*(head|tail)",
+        "tail\\s+-f\\b",
+        "tail\\s+--follow"
+      ],
+      "exception_policy": "allow_if_any_match",
+      "message": "Use the Read tool with `offset` and `limit` parameters instead of `head`/`tail`. Exceptions: pipeline use (`cmd | head`) and `tail -f` (live follow) are fine."
+    },
+    {
+      "id": "no-find-use-glob",
+      "enabled": true,
+      "description": "Use the Glob tool instead of find for file discovery",
+      "pattern": "\\bfind\\s+[./~$\"']",
+      "pattern_flags": "",
+      "exceptions": [
+        "find\\s+.*-exec",
+        "find\\s+.*-delete",
+        "find\\s+.*-newer",
+        "find\\s+.*-mtime",
+        "find\\s+.*-atime",
+        "find\\s+.*-ctime",
+        "find\\s+.*-size",
+        "find\\s+.*-perm",
+        "find\\s+.*-empty",
+        "find\\s+.*-maxdepth\\s+0",
+        "find\\s+.*-L\\b"
+      ],
+      "exception_policy": "allow_if_any_match",
+      "message": "Use the Glob tool instead of `find` for file discovery — faster and respects .gitignore. Use Bash `find` only for operations Glob can't do: `-exec`, `-delete`, `-newer`, `-mtime`, `-size`, `-perm`."
+    },
+    {
+      "id": "no-npm-use-bun",
+      "enabled": true,
+      "description": "Use bun/bunx instead of npm/npx",
+      "pattern": "\\b(npm|npx)\\s",
+      "pattern_flags": "",
+      "exceptions": [
+        "npm\\s+publish\\b",
+        "npm\\s+pack\\b",
+        "npm\\s+version\\b",
+        "npm\\s+owner\\b",
+        "npm\\s+access\\b",
+        "npm\\s+audit\\s+fix",
+        "npm\\s+--workspaces",
+        "npx\\s+--yes\\s+create-",
+        "npx\\s+create-"
+      ],
+      "exception_policy": "allow_if_any_match",
+      "message": "Use `bun` instead of `npm` and `bunx` instead of `npx` — significantly faster. Examples: `bun install`, `bun run build`, `bunx tsc`. Exception: `npm publish`, `npm pack`, `npm version` have no bun equivalent."
+    },
+    {
+      "id": "no-pip-use-uv",
+      "enabled": true,
+      "description": "Use uv instead of pip/pip3 for package management",
+      "pattern": "\\bpip3?\\s+(install|uninstall|upgrade|download)\\b",
+      "pattern_flags": "",
+      "exceptions": [
+        "pip\\s+install\\s+--target",
+        "pip\\s+install\\s+--prefix",
+        "pip\\s+install\\s+--root",
+        "pip\\s+install\\s+--isolated"
+      ],
+      "exception_policy": "allow_if_any_match",
+      "message": "Use `uv` instead of `pip`/`pip3` — dramatically faster with automatic venv management. Examples: `uv add <pkg>` (project), `uv pip install <pkg>` (bare), `uv run python script.py`."
+    },
+    {
+      "id": "no-nvm-use-mise",
+      "enabled": true,
+      "description": "Use mise instead of nvm for Node version management",
+      "pattern": "\\bnvm\\s+(install|use|alias|default)\\b",
+      "pattern_flags": "",
+      "exceptions": [],
+      "exception_policy": "allow_if_any_match",
+      "message": "Use `mise` instead of `nvm` for Node version management. Examples: `mise install node@20`, `mise use node@lts`, `mise use --global node@20`."
+    },
+    {
+      "id": "no-pyenv-use-mise",
+      "enabled": true,
+      "description": "Use mise instead of pyenv for Python version management",
+      "pattern": "\\bpyenv\\s+(install|global|local|shell)\\b",
+      "pattern_flags": "",
+      "exceptions": [],
+      "exception_policy": "allow_if_any_match",
+      "message": "Use `mise` instead of `pyenv` for Python version management. Examples: `mise install python@3.12`, `mise use python@3.12`."
+    },
+    {
+      "id": "no-rustup-pin-use-mise",
+      "enabled": true,
+      "description": "Use mise instead of rustup for Rust version pinning",
+      "pattern": "\\brustup\\s+(install|override\\s+set|default\\s+[0-9a-z])",
+      "pattern_flags": "",
+      "exceptions": [
+        "rustup\\s+component",
+        "rustup\\s+target",
+        "rustup\\s+update",
+        "rustup\\s+show",
+        "rustup\\s+toolchain\\s+list",
+        "rustup\\s+self"
+      ],
+      "exception_policy": "allow_if_any_match",
+      "message": "Use `mise` instead of `rustup` for Rust version pinning. Exception: `rustup component add`, `rustup target add`, `rustup update`, and `rustup show` are fine as-is."
+    }
+  ],
+
+  "failure_learning": {
+    "enabled": true,
+    "block_threshold": 3,
+    "window_seconds": 300,
+    "state_file": "~/.claude/hooks/course-correct-state.json",
+    "max_tracked_commands": 200,
+    "cleanup_after_seconds": 3600,
+    "message_template": "[course-correct] This exact command has failed {count} times in the last {window} minutes. Consider a different approach — check the path/syntax, use a dedicated tool, or break the command into smaller steps.\n\nFailing command: {preview}"
+  }
+}

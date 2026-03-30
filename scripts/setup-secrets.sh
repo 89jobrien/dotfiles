@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/log.sh"
 source "${ROOT_DIR}/scripts/lib/cmd.sh"
+source "${ROOT_DIR}/scripts/lib/onepassword.sh"
 TAG="secrets"
 
 ENC_FILE="${ROOT_DIR}/secrets/bootstrap.env.sops"
@@ -24,9 +25,14 @@ decrypt_secrets() {
   fi
 
   if [[ ! -f "${KEY_FILE}" ]]; then
-    log_err "missing age key file: ${KEY_FILE}"
-    log "create/import your age key, then rerun bootstrap"
-    return 1
+    log "age key missing; attempting restore from 1Password..."
+    if op_restore_file "${OP_AGE_KEY_ITEM}" "${KEY_FILE}"; then
+      log_ok "restored age key from 1Password"
+    else
+      log_err "missing age key file: ${KEY_FILE}"
+      log "generate with: age-keygen -o ${KEY_FILE}"
+      return 1
+    fi
   fi
 
   mkdir -p "${OUT_DIR}"

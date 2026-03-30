@@ -3,5 +3,9 @@
 git
 zsh
 fish
+mise
 alacritty
 zed
+nushell
+starship
+.claude
