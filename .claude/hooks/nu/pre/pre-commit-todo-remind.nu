@@ -26,7 +26,7 @@ def main [] {
     if ($in_progress | is-empty) { exit 0 }
 
     print ""
-    print "📋 In-progress todos (add 'closes <uuid>' to auto-complete):"
+    print "In-progress todos (add 'closes <uuid>' to auto-complete):"
     for line in $in_progress {
         let parsed = ($line | parse --regex $uuid_pat)
         if not ($parsed | is-empty) {
