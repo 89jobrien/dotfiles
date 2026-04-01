@@ -16,6 +16,7 @@
     ],
     "defaultMode": "acceptEdits"
   },
+  "model": "sonnet",
   "hooks": {
     "PostToolUse": [
       {
@@ -61,6 +62,10 @@
           },
           {
             "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/post-edit-cargo-check.nu"
+          },
+          {
+            "type": "command",
             "command": "nu /Users/joe/.claude/hooks/nu/post/post-baml-write.nu"
           },
           {
@@ -97,6 +102,10 @@
           {
             "type": "command",
             "command": "nu /Users/joe/.claude/hooks/nu/pre/pre-commit-todo-remind.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/pre/pre-commit-cargo-lint.nu"
           },
           {
             "type": "command",
@@ -149,7 +158,9 @@
     "claude-md-management@claude-plugins-official": true,
     "agent-sdk-dev@claude-plugins-official": true
   },
+  "alwaysThinkingEnabled": false,
   "effortLevel": "low",
+  "fastMode": true,
   "skipDangerousModePermissionPrompt": true,
   "mcpServers": {
     "personal-mcp": {
@@ -163,6 +174,5 @@
         "BOUNDARY_MAX_LOG_CHUNK_CHARS": "3000"
       }
     }
-  },
-  "model": "sonnet"
+  }
 }
