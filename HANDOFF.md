@@ -1,42 +1,96 @@
-# HANDOFF.md
+# HANDOFF — dotfiles council analysis (2026-03-30)
 
-State of the `dotfiles` repo as of 2026-03-31.
+## Overview
 
-## Recent Work
+Council tool (`devkit council`) could not complete due to API rate limits. Manual analysis
+was performed by examining the diff vs `main`, running the full bats test suite, and auditing
+the three library files most recently modified.
 
-- Built `notfiles` Rust workspace (`~/dev/notfiles`) — 5-crate workspace replacing GNU Stow + shell bootstrap scripts. See `~/dev/notfiles/HANDOFF.md` for details.
-- Claude Code hooks, skills, and superpowers infrastructure actively developed under `.claude/` and `.superpowers/`.
+## Findings Summary
 
-## Uncommitted Changes
+| Severity | Count |
+|----------|-------|
+| P0       | 0     |
+| P1       | 3 root causes → 19 test failures |
+| P2       | 19 pre-existing shellcheck warnings (see below) |
 
-```
-M  .claude/CLAUDE.md
-M  .claude/settings.json
-M  mise/.config/mise/config.toml
-M  zed/.config/zed/settings.json
-?? .claude/.claude/
-?? .claude/hooks/nu/post/post-edit-cargo-check.nu
-?? .superpowers/
-```
+---
 
-These should be reviewed and committed. Notable items:
-- `post-edit-cargo-check.nu` — new post-edit hook that runs `cargo check` after Rust file edits (non-blocking)
-- `.superpowers/` — new directory, contents unknown — review before committing
-- `.claude/.claude/` — nested `.claude` dir, may be stale artifact
+## P1 Issues Fixed
 
-## Pending Issues
+### P1-1: `merge_json_config` RETURN trap causes unbound variable in bats
 
-### 1. Commit outstanding changes
-Review the modified/untracked files above and commit what belongs. Be careful with `.claude/.claude/` — this looks like an accidental nested directory.
+**File:** `scripts/lib/json.sh`
+**Introduced by:** commit `4d0dd75` (2026-03-07)
 
-### 2. notfiles not yet wired into dotfiles bootstrap
-The new `notstrap` binary exists but dotfiles repo still uses the old `install.sh` / `Makefile` bootstrap flow. Next step: integrate `notstrap` into the dotfiles bootstrap process and retire the shell scripts.
+**Root cause:** `trap 'rm -f "${tmp}" "${tmp}.new"' RETURN` was added for cleanup. Bats
+uses `set -eET`; the `-T` flag causes RETURN traps to be inherited by calling functions.
+When bats' internal `bats_merge_stdout_and_stderr` returns after calling `merge_json_config`,
+the trap fires in that outer frame where `tmp` (local to `merge_json_config`) is out of scope
+→ `unbound variable` error, `$status` ≠ 0.
 
-### 3. scripts-refactoring-analysis.md
-A `scripts-refactoring-analysis.md` exists at repo root — appears to be an in-progress analysis artifact. Either act on it or delete it.
+**Fix:** Removed the trap. Added explicit `rm -f` on both success and failure paths.
 
-### 4. install.sh / install.ps1 still shell-based
-The Rust `notstrap` binary is the intended replacement. These scripts remain as fallback but should be deprecated once `notstrap` is stable.
+**Tests covering this:** all `merge_json_config`, `update_json_value`, and integration tests
+in `tests/lib/json.bats` (tests 40–64).
 
-### 5. RTK.md and skills are symlinks
-`RTK.md` and `skills` are symlinks pointing inside `dotfiles/`. This works when stowed but may break if the repo is used standalone. Document this dependency clearly in README.
+---
+
+### P1-2: `pkg.bats` missing `source cmd.sh`
+
+**File:** `tests/lib/pkg.bats`
+
+**Root cause:** `pkg.sh` delegates `has_zerobrew`, `has_brew`, `has_apt` to `has_cmd` from
+`cmd.sh`. The test `setup()` sourced `log.sh` + `pkg.sh` but NOT `cmd.sh`. All three
+functions therefore failed with exit code 127 (command not found) instead of 0/1.
+
+**Fix:** Added `source "${ROOT_DIR}/scripts/lib/cmd.sh"` to setup().
+
+**Tests covering this:** has_zerobrew, has_brew, has_apt, detect_pkg_manager,
+ensure_homebrew, bundle_install tests in `tests/lib/pkg.bats` (tests 85–100).
+
+---
+
+### P1-3: `launchd_logs` test blocks on `tail -f`
+
+**File:** `tests/lib/launchd.bats`
+
+**Root cause:** The original test ran `(launchd_logs >/dev/null 2>&1 &)` (subshell
+wrapping a background job). This caused `$!` to be unbound in the outer shell (bats
+uses `set -eET`), and the background `tail -f` process was never reliably killed, hanging
+the test runner.
+
+**Fix:** Replaced with `tail() { :; }` mock before calling `run launchd_logs`. Shell
+functions shadow external commands in bash subshells, so `launchd_logs` completes
+immediately after `mkdir` + `touch`, allowing the test to assert file creation.
+
+**Test covering this:** `tests/lib/launchd.bats` test 75.
+
+---
+
+## Test Counts
+
+| Metric | Value |
+|--------|-------|
+| Before fixes | 83 passing, 19 failing |
+| After fixes  | 102 passing, 0 failing |
+| New tests added | 0 (all existing tests now pass) |
+
+---
+
+## P2 (Deferred — Pre-existing)
+
+19 shellcheck findings in scripts NOT touched by this session:
+
+- `scripts/setup-secrets-interactive.sh`: SC2168 (`local` outside function — 2 errors),
+  SC2064 (trap quoting — 1 warning), SC2209 (EDITOR= assignment — 1 warning)
+- `scripts/setup-ai-tools.sh`: SC2016 (single-quoted jq expressions — info level, ~15 hits)
+
+These predate the current branch and do not affect correctness. Recommend fixing in a
+follow-up.
+
+---
+
+## Commit
+
+`acba87a` — fix(tests): repair 19 failing bats tests across json, pkg, and launchd

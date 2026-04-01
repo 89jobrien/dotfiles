@@ -161,14 +161,14 @@ EOF
 }
 
 @test "launchd_logs: creates state directory and log files" {
-  # Start launchd_logs in background and kill it quickly
-  launchd_logs >/dev/null 2>&1 &
-  local pid=$!
-  sleep 0.1
-  kill $pid 2>/dev/null || true
-  wait $pid 2>/dev/null || true
+  # Mock tail to avoid blocking indefinitely
+  tail() { :; }
 
-  # Verify directory and files were created
+  run launchd_logs
+
+  unset -f tail
+
+  [ "$status" -eq 0 ]
   [ -d "${STATE_DIR}" ]
   [ -f "${STDOUT_LOG}" ]
   [ -f "${STDERR_LOG}" ]
