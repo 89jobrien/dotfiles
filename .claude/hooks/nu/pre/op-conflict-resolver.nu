@@ -15,13 +15,13 @@ def deny [message: string] {
 def find_direct_env_conflicts [] {
     # Return names of env vars whose current value starts with 'op://'
     $env | transpose key value
-        | where { |row| ($row.value | describe) == "string" and ($row.value | str starts-with "op://") }
+        | where { |row| (($row.value | describe) == "string" and ($row.value | str starts-with "op://")) }
         | get key
 }
 
 def find_env_file_conflicts [command: string] {
     # If command contains --env-file <path>, read that file and find conflicts
-    let match = ($command | parse --regex '--env-file[=\s]+(["\']?)(\S+)\1')
+    let match = ($command | parse --regex "--env-file[=\\s]+([\"']?)(\\S+)\\1")
     if ($match | is-empty) { return [] }
 
     let env_file = $match | first | get capture2
@@ -30,26 +30,18 @@ def find_env_file_conflicts [command: string] {
     if not ($expanded | path exists) { return [] }
 
     let conflicts = try {
-        open $expanded | lines
-            | where { |l| $l != "" and not ($l | str starts-with "#") and ($l | str contains "=") }
-            | each { |line|
-                let parts = $line | split row "=" | first
-                let var_name = $parts | str trim
-                let var_value = ($line | str substring (($parts | str length) + 1)..) | str trim | str replace --regex '^["\']|["\']$' ""
-                if ($var_value | str starts-with "op://") and ($var_name in ($env | transpose key value | get key)) {
-                    $var_name
-                } else {
-                    null
-                }
-            }
-            | where { |v| $v != null }
+        let env_keys = ($env | transpose key value | get key)
+        (open $expanded | lines
+            | where { |l| (($l != "") and (not ($l | str starts-with "#")) and ($l | str contains "=")) }
+            | filter { |line| let var_value = ($line | split row "=" | skip 1 | str join "=" | str trim); (($var_value | str starts-with "op://") and (($line | split row "=" | first | str trim) in $env_keys)) }
+            | each { |line| $line | split row "=" | first | str trim })
     } catch { [] }
 
     $conflicts
 }
 
 def main [] {
-    let input = try { $in | from json } catch { exit 0 }
+    let input = try { open --raw /dev/stdin | from json } catch { exit 0 }
 
     if ($input | get -i tool_name | default "") != "Bash" { exit 0 }
 
@@ -70,7 +62,16 @@ def main [] {
     let var_list = ($conflicts | sort | str join ", ")
     let n = $conflicts | length
 
-    let message = $"[op-conflict-resolver] Found ($n) environment var\(s\) that conflict with op:// resolution: ($var_list)\n\nThese vars are already set in shell and will block op run from injecting the 1Password values.\n\nCorrected command:\n($corrected)\n\nRe-run with the corrected command above."
+    let message = ([
+        $"[op-conflict-resolver] Found ($n) environment var(s) that conflict with op:// resolution: ($var_list)"
+        ""
+        "These vars are already set in shell and will block op run from injecting the 1Password values."
+        ""
+        "Corrected command:"
+        $corrected
+        ""
+        "Re-run with the corrected command above."
+    ] | str join "\n")
 
     deny $message
 }

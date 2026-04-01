@@ -72,10 +72,13 @@ if ($secrets_file | path exists) and (which op | is-not-empty) {
         | lines
         | where { |l| not ($l | str starts-with "#") and ($l | str trim | str length) > 0 }
         | str join "\n"
-        | ^op inject
+        | ^op inject --account=my.1password.com
         | lines
-        | where { |l| $l | str starts-with "export " }
-        | each { |l| $l | str replace "export " "" | parse "{key}={value}" | first }
+        | where { |l| ($l | str trim | str length) > 0 and not ($l | str starts-with "#") }
+        | each { |l|
+            let l = if ($l | str starts-with "export ") { $l | str replace "export " "" } else { $l }
+            $l | parse "{key}={value}" | first
+          }
         | each { |kv| load-env {($kv.key): $kv.value} }
         | ignore
     }
@@ -98,6 +101,9 @@ $env.MAESTRO_RESOURCE_PROFILE = "development"
 if (which op | is-not-empty) {
     try {
         $env.OPENAI_API_KEY = (^op read "op://cli/OpenAI/credential" --account=my.1password.com)
+    }
+    try {
+        $env.ANTHROPIC_API_KEY = (^op read "op://Personal/vps-anthropic-api/ANTHROPIC_API_KEY" --account=my.1password.com)
     }
 }
 

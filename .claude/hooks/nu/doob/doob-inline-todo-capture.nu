@@ -5,7 +5,7 @@
 # Supported: .rs .ts .js .go (// prefix), .py .sh (# prefix), .sql (-- prefix)
 
 def main [] {
-    let input = $in | from json
+    let input = open --raw /dev/stdin | from json
     let tool = $input | get -i tool_name | default ""
     let file_path = $input | get -i tool_input.file_path | default ""
 
@@ -48,8 +48,9 @@ def main [] {
         "slash" => '//\s*(TODO|FIXME):\s*(.+)'
         "hash"  => '#\s*(TODO|FIXME):\s*(.+)'
         "dash"  => '--\s*(TODO|FIXME):\s*(.+)'
-        _       => exit 0
+        _       => ""
     }
+    if $grep_pat == "" { exit 0 }
 
     # Extract TODO/FIXME lines
     let todo_lines = ($new_content | lines | where { |line| $line =~ $grep_pat })
@@ -58,8 +59,8 @@ def main [] {
         let parsed = ($line | parse --regex $grep_pat)
         if ($parsed | is-empty) { continue }
 
-        let marker = $parsed | get -i capture1 | default "" | get 0? | default ""
-        let text = $parsed | get -i capture2 | default "" | get 0? | default "" | str trim
+        let marker = try { $parsed | get capture1 | first } catch { "" }
+        let text = try { ($parsed | get capture2 | first | str trim) } catch { "" }
 
         if $marker == "" or $text == "" { continue }
 

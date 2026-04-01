@@ -1,0 +1,178 @@
+{
+  "cleanupPeriodDays": 30,
+  "env": {
+    "BAML_LOG": "info",
+    "BOUNDARY_MAX_LOG_CHUNK_CHARS": "3000",
+    "MCP_ENV_FILE": "/Users/joe/.config/dev-bootstrap/secrets.env",
+    "RTK_HOOK_AUDIT": "1"
+  },
+  "includeCoAuthoredBy": true,
+  "permissions": {
+    "allow": [
+      "Bash(for i:*)",
+      "Bash(do echo:*)",
+      "Read(//tmp/pptx_board/ppt/slides/**)",
+      "Bash(open /Users/joe/dev/maestro-slides/output/board_review_q4.pptx)"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+  "model": "sonnet",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/post-bash-redact.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/post-tool-track-failures.nu"
+          },
+          {
+            "type": "command",
+            "command": "/Users/joe/.claude/hooks/doob-commit-autocomplete.sh"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/post-nextest-snap-notify.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/post-push-ci-watch.nu"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/post-agent-log.nu"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/post-edit-cargo-fmt.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/post-edit-cargo-check.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/post-baml-write.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/sync_memory_to_vault.nu"
+          },
+          {
+            "type": "command",
+            "command": "/Users/joe/.claude/hooks/doob-inline-todo-capture.sh"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/skill-frontmatter-validator.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/post/uv-shebang-enforcer.nu"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/pre/rtk-rewrite.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/pre/pre-nextest-op-wrap.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/pre/pre-commit-todo-remind.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/pre/pre-commit-cargo-lint.nu"
+          },
+          {
+            "type": "command",
+            "command": "/Users/joe/.claude/hooks/doob-branch-tagger.sh"
+          },
+          {
+            "type": "command",
+            "command": "/Users/joe/.claude/hooks/doob-destructive-backup.sh"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/pre/op-conflict-resolver.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/pre/pre-tool-course-correct.nu"
+          },
+          {
+            "type": "command",
+            "command": "nu /Users/joe/.claude/hooks/nu/pre/destructive-service-guardian.nu"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/joe/.claude/hooks/session-start.sh"
+          },
+          {
+            "type": "command",
+            "command": "/Users/joe/.claude/hooks/doob-overdue-alert.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash /Users/joe/.claude/statusline-command.sh"
+  },
+  "enabledPlugins": {
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "sourcegraph@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "agent-sdk-dev@claude-plugins-official": true
+  },
+  "alwaysThinkingEnabled": false,
+  "effortLevel": "low",
+  "fastMode": true,
+  "skipDangerousModePermissionPrompt": true,
+  "mcpServers": {
+    "personal-mcp": {
+      "type": "stdio",
+      "command": "/Users/joe/.local/bin/personal-mcp",
+      "args": [],
+      "env": {
+        "MCP_CTX_DIR": "/Users/joe/.ctx",
+        "MCP_ENV_FILE": "/Users/joe/.config/dev-bootstrap/secrets.env",
+        "BAML_LOG": "info",
+        "BOUNDARY_MAX_LOG_CHUNK_CHARS": "3000"
+      }
+    }
+  }
+}

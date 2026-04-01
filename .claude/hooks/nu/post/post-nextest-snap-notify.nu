@@ -3,7 +3,7 @@
 # After a successful cargo nextest run, checks for pending .snap.new files.
 
 def main [] {
-    let input = $in | from json
+    let input = open --raw /dev/stdin | from json
     let cmd = $input | get -i tool_input.command | default ""
     let exit_code = $input | get -i tool_response.exit_code | default 1
 

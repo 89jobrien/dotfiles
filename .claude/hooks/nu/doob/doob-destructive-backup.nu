@@ -4,7 +4,7 @@
 # Keeps the 10 most recent backups.
 
 def main [] {
-    let input = $in | from json
+    let input = open --raw /dev/stdin | from json
     let cmd = $input | get -i tool_input.command | default ""
 
     let is_remove = ($cmd | str contains "doob todo remove") or ($cmd | str contains "doob note remove")

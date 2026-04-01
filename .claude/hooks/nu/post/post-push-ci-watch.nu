@@ -3,7 +3,7 @@
 # After git push, looks up the CI run for the pushed branch and reports status.
 
 def main [] {
-    let input = $in | from json
+    let input = open --raw /dev/stdin | from json
     let cmd = $input | get -i tool_input.command | default ""
 
     if not ($cmd | str contains "git push") { exit 0 }

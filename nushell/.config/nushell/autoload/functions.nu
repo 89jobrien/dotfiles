@@ -92,6 +92,15 @@ def mnpm [...args: string] {
     ^npm ...$args
 }
 
+# ── Secrets helpers ──────────────────────────────────────────────────────────
+
+# Run a command with secrets injected from ~/.secrets via op run.
+# Works around $HOME not being expanded by op CLI.
+def oprun [...args: string] {
+    let secrets = ($env.HOME | path join ".secrets")
+    ^op run --account=my.1password.com $"--env-file=($secrets)" -- ...$args
+}
+
 # ── Git helpers ──────────────────────────────────────────────────────────────
 
 # Push via gh credential helper

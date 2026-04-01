@@ -3,7 +3,7 @@
 # Syncs Claude session memory files to Obsidian vault KG.
 # Triggered on Write|Edit. Exits immediately for non-memory writes.
 
-const PROJECTS_ROOT = ($env.HOME | path join ".claude" "projects")
+def projects_root [] { $env.HOME | path join ".claude" "projects" }
 
 const PROJECT_MAP = {
     "-Users-joe-dev-devloop": {
@@ -37,7 +37,7 @@ const KNOWN_PREFIXES = ["feedback_" "project_" "reference_" "user_" "infra_"]
 
 def is_memory_file [file_path: string] {
     let parts = $file_path | split row "/"
-    let mem_idx = $parts | enumerate | where { |e| $e.item == "memory" } | first? | get -i index
+    let mem_idx = try { $parts | enumerate | where { |e| $e.item == "memory" } | first | get index } catch { null }
     if $mem_idx == null { return false }
     if $mem_idx < 2 { return false }
     let projects_idx = $mem_idx - 2
@@ -61,7 +61,8 @@ def derive_topic [filename: string] {
 
 def render_context_note [slug: string, project_name: string, files: list, wikilinks: list] {
     let topics = ($files | each { |f| derive_topic $f.stem })
-    let topic_yaml = $"[($topics | str join ", ")]"
+    let sep = ", "
+    let topic_yaml = $"[($topics | str join $sep)]"
     let tags_yaml = $"[claude-memory, ($project_name), session-context]"
 
     mut lines = [
@@ -95,7 +96,7 @@ def render_context_note [slug: string, project_name: string, files: list, wikili
 }
 
 def main [] {
-    let input = try { $in | from json } catch { exit 0 }
+    let input = try { open --raw /dev/stdin | from json } catch { exit 0 }
 
     let file_path = $input | get -i tool_input.file_path | default ""
     if not (is_memory_file $file_path) { exit 0 }
@@ -112,7 +113,7 @@ def main [] {
     }
     let wikilinks = if $map_entry != null { $map_entry.wikilinks } else { [] }
 
-    let memory_dir = $PROJECTS_ROOT | path join $slug "memory"
+    let memory_dir = (projects_root) | path join $slug "memory"
     if not ($memory_dir | path exists) { exit 0 }
 
     let files = try {

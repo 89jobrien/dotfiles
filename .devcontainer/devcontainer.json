@@ -5,7 +5,7 @@
     "context": ".."
   },
   "remoteUser": "vscode",
-  "postCreateCommand": "mise trust && mise install && ./scripts/doctor.sh || true",
+  "postCreateCommand": "mise trust; mise install || true; ALLOW_DIRECT_DOTFILES_INSTALL=1 ./install.sh --dot-only",
   "remoteEnv": {
     "PATH": "/usr/local/bin:/home/vscode/.local/bin:/home/vscode/.local/share/mise/shims:${containerEnv:PATH}"
   },

@@ -4,7 +4,7 @@
 # Only triggers if the command doesn't already contain --tags.
 
 def main [] {
-    let input = $in | from json
+    let input = open --raw /dev/stdin | from json
     let cmd = $input | get -i tool_input.command | default ""
 
     if $cmd == "" { exit 0 }

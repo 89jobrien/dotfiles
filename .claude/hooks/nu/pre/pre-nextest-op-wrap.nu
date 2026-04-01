@@ -4,7 +4,7 @@
 # if not already present. Prevents 1Password prompts during test runs.
 
 def main [] {
-    let input = $in | from json
+    let input = open --raw /dev/stdin | from json
     let cmd = $input | get -i tool_input.command | default ""
 
     if not ($cmd | str contains "cargo nextest") { exit 0 }

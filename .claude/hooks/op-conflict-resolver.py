@@ -110,6 +110,20 @@ def find_env_file_conflicts(command: str) -> list[str]:
     return conflicts
 
 
+def find_already_unset_vars(command: str) -> set[str]:
+    """
+    Parse any `env -u VAR` prefixes already present in the command string
+    and return the set of variable names that are already being unset.
+    This prevents the hook from looping when a corrected command is re-run.
+    """
+    already_unset: set[str] = set()
+    # Match: env (-u VAR)+ at the start of the command (possibly nested)
+    for match in re.finditer(r'\benv\s+((?:-u\s+\S+\s*)+)', command):
+        for var_match in re.finditer(r'-u\s+(\S+)', match.group(1)):
+            already_unset.add(var_match.group(1))
+    return already_unset
+
+
 def build_corrected_command(original: str, conflict_vars: list[str]) -> str:
     """Prepend `env -u VAR1 -u VAR2 ...` to the original command."""
     unset_flags = " ".join(f"-u {v}" for v in sorted(conflict_vars))
@@ -140,6 +154,9 @@ def main() -> None:
         allow()
 
     try:
+        # Vars already being unset by existing env -u prefixes in the command
+        already_unset = find_already_unset_vars(command)
+
         conflicts: list[str] = []
 
         # Source 1: vars in the current environment with unresolved op:// values
@@ -147,6 +164,9 @@ def main() -> None:
 
         # Source 2: vars referenced in an --env-file that are already in env
         conflicts.extend(find_env_file_conflicts(command))
+
+        # Remove vars that are already being unset by the command itself
+        conflicts = [v for v in conflicts if v not in already_unset]
 
         # Deduplicate while preserving first-seen order
         seen: set[str] = set()
