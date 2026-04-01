@@ -1,3 +1,8 @@
+# Vector metrics database (large, local-only)
+vector/metrics.db
+vector/metrics.db-wal
+vector/metrics.db-shm
+
 # OS files
 .DS_Store
 .DS_Store?
@@ -41,9 +46,9 @@ mise.local.toml
 # Machine-local app state (do not commit)
 /raycast/
 /mcpm/
-/vector/
-!vector/.config/
-!vector/.config/**
+# /vector/
+# !vector/.config/
+# !vector/.config/**
 
 # Local build/runtime artifacts
 /.venv/
@@ -73,10 +78,6 @@ zed/.config/zed/settings_backup.json
 # Claude Code local artifacts
 .claude/review-loop.log
 
-# Audit logs (accumulated redaction scan results)
-.logs/*.jsonl
-.logs/*.log
-
 # Beads and local markdown
 .beads/
 *.local.md
@@ -84,6 +85,4 @@ zed/.config/zed/settings_backup.json
 # Tailscale device exports (contain network topology)
 tailscale/backups/
 tailscale/ssh-config.generated
-
-# Personal infra config (machine names, IPs, 1P item names)
-.claude/infra.toml
+.envrc

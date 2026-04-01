@@ -439,6 +439,14 @@ run = "./scripts/vector-retention-service.sh logs"
 description = "Uninstall daily launchd retention schedule"
 run = "./scripts/vector-retention-service.sh uninstall"
 
+[tasks.vector-ingest]
+description = "Incrementally ingest Vector sink JSONL files into SQLite (vector/metrics.db)"
+run = "rust-script scripts/vector-ingest.rs"
+
+[tasks.vector-ingest-full]
+description = "Re-ingest all Vector sink JSONL files from scratch (ignores checkpoints)"
+run = "rust-script scripts/vector-ingest.rs --full"
+
 # ---------------------------------------------------------------------------
 # Rust
 # ---------------------------------------------------------------------------
