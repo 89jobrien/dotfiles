@@ -395,9 +395,10 @@ alias dotfiles-check='~/.dotfiles/scripts/check-updates.sh'
 
 # Auto-check for dotfiles updates on shell startup (cached, non-blocking)
 # Runs in background every hour, shows notification if updates available
-if [[ -x ~/.dotfiles/scripts/check-updates.sh ]]; then
-  ~/.dotfiles/scripts/check-updates.sh --quiet &
-fi
+# Disabled per request.
+# if [[ -x ~/.dotfiles/scripts/check-updates.sh ]]; then
+#   ~/.dotfiles/scripts/check-updates.sh --quiet &
+# fi
 
 # Kubernetes shortcuts scoped to the maestro GKE cluster
 alias kmpods='kubectl --context=gke_toptal-maestro_us-east1_main-0 -n team-maestro get pods'
@@ -413,3 +414,5 @@ mnpm() { command npm "$@"; }
 [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
 export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export JAVA_HOME="/opt/homebrew/opt/openjdk"
+
+. "$HOME/.local/bin/env"
