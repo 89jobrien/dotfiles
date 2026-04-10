@@ -1,0 +1,95 @@
+project: dotfiles
+updated: 2026-04-10
+
+notes: |
+  Zellij workspace setup session. All 7 active Rust project layouts created,
+  installed via Nix flake, stowed. Alacritty shell switched to nu-login.
+  Preflight scripts and SessionStart hooks added to all repos.
+  Follow-up todos captured in doob under dev/dotfiles.
+
+items:
+  - id: DOT-001
+    title: "Add just workspace recipe to each active Rust repo"
+    description: |
+      Each of minibox, devloop, doob, braid, notfiles, obfsck, personal-mcp
+      should have a `just workspace` recipe that runs `zellij --layout <name>`.
+    priority: P1
+    status: open
+    files: []
+
+  - id: DOT-002
+    title: "Make preflight.nu scripts executable"
+    description: |
+      chmod +x scripts/preflight.nu in all 7 repos so they can be run directly
+      without prefixing `nu`.
+    priority: P1
+    status: open
+    files: []
+
+  - id: DOT-003
+    title: "Verify chsh to nu-login succeeded"
+    description: |
+      chsh could not run non-interactively. Confirm `dscl . -read /Users/joe UserShell`
+      shows /Users/joe/.local/bin/nu-login. Run manually if not.
+    priority: P1
+    status: open
+    files: []
+
+  - id: DOT-004
+    title: "Commit zellij dotfiles and fix dev/dotfiles → dotfiles sync"
+    description: |
+      All zellij changes live in ~/dev/dotfiles but have not been committed.
+      ~/dotfiles (stow source) was synced manually via cp. Should run mise run dot
+      after commit to make stow the canonical sync path.
+    priority: P1
+    status: open
+    files:
+      - flake.nix
+      - config/stow-packages.txt
+      - alacritty/.config/alacritty/alacritty.toml
+      - zellij/.config/zellij/layouts/minibox.kdl
+      - zellij/.config/zellij/layouts/devloop.kdl
+      - zellij/.config/zellij/layouts/doob.kdl
+      - zellij/.config/zellij/layouts/braid.kdl
+      - zellij/.config/zellij/layouts/notfiles.kdl
+      - zellij/.config/zellij/layouts/obfsck.kdl
+      - zellij/.config/zellij/layouts/personal-mcp.kdl
+
+  - id: DOT-005
+    title: "Create Maestro zellij layout"
+    description: |
+      Maestro was explicitly deferred from the main workspace setup.
+      Needs its own layout separate from the Rust project layouts.
+    priority: P2
+    status: open
+    files: []
+
+  - id: DOT-006
+    title: "Create zellij config.kdl with Catppuccin Mocha theme"
+    description: |
+      No zellij config.kdl exists yet — running on defaults. Add base config
+      with Catppuccin Mocha theme (matching alacritty) and sensible keybindings.
+    priority: P1
+    status: open
+    files:
+      - zellij/.config/zellij/config.kdl
+
+  - id: DOT-007
+    title: "Add global nushell workspace aliases"
+    description: |
+      Add `ws minibox`, `ws devloop`, etc. aliases to nushell config
+      so layouts can be launched from anywhere without cd-ing first.
+    priority: P1
+    status: open
+    files:
+      - nushell/.config/nushell/autoload/functions.nu
+
+log:
+  - date: 2026-04-10
+    summary: >
+      Zellij installed via Nix flake (0.43.1). 7 project layouts created
+      (minibox, devloop, doob, braid, notfiles, obfsck, personal-mcp) with
+      dev/test/run/claude/preflight tabs. Alacritty shell switched from /bin/zsh
+      to /Users/joe/.local/bin/nu-login. preflight.nu scripts added to all repos.
+      SessionStart hooks wired in .claude/settings.json for all repos.
+      zellij added to stow-packages.txt and stowed. 7 follow-up todos captured in doob.
