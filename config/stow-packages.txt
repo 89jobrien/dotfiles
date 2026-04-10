@@ -1,8 +1,10 @@
 # Default managed packages (immutable layer).
 # Keep secret-bearing app state (raycast, mcpm) out of this list by default.
 git
+ssh
 zsh
 fish
 nushell
 alacritty
 zed
+zellij
