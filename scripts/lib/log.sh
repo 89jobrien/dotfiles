@@ -141,6 +141,8 @@ spin_with_msg() {
     log_err "${msg} (exit code: ${rc})"
   fi
 
+  rm -f "${tmpfile}"
+  trap - RETURN
   return $rc
 }
 
