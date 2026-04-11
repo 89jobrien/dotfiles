@@ -27,6 +27,7 @@ elif [[ ! -d "${DEVKIT_SRC}" ]]; then
   log_skip "devkit: source not found at ${DEVKIT_SRC} (set DEVKIT_SRC or clone 89jobrien/devkit)"
 else
   _devkit_log="$(mktemp)"
+  trap 'rm -f "${_devkit_log}"' EXIT
   if (cd "${DEVKIT_SRC}" && go install ./cmd/devkit 2>"${_devkit_log}"); then
     log_ok "devkit installed"
   else
@@ -34,6 +35,7 @@ else
     cat "${_devkit_log}" >&2
   fi
   rm -f "${_devkit_log}"
+  trap - EXIT
 fi
 
 if [[ ${#failed_optional[@]} -gt 0 ]]; then

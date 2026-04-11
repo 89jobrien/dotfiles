@@ -537,33 +537,26 @@ run = "nu ./scripts/hooks-menu.nu"
 description = "Multi-role branch analysis via devkit council (auto-detects default branch)"
 run = """
 set -euo pipefail
-if ! command -v devkit &>/dev/null; then
-  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
-fi
-_detected="$(git remote show "${DEVKIT_REMOTE:-origin}" 2>/dev/null | awk '/HEAD branch/{print $NF}')"
-base="${DEVKIT_BASE:-${_detected:-main}}"
-devkit council --base "$base"
+source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+require_devkit
+devkit council --base "$(resolve_base_branch)"
 """
 
 [tasks.analyze-full]
 description = "Full council analysis including security and performance roles"
 run = """
 set -euo pipefail
-if ! command -v devkit &>/dev/null; then
-  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
-fi
-_detected="$(git remote show "${DEVKIT_REMOTE:-origin}" 2>/dev/null | awk '/HEAD branch/{print $NF}')"
-base="${DEVKIT_BASE:-${_detected:-main}}"
-devkit council --base "$base" --mode extensive
+source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+require_devkit
+devkit council --base "$(resolve_base_branch)" --mode extensive
 """
 
 [tasks.standup]
 description = "Summarize recent work as a standup update via devkit"
 run = """
 set -euo pipefail
-if ! command -v devkit &>/dev/null; then
-  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
-fi
+source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+require_devkit
 devkit standup
 """
 
@@ -571,9 +564,8 @@ devkit standup
 description = "Run repo health checks and emit a scored report via devkit"
 run = """
 set -euo pipefail
-if ! command -v devkit &>/dev/null; then
-  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
-fi
+source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+require_devkit
 devkit health
 """
 
@@ -581,9 +573,8 @@ devkit health
 description = "Council-style review of overall repo health"
 run = """
 set -euo pipefail
-if ! command -v devkit &>/dev/null; then
-  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
-fi
+source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+require_devkit
 devkit repo-review
 """
 
@@ -591,9 +582,8 @@ devkit repo-review
 description = "Draft a pull request description from branch diff"
 run = """
 set -euo pipefail
-if ! command -v devkit &>/dev/null; then
-  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
-fi
+source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+require_devkit
 devkit pr
 """
 
