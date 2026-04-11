@@ -10,7 +10,7 @@ uv = "latest"
 # Project-local env loading pattern.
 # Keep secrets out of this file; put machine-specific values in `mise.local.toml`
 # (ignored by git), `.env.local`, or encrypted `secrets/.env.sops.json`.
-_.file = [".env", ".env.local", "secrets/.env.json", "secrets/.env.sops.json"]
+_.file = [".env", ".env.local", "secrets/.env.json"]
 _.path = ["bin", "scripts", "node_modules/.bin", ".venv/bin", "target/debug", "target/release"]
 _.python.venv = { path = ".venv", create = true }
 PJ_TUI_EVENT_STREAM = "app"
@@ -138,6 +138,10 @@ run = "./scripts/setup-secrets-interactive.sh"
 # ---------------------------------------------------------------------------
 # AI Tools
 # ---------------------------------------------------------------------------
+
+[tasks.claude-config]
+description = "Sync dotfiles agents/commands/skills into ~/.agents and link into ~/.claude"
+run = "./scripts/setup-claude-config.sh"
 
 [tasks.ai-tools]
 description = "Install personal MCP and configure all AI tool configs"
@@ -524,3 +528,77 @@ run = "./scripts/menu"
 [tasks.hooks]
 description = "Manage Claude Code nu hooks (list, status, test, view)"
 run = "nu ./scripts/hooks-menu.nu"
+
+# ---------------------------------------------------------------------------
+# Devkit Automation
+# ---------------------------------------------------------------------------
+
+[tasks.analyze]
+description = "Multi-role branch analysis via devkit council (auto-detects default branch)"
+run = """
+set -euo pipefail
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
+require_devkit
+devkit council --base "$(resolve_base_branch)"
+"""
+
+[tasks.analyze-full]
+description = "Full council analysis including security and performance roles"
+run = """
+set -euo pipefail
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
+require_devkit
+devkit council --base "$(resolve_base_branch)" --mode extensive
+"""
+
+[tasks.standup]
+description = "Summarize recent work as a standup update via devkit"
+run = """
+set -euo pipefail
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
+require_devkit
+devkit standup
+"""
+
+[tasks.devkit-health]
+description = "Run repo health checks and emit a scored report via devkit"
+run = """
+set -euo pipefail
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
+require_devkit
+devkit health
+"""
+
+[tasks.repo-review]
+description = "Council-style review of overall repo health"
+run = """
+set -euo pipefail
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
+require_devkit
+devkit repo-review
+"""
+
+[tasks.pr-draft]
+description = "Draft a pull request description from branch diff"
+run = """
+set -euo pipefail
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
+require_devkit
+devkit pr
+"""
+
+[tasks.devkit-install]
+description = "Build and install devkit from source (set DEVKIT_SRC to override ~/dev/devkit)"
+run = "./scripts/setup-dev-tools.sh"
