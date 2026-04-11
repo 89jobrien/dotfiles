@@ -537,7 +537,9 @@ run = "nu ./scripts/hooks-menu.nu"
 description = "Multi-role branch analysis via devkit council (auto-detects default branch)"
 run = """
 set -euo pipefail
-source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
 require_devkit
 devkit council --base "$(resolve_base_branch)"
 """
@@ -546,7 +548,9 @@ devkit council --base "$(resolve_base_branch)"
 description = "Full council analysis including security and performance roles"
 run = """
 set -euo pipefail
-source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
 require_devkit
 devkit council --base "$(resolve_base_branch)" --mode extensive
 """
@@ -555,7 +559,9 @@ devkit council --base "$(resolve_base_branch)" --mode extensive
 description = "Summarize recent work as a standup update via devkit"
 run = """
 set -euo pipefail
-source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
 require_devkit
 devkit standup
 """
@@ -564,7 +570,9 @@ devkit standup
 description = "Run repo health checks and emit a scored report via devkit"
 run = """
 set -euo pipefail
-source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
 require_devkit
 devkit health
 """
@@ -573,7 +581,9 @@ devkit health
 description = "Council-style review of overall repo health"
 run = """
 set -euo pipefail
-source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
 require_devkit
 devkit repo-review
 """
@@ -582,7 +592,9 @@ devkit repo-review
 description = "Draft a pull request description from branch diff"
 run = """
 set -euo pipefail
-source "$(git rev-parse --show-toplevel)/scripts/lib/devkit.sh"
+_root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not inside a git repo" >&2; exit 1; }
+# shellcheck source=scripts/lib/devkit.sh
+. "${_root}/scripts/lib/devkit.sh"
 require_devkit
 devkit pr
 """
