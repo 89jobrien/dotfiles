@@ -530,29 +530,29 @@ description = "Manage Claude Code nu hooks (list, status, test, view)"
 run = "nu ./scripts/hooks-menu.nu"
 
 # ---------------------------------------------------------------------------
-# Claude Headless Automation
+# Devkit Automation
 # ---------------------------------------------------------------------------
 
-[tasks.claude-analyze]
-description = "Run /analyze in headless mode on the current project"
-run = """
-claude -p "/analyze" \
-  --allowedTools "Bash,Read,Glob,Grep,Agent" \
-  --output-format text
-"""
+[tasks.analyze]
+description = "Multi-role branch analysis via devkit council"
+run = "devkit council --base main"
 
-[tasks.claude-standup]
-description = "Run devloop-standup skill headlessly — summarize recent session work"
-run = """
-claude -p "/devloop-standup" \
-  --allowedTools "Bash,Read,Glob,Grep" \
-  --output-format text
-"""
+[tasks.analyze-full]
+description = "Full council analysis including security and performance roles"
+run = "devkit council --base main --mode extensive"
 
-[tasks.claude-project-pulse]
-description = "Run project-pulse skill headlessly across active projects"
-run = """
-claude -p "/context:prime then summarize active work across ~/dev projects with recent git activity" \
-  --allowedTools "Bash,Read,Glob,Grep,Agent" \
-  --output-format text
-"""
+[tasks.standup]
+description = "Summarize recent work as a standup update via devkit"
+run = "devkit standup"
+
+[tasks.devkit-health]
+description = "Run repo health checks and emit a scored report via devkit"
+run = "devkit health"
+
+[tasks.repo-review]
+description = "Council-style review of overall repo health"
+run = "devkit repo-review"
+
+[tasks.pr-draft]
+description = "Draft a pull request description from branch diff"
+run = "devkit pr"

@@ -35,7 +35,9 @@ Run a structured codebase analysis and produce actionable findings.
    - ...
    ```
 
-5. Offer to create doob tasks from findings (`bd create`) if the user wants to track them.
+5. If `devkit` is available, also run `devkit health` and `devkit repo-review` for scored reports.
+
+6. Offer to create doob tasks from findings (`bd create`) if the user wants to track them.
 
 ## Rules
 
