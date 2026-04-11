@@ -19,15 +19,20 @@ else
 fi
 
 # devkit — AI-powered dev workflow toolkit
-DEVKIT_SRC="${HOME}/dev/devkit"
-if [[ -d "${DEVKIT_SRC}" ]] && has_cmd go; then
-  if (cd "${DEVKIT_SRC}" && go install ./cmd/devkit 2>/dev/null); then
+# Source path is configurable via DEVKIT_SRC env var; defaults to ~/dev/devkit
+DEVKIT_SRC="${DEVKIT_SRC:-${HOME}/dev/devkit}"
+if ! has_cmd go; then
+  log_skip "devkit: go not found (install go via mise)"
+elif [[ ! -d "${DEVKIT_SRC}" ]]; then
+  log_skip "devkit: source not found at ${DEVKIT_SRC} (set DEVKIT_SRC or clone 89jobrien/devkit)"
+else
+  install_out="$(cd "${DEVKIT_SRC}" && go install ./cmd/devkit 2>&1)"
+  if [[ $? -eq 0 ]]; then
     log_ok "devkit installed"
   else
-    log_warn "devkit install failed; skipping"
+    log_warn "devkit install failed:"
+    echo "${install_out}" >&2
   fi
-else
-  log_skip "devkit: source not found or go missing"
 fi
 
 if [[ ${#failed_optional[@]} -gt 0 ]]; then

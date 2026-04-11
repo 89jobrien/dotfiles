@@ -534,25 +534,63 @@ run = "nu ./scripts/hooks-menu.nu"
 # ---------------------------------------------------------------------------
 
 [tasks.analyze]
-description = "Multi-role branch analysis via devkit council"
-run = "devkit council --base main"
+description = "Multi-role branch analysis via devkit council (auto-detects default branch)"
+run = """
+set -euo pipefail
+if ! command -v devkit &>/dev/null; then
+  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
+fi
+base="${DEVKIT_BASE:-$(git remote show origin 2>/dev/null | awk '/HEAD branch/{print $NF}' || echo main)}"
+devkit council --base "$base"
+"""
 
 [tasks.analyze-full]
 description = "Full council analysis including security and performance roles"
-run = "devkit council --base main --mode extensive"
+run = """
+set -euo pipefail
+if ! command -v devkit &>/dev/null; then
+  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
+fi
+base="${DEVKIT_BASE:-$(git remote show origin 2>/dev/null | awk '/HEAD branch/{print $NF}' || echo main)}"
+devkit council --base "$base" --mode extensive
+"""
 
 [tasks.standup]
 description = "Summarize recent work as a standup update via devkit"
-run = "devkit standup"
+run = """
+if ! command -v devkit &>/dev/null; then
+  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
+fi
+devkit standup
+"""
 
 [tasks.devkit-health]
 description = "Run repo health checks and emit a scored report via devkit"
-run = "devkit health"
+run = """
+if ! command -v devkit &>/dev/null; then
+  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
+fi
+devkit health
+"""
 
 [tasks.repo-review]
 description = "Council-style review of overall repo health"
-run = "devkit repo-review"
+run = """
+if ! command -v devkit &>/dev/null; then
+  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
+fi
+devkit repo-review
+"""
 
 [tasks.pr-draft]
 description = "Draft a pull request description from branch diff"
-run = "devkit pr"
+run = """
+if ! command -v devkit &>/dev/null; then
+  echo "devkit not found — run: mise run devkit-install" >&2; exit 1
+fi
+devkit pr
+"""
+
+[tasks.devkit-install]
+description = "Build and install devkit from source (set DEVKIT_SRC to override ~/dev/devkit)"
+run = "./scripts/setup-dev-tools.sh"
