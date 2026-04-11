@@ -21,6 +21,9 @@ post:
 dot:
     ./install.sh --dot-only
 
+direnv:
+    mise run direnv
+
 nvim:
     ./scripts/setup-nvchad-avante.sh
 

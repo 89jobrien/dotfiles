@@ -28,6 +28,10 @@ run = "./install.sh"
 description = "Fast install — stow symlinks + configs only (no packages, no compilation)"
 run = "./install.sh --dot-only"
 
+[tasks.direnv]
+description = "Configure direnv shell hooks and allow workspace .envrc files"
+run = "scripts/setup-direnv.sh"
+
 [tasks.stow]
 description = "Restow managed package set only"
 run = "./install.sh --no-packages --no-post"

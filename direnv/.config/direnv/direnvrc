@@ -1,0 +1,19 @@
+# Global direnv config — stow-linked to ~/.config/direnv/direnvrc
+# Loaded by direnv before evaluating any .envrc file.
+
+# Inherit env from parent .envrc when present (matches source_up usage in ~/dev/.envrc).
+source_up_if_exists
+
+# Python venv layout helper.
+layout_python() {
+  local python="${1:-python3}"
+  unset PYTHONHOME
+  [[ -d .venv ]] || $python -m venv .venv
+  export VIRTUAL_ENV="$PWD/.venv"
+  PATH_add "$VIRTUAL_ENV/bin"
+}
+
+# Node.js local bin layout helper.
+layout_node() {
+  PATH_add node_modules/.bin
+}
