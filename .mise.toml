@@ -528,3 +528,31 @@ run = "./scripts/menu"
 [tasks.hooks]
 description = "Manage Claude Code nu hooks (list, status, test, view)"
 run = "nu ./scripts/hooks-menu.nu"
+
+# ---------------------------------------------------------------------------
+# Claude Headless Automation
+# ---------------------------------------------------------------------------
+
+[tasks.claude-analyze]
+description = "Run /analyze in headless mode on the current project"
+run = """
+claude -p "/analyze" \
+  --allowedTools "Bash,Read,Glob,Grep,Agent" \
+  --output-format text
+"""
+
+[tasks.claude-standup]
+description = "Run devloop-standup skill headlessly — summarize recent session work"
+run = """
+claude -p "/devloop-standup" \
+  --allowedTools "Bash,Read,Glob,Grep" \
+  --output-format text
+"""
+
+[tasks.claude-project-pulse]
+description = "Run project-pulse skill headlessly across active projects"
+run = """
+claude -p "/context:prime then summarize active work across ~/dev projects with recent git activity" \
+  --allowedTools "Bash,Read,Glob,Grep,Agent" \
+  --output-format text
+"""
