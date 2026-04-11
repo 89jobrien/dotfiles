@@ -348,6 +348,7 @@ run_dot_hooks() {
   fi
 
   section "AI Tools"
+  run_hook "Claude Config" "${ROOT_DIR}/scripts/setup-claude-config.sh"
   run_hook "AI Tools" "${ROOT_DIR}/scripts/setup-ai-tools.sh"
   run_hook "Hooks" "${ROOT_DIR}/scripts/setup-hooks.sh"
 }

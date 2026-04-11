@@ -10,7 +10,7 @@ uv = "latest"
 # Project-local env loading pattern.
 # Keep secrets out of this file; put machine-specific values in `mise.local.toml`
 # (ignored by git), `.env.local`, or encrypted `secrets/.env.sops.json`.
-_.file = [".env", ".env.local", "secrets/.env.json", "secrets/.env.sops.json"]
+_.file = [".env", ".env.local", "secrets/.env.json"]
 _.path = ["bin", "scripts", "node_modules/.bin", ".venv/bin", "target/debug", "target/release"]
 _.python.venv = { path = ".venv", create = true }
 PJ_TUI_EVENT_STREAM = "app"
@@ -138,6 +138,10 @@ run = "./scripts/setup-secrets-interactive.sh"
 # ---------------------------------------------------------------------------
 # AI Tools
 # ---------------------------------------------------------------------------
+
+[tasks.claude-config]
+description = "Sync dotfiles agents/commands/skills into ~/.agents and link into ~/.claude"
+run = "./scripts/setup-claude-config.sh"
 
 [tasks.ai-tools]
 description = "Install personal MCP and configure all AI tool configs"
