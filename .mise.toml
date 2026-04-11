@@ -540,7 +540,8 @@ set -euo pipefail
 if ! command -v devkit &>/dev/null; then
   echo "devkit not found — run: mise run devkit-install" >&2; exit 1
 fi
-base="${DEVKIT_BASE:-$(git remote show origin 2>/dev/null | awk '/HEAD branch/{print $NF}' || echo main)}"
+_detected="$(git remote show "${DEVKIT_REMOTE:-origin}" 2>/dev/null | awk '/HEAD branch/{print $NF}')"
+base="${DEVKIT_BASE:-${_detected:-main}}"
 devkit council --base "$base"
 """
 
@@ -551,13 +552,15 @@ set -euo pipefail
 if ! command -v devkit &>/dev/null; then
   echo "devkit not found — run: mise run devkit-install" >&2; exit 1
 fi
-base="${DEVKIT_BASE:-$(git remote show origin 2>/dev/null | awk '/HEAD branch/{print $NF}' || echo main)}"
+_detected="$(git remote show "${DEVKIT_REMOTE:-origin}" 2>/dev/null | awk '/HEAD branch/{print $NF}')"
+base="${DEVKIT_BASE:-${_detected:-main}}"
 devkit council --base "$base" --mode extensive
 """
 
 [tasks.standup]
 description = "Summarize recent work as a standup update via devkit"
 run = """
+set -euo pipefail
 if ! command -v devkit &>/dev/null; then
   echo "devkit not found — run: mise run devkit-install" >&2; exit 1
 fi
@@ -567,6 +570,7 @@ devkit standup
 [tasks.devkit-health]
 description = "Run repo health checks and emit a scored report via devkit"
 run = """
+set -euo pipefail
 if ! command -v devkit &>/dev/null; then
   echo "devkit not found — run: mise run devkit-install" >&2; exit 1
 fi
@@ -576,6 +580,7 @@ devkit health
 [tasks.repo-review]
 description = "Council-style review of overall repo health"
 run = """
+set -euo pipefail
 if ! command -v devkit &>/dev/null; then
   echo "devkit not found — run: mise run devkit-install" >&2; exit 1
 fi
@@ -585,6 +590,7 @@ devkit repo-review
 [tasks.pr-draft]
 description = "Draft a pull request description from branch diff"
 run = """
+set -euo pipefail
 if ! command -v devkit &>/dev/null; then
   echo "devkit not found — run: mise run devkit-install" >&2; exit 1
 fi

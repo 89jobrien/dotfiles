@@ -26,13 +26,14 @@ if ! has_cmd go; then
 elif [[ ! -d "${DEVKIT_SRC}" ]]; then
   log_skip "devkit: source not found at ${DEVKIT_SRC} (set DEVKIT_SRC or clone 89jobrien/devkit)"
 else
-  install_out="$(cd "${DEVKIT_SRC}" && go install ./cmd/devkit 2>&1)"
-  if [[ $? -eq 0 ]]; then
+  _devkit_log="$(mktemp)"
+  if (cd "${DEVKIT_SRC}" && go install ./cmd/devkit 2>"${_devkit_log}"); then
     log_ok "devkit installed"
   else
     log_warn "devkit install failed:"
-    echo "${install_out}" >&2
+    cat "${_devkit_log}" >&2
   fi
+  rm -f "${_devkit_log}"
 fi
 
 if [[ ${#failed_optional[@]} -gt 0 ]]; then
