@@ -1,8 +1,10 @@
 # Global direnv config — stow-linked to ~/.config/direnv/direnvrc
 # Loaded by direnv before evaluating any .envrc file.
 
-# Inherit env from parent .envrc when present (matches source_up usage in ~/dev/.envrc).
-source_up_if_exists
+# Per-project opt-in: add `source_up_if_exists` to a project's own .envrc to
+# inherit environment from a parent directory's .envrc (e.g., ~/dev/.envrc).
+# It is intentionally NOT called here — a global default would silently expose
+# secret-bearing parent envs to every directory on the machine.
 
 # Python venv layout helper.
 layout_python() {

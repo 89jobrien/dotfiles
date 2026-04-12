@@ -54,6 +54,8 @@ if command -q direnv
 end'
 
   # --- nushell hook ---
+  # Guard against empty output: direnv export json emits "" (not "{}") when there
+  # is nothing to export; piping "" directly to `from json` raises a parse error.
   inject_if_absent \
     "${HOME}/.config/nushell/config.nu" \
     "direnv export json" \
@@ -62,7 +64,7 @@ $env.config = ($env.config? | default {} | upsert hooks (
   $env.config?.hooks? | default {} | upsert pre_prompt (
     ($env.config?.hooks?.pre_prompt? | default []) | append {||
       if (which direnv | is-empty) { return }
-      direnv export json | from json | load-env
+      direnv export json | if ($in | is-empty) { null } else { from json | load-env }
     }
   )
 ))'
