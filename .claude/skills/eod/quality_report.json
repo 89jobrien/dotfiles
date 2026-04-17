@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-04-12T04:14:29.385898",
+  "skill_name": "eod",
+  "overall_score": {
+    "total_score": 59.0,
+    "completeness": 60.0,
+    "accuracy": 100.0,
+    "coverage": 0.0,
+    "health": 80.0,
+    "grade": "C-"
+  },
+  "metrics": [
+    {
+      "name": "Completeness",
+      "value": 60.0,
+      "level": "MetricLevel.WARNING",
+      "description": "Documentation completeness: 60.0%",
+      "suggestions": [
+        "Add references directory"
+      ]
+    },
+    {
+      "name": "Accuracy",
+      "value": 100.0,
+      "level": "MetricLevel.INFO",
+      "description": "Documentation accuracy: 100.0%",
+      "suggestions": []
+    },
+    {
+      "name": "Coverage",
+      "value": 0.0,
+      "level": "MetricLevel.WARNING",
+      "description": "Documentation coverage: 0.0%",
+      "suggestions": [
+        "Add getting started guide",
+        "Add API reference documentation",
+        "Expand documentation coverage"
+      ]
+    },
+    {
+      "name": "Health",
+      "value": 80.0,
+      "level": "MetricLevel.INFO",
+      "description": "Skill health: 80.0%",
+      "suggestions": [
+        "Missing references directory"
+      ]
+    }
+  ],
+  "statistics": {
+    "total_files": 1,
+    "total_size_bytes": 3400,
+    "markdown_files": 1,
+    "reference_files": 0,
+    "total_characters": 3368,
+    "total_words": 546
+  },
+  "recommendations": [
+    "\ud83d\udd34 PRIORITY: Improve documentation completeness",
+    "\ud83d\udfe1 Expand documentation coverage (API, examples)",
+    "\ud83d\udcdd Review and enhance overall documentation quality"
+  ],
+  "history": []
+}
