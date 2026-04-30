@@ -28,6 +28,9 @@ source autoload/settings.nu
 source autoload/aliases.nu
 source autoload/functions.nu
 source autoload/audit.nu
+source autoload/nuenv.nu
+source autoload/did-you-mean.nu
+source autoload/toolkit-hook.nu
 
 # ── Keybindings ───────────────────────────────────────────────────────────────
 
@@ -73,6 +76,22 @@ $env.config.hooks.env_change.PWD = (
     if (which direnv | is-empty) { return }
     direnv export json | from json | default {} | load-env
   }
+  | append (nuenv-hook)
+  | append (toolkit-hook)
+  | append {|before, after|
+    let cache = ($env.HOME | path join ".cache/doob/status.json")
+    if not ($cache | path exists) { return }
+    let data = (open $cache | from json)
+    let overdue = ($data.overdue_total? | default 0)
+    if $overdue == 0 { return }
+    let repo = ($after | path basename)
+    let repo_count = ($data.overdue_by_repo? | default {} | get -i $repo | default 0)
+    if $repo_count > 0 {
+      print $"(ansi yellow)doob: ($repo_count) overdue in ($repo)(ansi reset)"
+    } else {
+      print $"(ansi dim)doob: ($overdue) overdue total(ansi reset)"
+    }
+  }
 )
 
 # display_output: expand table columns on wide terminals
@@ -80,7 +99,8 @@ $env.config.hooks.display_output = {||
   if (term size).columns >= 100 { table -e } else { table }
 }
 
-# command_not_found: helpful fallback message
-$env.config.hooks.command_not_found = {|cmd|
-  $"Command '($cmd)' not found. Is it a mise tool? Try: mise use ($cmd)"
-}
+# command_not_found: fuzzy-match 3 closest commands from PATH
+$env.config.hooks.command_not_found = (use autoload/did-you-mean.nu; hook)
+
+# go wrapper: install to $HOME/go/bin by default
+def go [...args] { with-env { GOBIN: $"($env.HOME)/go/bin" } { ^go ...$args } }

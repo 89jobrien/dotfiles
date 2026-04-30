@@ -48,6 +48,23 @@ $env.MISE_SHELL = "nu"
 
 # ── Secrets / SOPS ──────────────────────────────────────────────────────────
 let age_key = ($env.HOME | path join ".config/sops/age/keys.txt")
+# Populate keys.txt from 1Password if it's missing or contains only a placeholder
+if (which op | is-not-empty) {
+    let needs_refresh = (
+        not ($age_key | path exists) or
+        (open $age_key | str trim) == "AGE-SECRET-KEY-1TESTKEY"
+    )
+    if $needs_refresh {
+        try {
+            op item get 6meypnchchq3tsb32mdnzxtlia --fields notesPlain
+            | str replace --all '"' ''
+            | lines
+            | where { |l| $l | str starts-with "AGE-SECRET-KEY" }
+            | str join "\n"
+            | save --force $age_key
+        }
+    }
+}
 if ($age_key | path exists) {
     $env.SOPS_AGE_KEY_FILE = $age_key
     $env.MISE_SOPS_AGE_KEY_FILE = $age_key
@@ -64,25 +81,8 @@ if ($bootstrap_secrets | path exists) {
     | ignore
 }
 
-# Secrets file (~/.secrets) — resolve op:// refs via op inject
-let secrets_file = ($env.HOME | path join ".secrets")
-if ($secrets_file | path exists) and (which op | is-not-empty) {
-    try {
-        open $secrets_file
-        | lines
-        | where { |l| not ($l | str starts-with "#") and ($l | str trim | str length) > 0 }
-        | str join "\n"
-        | ^op inject --account=my.1password.com
-        | lines
-        | where { |l| ($l | str trim | str length) > 0 and not ($l | str starts-with "#") }
-        | each { |l|
-            let l = if ($l | str starts-with "export ") { $l | str replace "export " "" } else { $l }
-            $l | parse "{key}={value}" | first
-          }
-        | each { |kv| load-env {($kv.key): $kv.value} }
-        | ignore
-    }
-}
+# Secrets are loaded via direnv + dotenvx when inside ~/dev.
+# Outside ~/dev, secrets are available via `oprun <cmd>` (uses ~/.secrets with op run).
 
 # ── Colima / Docker ──────────────────────────────────────────────────────────
 let colima_dev_sock = ($env.HOME | path join ".colima/dev/docker.sock")
@@ -97,25 +97,31 @@ if ($colima_dev_sock | path exists) {
 $env.MAESTRO_API_URL = "https://api.maestro-staging.toptal.net"
 $env.MAESTRO_RESOURCE_PROFILE = "development"
 
-# ── API keys from 1Password ──────────────────────────────────────────────────
-if (which op | is-not-empty) {
-    try {
-        $env.OPENAI_API_KEY = (^op read "op://cli/OpenAI/credential" --account=my.1password.com)
-    }
-    try {
-        $env.ANTHROPIC_API_KEY = (^op read "op://Personal/vps-anthropic-api/ANTHROPIC_API_KEY" --account=my.1password.com)
-    }
-}
 
 # ── Homebrew ──────────────────────────────────────────────────────────────────
 $env.HOMEBREW_PREFIX     = "/opt/homebrew"
 $env.HOMEBREW_CELLAR     = "/opt/homebrew/Cellar"
 $env.HOMEBREW_REPOSITORY = "/opt/homebrew"
 
-# ── SSH agent (native macOS) ──────────────────────────────────────────────────
-# Use native macOS SSH agent (no Touch ID prompts).
-# 1Password agent is used only for specific hosts via IdentityAgent in ~/.ssh/config.
-let native_sock = (glob "/var/run/com.apple.launchd.*/Listeners" | first)
-if ($native_sock | is-not-empty) {
-    $env.SSH_AUTH_SOCK = $native_sock
+# ── Handon banner ────────────────────────────────────────────────────────────
+# Show top handoff items for current repo on shell start.
+if (which handoff-detect | is-not-empty) {
+    let _result = (do { run-external "handoff-detect" $env.PWD } | complete)
+    if $_result.exit_code == 0 and ($_result.stdout | str trim | is-not-empty) {
+        print $"(ansi cyan)--- handoff ---"
+        print $_result.stdout
+        print (ansi reset)
+    }
 }
+
+# ── SSH agent ────────────────────────────────────────────────────────────────
+# Prefer gpg-agent (YubiKey/OpenPGP), fall back to native macOS launchd agent.
+$env.SSH_AUTH_SOCK = (
+    [
+        (^gpgconf --list-dirs agent-ssh-socket | str trim)
+        (glob "/var/run/com.apple.launchd.*/Listeners" | first | default "")
+    ]
+    | where { |it| $it | path exists }
+    | first
+    | default ""
+)
