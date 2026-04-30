@@ -12,6 +12,8 @@ $rust\
 $golang\
 $nodejs\
 $cmd_duration\
+$custom.doob\
+$custom.doob_urgent\
 $fill\
 $time\
 $line_break\
@@ -69,3 +71,38 @@ style    = "yellow"
 disabled = false
 format   = "[$time]($style)"
 style    = "dimmed white"
+
+[custom.doob]
+description = "Show overdue doob todos (1-3, yellow)"
+command = """
+file="$HOME/.cache/doob/status.json"
+[ -f "$file" ] || exit 0
+count=$(python3 -c "
+import json, sys
+d = json.load(open('$file'))
+c = d.get('overdue_total', 0)
+print(c) if 0 < c <= 3 else sys.exit(1)
+" 2>/dev/null) || exit 0
+echo "doob: $count overdue"
+"""
+when = "test -f $HOME/.cache/doob/status.json"
+format = "[$output]($style) "
+style = "yellow"
+shell = ["sh", "-c"]
+
+[custom.doob_urgent]
+description = "Show urgent overdue doob todos (>3, red)"
+command = """
+file="$HOME/.cache/doob/status.json"
+[ -f "$file" ] || exit 0
+python3 -c "
+import json, sys
+d = json.load(open('$file'))
+c = d.get('overdue_total', 0)
+print(f'doob: {c} overdue') if c > 3 else sys.exit(1)
+" 2>/dev/null
+"""
+when = "test -f $HOME/.cache/doob/status.json"
+format = "[$output]($style) "
+style = "red"
+shell = ["sh", "-c"]
