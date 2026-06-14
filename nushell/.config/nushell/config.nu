@@ -31,6 +31,7 @@ source autoload/audit.nu
 source autoload/nuenv.nu
 source autoload/did-you-mean.nu
 source autoload/toolkit-hook.nu
+source autoload/nu_libs.nu
 
 # ── Keybindings ───────────────────────────────────────────────────────────────
 
@@ -46,53 +47,37 @@ $env.config.keybindings = ($env.config.keybindings? | default [] | append [
       cmd: "commandline edit --insert (fd --type f | fzf | str trim)"
     }
   }
-  # Alt+D — fzf directory jump
-  {
-    name: fzf_cd
-    modifier: alt
-    keycode: char_d
-    mode: [emacs, vi_insert]
-    event: {
-      send: executehostcommand
-      cmd: "cd (fd --type d | fzf | str trim)"
-    }
-  }
-  # Alt+E — open current commandline in $EDITOR
-  {
-    name: edit_in_editor
-    modifier: alt
-    keycode: char_e
-    mode: [emacs, vi_insert]
-    event: { send: openeditor }
-  }
 ])
 
 # ── Hooks ─────────────────────────────────────────────────────────────────────
-# Always append — never replace — to avoid clobbering hooks set by atuin, etc.
+# Prevent accumulation from repeated config.nu sourcing by tracking registration
 
-# direnv: fires on directory change only (not every prompt render)
-$env.config.hooks.env_change.PWD = (
-  $env.config.hooks.env_change.PWD? | default [] | append {||
-    if (which direnv | is-empty) { return }
-    direnv export json | from json | default {} | load-env
-  }
-  | append (nuenv-hook)
-  | append (toolkit-hook)
-  | append {|before, after|
+let pwd_hooks = [
+  (nuenv-hook)
+  (toolkit-hook)
+  {|before, after|
     let cache = ($env.HOME | path join ".cache/doob/status.json")
     if not ($cache | path exists) { return }
     let data = (open $cache | from json)
     let overdue = ($data.overdue_total? | default 0)
     if $overdue == 0 { return }
     let repo = ($after | path basename)
-    let repo_count = ($data.overdue_by_repo? | default {} | get -i $repo | default 0)
+    let repo_count = ($data.overdue_by_repo? | default {} | get -o $repo | default 0)
     if $repo_count > 0 {
       print $"(ansi yellow)doob: ($repo_count) overdue in ($repo)(ansi reset)"
     } else {
       print $"(ansi dim)doob: ($overdue) overdue total(ansi reset)"
     }
   }
-)
+]
+
+# Guard against accumulation from repeated sourcing (e.g., user runs 'source config.nu')
+if ($env.NUSHELL_CONFIG_SOURCED? == "true") {
+  # Already sourced in this session, skip hook registration
+} else {
+  $env.config.hooks.env_change.PWD = $pwd_hooks
+  $env.NUSHELL_CONFIG_SOURCED = "true"
+}
 
 # display_output: expand table columns on wide terminals
 $env.config.hooks.display_output = {||
@@ -104,3 +89,6 @@ $env.config.hooks.command_not_found = (use autoload/did-you-mean.nu; hook)
 
 # go wrapper: install to $HOME/go/bin by default
 def go [...args] { with-env { GOBIN: $"($env.HOME)/go/bin" } { ^go ...$args } }
+
+# naptrace: run from source checkout so prompts/ is found
+def --wrapped naptrace [...args] { cd ~/dev/naptrace; ^naptrace ...$args }

@@ -1,5 +1,64 @@
 # Custom functions
 
+# ── nu_libs ──────────────────────────────────────────────────────────────────
+
+# Show all commands loaded from nu_libs, grouped by domain
+def libs [
+    --filter(-f): string = ""  # filter by name substring
+] {
+    let nu_libs_dir = "/Users/joe/dev/nu_libs/lib"
+
+    # Build name→domain map by scanning export defs in each domain's files
+    let domain_map = (
+        ls $nu_libs_dir
+        | where type == "dir"
+        | get name
+        | each {|dir|
+            let domain = $dir | path basename
+            let names = (
+                glob $"($dir)/**/*.nu"
+                | each {|f|
+                    open $f | lines
+                    | where {|l| ($l | str starts-with "export def") or ($l | str starts-with "export alias")}
+                    | each {|l|
+                        # extract the command name: third or fourth word depending on flags
+                        let parts = $l | split row " " | where {|p| ($p | str length) > 0}
+                        # skip "export", "def"/"alias", and any --flags
+                        $parts | skip 2 | where {|p| not ($p | str starts-with "-")} | first
+                    }
+                    | compact
+                }
+                | flatten
+                | compact
+                | each {|n| $n | str replace --all '"' "" | str replace --all "`" "" | str trim}
+            )
+            $names | each {|n| {name: $n, domain: $domain}}
+        }
+        | flatten
+        | uniq-by name
+        | reduce -f {} {|x, acc| $acc | upsert $x.name $x.domain}
+    )
+
+    let nu_libs_names = $domain_map | columns
+
+    help commands
+    | where command_type == "custom"
+    | where {|cmd| $cmd.name in $nu_libs_names}
+    | if ($filter | is-not-empty) { where name =~ $filter } else { $in }
+    | select name description
+    | each {|cmd|
+        $cmd | insert domain ($domain_map | get $cmd.name)
+    }
+    | sort-by domain name
+    | group-by domain
+    | transpose domain cmds
+    | each {|g|
+        print $"(ansi cyan_bold)── ($g.domain) ──(ansi reset)"
+        $g.cmds | select name description | print
+    }
+    null
+}
+
 # ── Files ────────────────────────────────────────────────────────────────────
 
 # Quick directory listing sorted by size

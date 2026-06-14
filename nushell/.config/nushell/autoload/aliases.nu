@@ -1,5 +1,8 @@
 # Aliases
 
+# ── Shell ─────────────────────────────────────────────────────────────────────
+alias rr = exec nu   # reload nushell (re-reads config.nu and env.nu)
+
 # ── Files ────────────────────────────────────────────────────────────────────
 alias ll = ls -l
 alias la = ls -la
@@ -14,17 +17,19 @@ alias mr  = mise run
 alias mi  = mise install
 alias mt  = mise tasks ls
 
-# ── Git ──────────────────────────────────────────────────────────────────────
-alias g   = git
-alias gs  = git status -sb
-alias ga  = git add
-alias gc  = git commit
-alias gco = git checkout
-alias gb  = git branch
-alias gd  = git diff
-alias gl  = git pull --ff-only
-alias gp  = git push
-alias gpf = git push --force-with-lease
+# ── Git (gitoxide) ───────────────────────────────────────────────────────────
+# gix-supported: status, branch, log, fetch, clone, diff(objects), blame, worktree
+# not yet in gix: add, commit, checkout/switch/restore, push, stash, rebase, merge
+def --wrapped g    [...args] { gix ...$args }
+def           gs   []        { gix status }
+def --wrapped gb   [...args] { gix branch list ...$args }
+def --wrapped ga   [...args] { git add ...$args }
+def --wrapped gc   [...args] { git commit ...$args }
+def --wrapped gco  [...args] { git checkout ...$args }
+def --wrapped gd   [...args] { git diff ...$args }        # gix diff = object-level only
+def           gl   []        { git pull --ff-only }
+def --wrapped gp   [...args] { git push ...$args }
+def --wrapped gpf  [...args] { git push --force-with-lease ...$args }
 def gitgood [] { git stash; git pull --rebase; git stash pop; git push }
 
 # ── GitHub CLI ───────────────────────────────────────────────────────────────
@@ -35,6 +40,9 @@ alias ghprv  = gh pr view
 alias ghprw  = gh pr view --web
 alias ghiss  = gh issue list
 alias ghrun  = gh run list
+
+# ── BAML ─────────────────────────────────────────────────────────────────────
+alias baml = uvx --from baml-py baml-cli
 
 # ── Python / uv ──────────────────────────────────────────────────────────────
 alias pip  = uv pip
@@ -49,12 +57,11 @@ alias yarn = bun
 
 # ── Zerobrew ─────────────────────────────────────────────────────────────────
 alias zbi = zb install
-alias zbs = zb search
 alias zbl = zb list
 alias zbu = zb update
 
 # ── Dotfiles ─────────────────────────────────────────────────────────────────
-alias dot = cd ~/dotfiles
+alias dotfiles = cd ~/dotfiles
 def --env dotgs   [] { cd ~/dotfiles; git status -sb }
 def --env dotpull [] { cd ~/dotfiles; git pull --ff-only }
 def --env dotpush [] { cd ~/dotfiles; git push }
