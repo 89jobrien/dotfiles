@@ -12,11 +12,11 @@ doctor:
 drift:
     ./scripts/drift-check.sh
 
-stow:
+link:
     ./install.sh --no-packages --no-post
 
 post:
-    ./install.sh --no-packages --no-stow
+    ./install.sh --no-packages --no-link
 
 dot:
     ./install.sh --dot-only

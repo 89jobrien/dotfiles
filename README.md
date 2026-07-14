@@ -4,6 +4,11 @@
 
 Reproducible dev environment bootstrap with a managed (immutable) core and local (mutable) overrides. Supports macOS, Linux, and Windows (via NixOS-WSL).
 
+> **Dotfiles manager:** [notfiles](https://github.com/89jobrien/notfiles) (Rust, replaces GNU
+> Stow). Config packages live at `~/.notfiles`
+> ([89jobrien/notfiles-config](https://github.com/89jobrien/notfiles-config)).
+> Bootstrap clones that repo and runs `notfiles link` automatically.
+
 ## Quick start
 
 **macOS / Linux:**

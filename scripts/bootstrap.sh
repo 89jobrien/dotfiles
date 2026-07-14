@@ -8,13 +8,13 @@ source "${ROOT_DIR}/scripts/lib/common.sh"
 source "${ROOT_DIR}/scripts/lib/onepassword.sh"
 TAG="bootstrap"
 
-STOW_LIST_FILE="${ROOT_DIR}/config/stow-packages.txt"
-STOW_LIST_LOCAL_FILE="${ROOT_DIR}/config/stow-packages.local.txt"
+NOTFILES_SOURCE="${NOTFILES_DIR:-${HOME}/.notfiles}"
+NOTFILES_REPO="https://github.com/89jobrien/notfiles-config.git"
 APT_LIST_FILE="${ROOT_DIR}/config/apt-packages.txt"
 APT_LIST_LOCAL_FILE="${ROOT_DIR}/config/apt-packages.local.txt"
 
 DO_PACKAGES=1
-DO_STOW=1
+DO_LINK=1
 DO_POST=1
 DOT_ONLY=0
 
@@ -78,9 +78,9 @@ Usage: ./install.sh [options]
 
 Options:
   --no-packages   Skip package manager installs
-  --no-stow       Skip stow linking
+  --no-link       Skip notfiles linking
   --no-post       Skip post-setup hooks
-  --dot-only       Stow + config hooks only (no packages, no compilation)
+  --dot-only      notfiles link + config hooks only (no packages, no compilation)
   -h, --help      Show this help
 EOF
 }
@@ -88,7 +88,7 @@ EOF
 for arg in "$@"; do
   case "$arg" in
     --no-packages) DO_PACKAGES=0 ;;
-    --no-stow) DO_STOW=0 ;;
+    --no-link) DO_LINK=0 ;;
     --no-post) DO_POST=0 ;;
     --dot-only)  DOT_ONLY=1 ;;
     -h|--help)
@@ -104,7 +104,7 @@ for arg in "$@"; do
 done
 
 # ---------------------------------------------------------------------------
-# Package & stow helpers (unchanged logic)
+# Package install and notfiles helpers
 # ---------------------------------------------------------------------------
 
 ensure_homebrew() {
@@ -154,31 +154,23 @@ check_homebrew_writable() {
   fi
 }
 
-ensure_stow() {
-  if has_cmd stow; then
+ensure_notfiles() {
+  if has_cmd notfiles; then
     return 0
   fi
 
-  if has_cmd zb; then
-    log "installing stow via zerobrew..."
-    zb install stow
+  if [[ -x "${HOME}/.local/bin/notfiles" ]]; then
+    export PATH="${HOME}/.local/bin:${PATH}"
     return 0
   fi
 
-  if has_cmd brew; then
-    log "installing stow via Homebrew..."
-    brew install stow
+  if has_cmd cargo; then
+    log "installing notfiles via cargo..."
+    cargo install notfiles
     return 0
   fi
 
-  if [[ "$(uname -s)" == "Linux" ]] && has_cmd apt-get; then
-    log "installing stow via apt..."
-    sudo apt-get update
-    sudo apt-get install -y stow
-    return 0
-  fi
-
-  log_err "cannot install stow automatically"
+  log_err "cannot install notfiles — install cargo or add notfiles to PATH"
   return 1
 }
 
@@ -263,51 +255,22 @@ install_mise_toolchain() {
   fi
 }
 
-stow_package() {
-  local package="$1"
-  if [[ ! -d "${ROOT_DIR}/${package}" ]]; then
+notfiles_link() {
+  if [[ "$DO_LINK" -ne 1 ]]; then
+    log_skip "notfiles link"
     return 0
   fi
 
-  local dry_run_output
-  dry_run_output="$(stow -d "${ROOT_DIR}" -t "${HOME}" -n "${package}" 2>&1 || true)"
-  if printf '%s\n' "${dry_run_output}" | grep -Eq 'would cause conflicts|cannot stow|existing target is not owned by stow|ERROR'; then
-    return 0
+  if [[ ! -d "${NOTFILES_SOURCE}" ]]; then
+    log "cloning notfiles config to ${NOTFILES_SOURCE}..."
+    git clone "${NOTFILES_REPO}" "${NOTFILES_SOURCE}"
   fi
 
-  stow -d "${ROOT_DIR}" -t "${HOME}" -R "${package}" >/dev/null 2>&1
-}
+  ensure_notfiles
 
-stow_packages() {
-  if [[ "$DO_STOW" -ne 1 ]]; then
-    log_skip "stow"
-    return 0
-  fi
-
-  if [[ ! -f "${STOW_LIST_FILE}" ]]; then
-    log_err "missing stow package list: ${STOW_LIST_FILE}"
-    return 1
-  fi
-
-  ensure_stow
-
-  local stow_count=0
-  while IFS= read -r pkg; do
-    [[ -z "${pkg}" || "${pkg}" =~ ^[[:space:]]*# ]] && continue
-    stow_package "${pkg}"
-    ((stow_count++)) || true
-  done < "${STOW_LIST_FILE}"
-
-  if [[ -f "${STOW_LIST_LOCAL_FILE}" ]]; then
-    while IFS= read -r pkg; do
-      [[ -z "${pkg}" || "${pkg}" =~ ^[[:space:]]*# ]] && continue
-      stow_package "${pkg}"
-      ((stow_count++)) || true
-    done < "${STOW_LIST_LOCAL_FILE}"
-  fi
-
-  log_ok "stowed ($stow_count packages)"
-  _record "Stow" "ok" "${stow_count}"
+  notfiles --dir "${NOTFILES_SOURCE}" link
+  log_ok "linked dotfiles via notfiles"
+  _record "Notfiles" "ok"
 }
 
 # ---------------------------------------------------------------------------
@@ -454,7 +417,7 @@ main() {
   check_env
 
   if [[ "${DOT_ONLY}" -eq 1 ]]; then
-    stow_packages
+    notfiles_link
     run_dot_hooks
     print_summary
     log_ok "dot install complete"
@@ -465,7 +428,7 @@ main() {
   ensure_homebrew || true
   check_homebrew_writable
   install_packages
-  stow_packages
+  notfiles_link
   install_mise_toolchain
   run_post_hooks
   print_summary
