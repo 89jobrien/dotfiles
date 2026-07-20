@@ -1,0 +1,53 @@
+layout {
+    tab name="dev" cwd="/Users/joe/dev/devloop" {
+        pane split_direction="vertical" {
+            pane focus=true
+            pane split_direction="horizontal" {
+                pane {
+                    command "cargo"
+                    args "clippy" "--workspace"
+                    start_suspended true
+                }
+                pane {
+                    command "cargo"
+                    args "check" "--workspace"
+                    start_suspended true
+                }
+            }
+        }
+    }
+    tab name="test" cwd="/Users/joe/dev/devloop" {
+        pane {
+            command "cargo"
+            args "nextest" "run" "--workspace"
+            start_suspended true
+        }
+    }
+    tab name="run" cwd="/Users/joe/dev/devloop" {
+        pane {
+            command "just"
+            args "run"
+            start_suspended true
+            focus=true
+        }
+    }
+    tab name="pipeline" cwd="/Users/joe/dev/devloop" {
+        pane {
+            command "just"
+            args "pipeline"
+            start_suspended true
+        }
+    }
+    tab name="claude" cwd="/Users/joe/dev/devloop" {
+        pane {
+            command "claude"
+        }
+    }
+    tab name="preflight" cwd="/Users/joe/dev/devloop" {
+        pane {
+            command "nu"
+            args "scripts/preflight.nu"
+            start_suspended true
+        }
+    }
+}

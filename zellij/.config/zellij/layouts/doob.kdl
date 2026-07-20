@@ -1,0 +1,45 @@
+layout {
+    tab name="dev" cwd="/Users/joe/dev/doob" {
+        pane split_direction="vertical" {
+            pane focus=true
+            pane split_direction="horizontal" {
+                pane {
+                    command "cargo"
+                    args "clippy" "--workspace" "--all-features"
+                    start_suspended true
+                }
+                pane {
+                    command "cargo"
+                    args "check" "--workspace"
+                    start_suspended true
+                }
+            }
+        }
+    }
+    tab name="test" cwd="/Users/joe/dev/doob" {
+        pane {
+            command "bash"
+            args "-c" "./ci.sh"
+            start_suspended true
+        }
+    }
+    tab name="dash" cwd="/Users/joe/dev/doob" {
+        pane {
+            command "doobdash"
+            start_suspended true
+            focus=true
+        }
+    }
+    tab name="claude" cwd="/Users/joe/dev/doob" {
+        pane {
+            command "claude"
+        }
+    }
+    tab name="preflight" cwd="/Users/joe/dev/doob" {
+        pane {
+            command "nu"
+            args "scripts/preflight.nu"
+            start_suspended true
+        }
+    }
+}

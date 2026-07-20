@@ -1,0 +1,46 @@
+layout {
+    tab name="dev" cwd="/Users/joe/dev/notfiles" {
+        pane split_direction="vertical" {
+            pane focus=true
+            pane split_direction="horizontal" {
+                pane {
+                    command "cargo"
+                    args "clippy" "--workspace"
+                    start_suspended true
+                }
+                pane {
+                    command "cargo"
+                    args "check" "--workspace"
+                    start_suspended true
+                }
+            }
+        }
+    }
+    tab name="test" cwd="/Users/joe/dev/notfiles" {
+        pane split_direction="horizontal" {
+            pane {
+                command "cargo"
+                args "test" "--workspace"
+                start_suspended true
+                focus=true
+            }
+            pane {
+                command "cargo"
+                args "test" "-p" "notfiles" "--test" "integration"
+                start_suspended true
+            }
+        }
+    }
+    tab name="claude" cwd="/Users/joe/dev/notfiles" {
+        pane {
+            command "claude"
+        }
+    }
+    tab name="preflight" cwd="/Users/joe/dev/notfiles" {
+        pane {
+            command "nu"
+            args "scripts/preflight.nu"
+            start_suspended true
+        }
+    }
+}

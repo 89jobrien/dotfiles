@@ -62,13 +62,25 @@ Commits are signed via SSH key through the 1Password agent. If `git commit` fail
 
 ## Active Hooks (transparent, always-on)
 
-- **PreToolUse/Bash**: `rtk-rewrite.sh` — rewrites CLI commands through RTK for token savings
-- **PreToolUse/Bash**: `pre-tool-course-correct.py` — blocks anti-pattern Bash commands (grep/cat/find/npm/pip/nvm — use dedicated tools instead); also blocks any Bash command that fails ≥3 times in 5 min. Rules: `~/.claude/hooks/course-correct-rules.json`
-- **PostToolUse/Bash**: `post-bash-redact.sh` — redacts sensitive output
-- **PostToolUse/Bash**: `post-tool-track-failures.py` — records failed Bash exit codes for course-correct learning
-- **PostToolUse/Edit|Write**: `post-edit-cargo-fmt.nu` — auto-runs `cargo fmt` on edited Rust files
-- **PostToolUse/Edit|Write**: `post-edit-cargo-check.nu` — runs `cargo check --workspace` after Rust edits, surfaces errors to stderr (non-blocking)
-- **PostToolUse/Edit|Write**: `sync_memory_to_vault.py` — syncs `~/.claude/…/memory/` files to Obsidian vault
+All PreToolUse/PostToolUse/Stop/SessionEnd hooks run through a single compiled binary,
+`crs` (coursers, `~/.cargo/bin/crs`), wired in `~/.claude/settings.json` as
+`crs hook <event>`. `crs` reads its rule pipeline from `~/.config/crs/plugins.d/*.toml`
+and `~/.config/coursers/course-correct-rules.json` (the live rules file — not the
+`~/dotfiles/.claude/hooks/course-correct-rules.json` copy, which has drifted stale).
+
+- **PreToolUse/Bash**: command rewriting (`crs rewrite` — RTK-style token savings) and
+  course-correct blocking of anti-pattern commands (grep/cat/find/npm/pip/nvm/rustup —
+  use dedicated tools instead), plus destructive-command guardrails
+  (`~/.config/crs/plugins.d/godmode.toml`: force-push, DROP TABLE, 1Password item edits, etc.)
+- **PostToolUse/Bash**: output redaction/filtering (`crs filter`) and failure tracking for
+  course-correct learning (`crs post`)
+- **PostToolUse/Edit|Write**: `cargo-fmt-on-edit` — runs `cargo fmt` on edited `.rs` files
+  (shells out to `~/dotfiles/.claude/hooks/post-edit-cargo-fmt.sh`)
+- **PostToolUse/Edit|Write**: `memory-vault-sync` — syncs `~/.claude/…/memory/*.md` writes to
+  the Obsidian vault (shells out to `~/dotfiles/.claude/hooks/sync_memory_to_vault.py`)
+- **Stop**: `stop-handoff` — runs `hj handoff`
+
+Query hook activity: `crs log --limit N`. Validate config: `crs validate-hooks`.
 
 ## Secrets Audit
 

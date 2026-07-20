@@ -1,0 +1,46 @@
+layout {
+    tab name="dev" cwd="/Users/joe/dev/personal-mcp" {
+        pane split_direction="vertical" {
+            pane focus=true
+            pane split_direction="horizontal" {
+                pane {
+                    command "cargo"
+                    args "clippy"
+                    start_suspended true
+                }
+                pane {
+                    command "cargo"
+                    args "check"
+                    start_suspended true
+                }
+            }
+        }
+    }
+    tab name="run" cwd="/Users/joe/dev/personal-mcp" {
+        pane {
+            command "cargo"
+            args "run" "--release"
+            start_suspended true
+            focus=true
+        }
+    }
+    tab name="baml" cwd="/Users/joe/dev/personal-mcp" {
+        pane {
+            command "mise"
+            args "run" "baml-generate"
+            start_suspended true
+        }
+    }
+    tab name="claude" cwd="/Users/joe/dev/personal-mcp" {
+        pane {
+            command "claude"
+        }
+    }
+    tab name="preflight" cwd="/Users/joe/dev/personal-mcp" {
+        pane {
+            command "nu"
+            args "scripts/preflight.nu"
+            start_suspended true
+        }
+    }
+}

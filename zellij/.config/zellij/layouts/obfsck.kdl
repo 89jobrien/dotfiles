@@ -1,0 +1,45 @@
+layout {
+    tab name="dev" cwd="/Users/joe/dev/obfsck" {
+        pane split_direction="vertical" {
+            pane focus=true
+            pane split_direction="horizontal" {
+                pane {
+                    command "cargo"
+                    args "clippy" "--workspace"
+                    start_suspended true
+                }
+                pane {
+                    command "cargo"
+                    args "check" "--workspace"
+                    start_suspended true
+                }
+            }
+        }
+    }
+    tab name="test" cwd="/Users/joe/dev/obfsck" {
+        pane {
+            command "mise"
+            args "run" "ci"
+            start_suspended true
+        }
+    }
+    tab name="bench" cwd="/Users/joe/dev/obfsck" {
+        pane {
+            command "cargo"
+            args "bench"
+            start_suspended true
+        }
+    }
+    tab name="claude" cwd="/Users/joe/dev/obfsck" {
+        pane {
+            command "claude"
+        }
+    }
+    tab name="preflight" cwd="/Users/joe/dev/obfsck" {
+        pane {
+            command "nu"
+            args "scripts/preflight.nu"
+            start_suspended true
+        }
+    }
+}

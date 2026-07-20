@@ -1,0 +1,60 @@
+layout {
+    tab name="dev" cwd="/Users/joe/dev/minibox" {
+        pane split_direction="vertical" {
+            pane focus=true
+            pane split_direction="horizontal" {
+                pane {
+                    command "cargo"
+                    args "clippy" "--workspace"
+                    start_suspended true
+                }
+                pane {
+                    command "cargo"
+                    args "xtask" "pre-commit"
+                    start_suspended true
+                }
+            }
+        }
+    }
+    tab name="test" cwd="/Users/joe/dev/minibox" {
+        pane split_direction="horizontal" {
+            pane {
+                command "cargo"
+                args "xtask" "test-unit"
+                start_suspended true
+                focus=true
+            }
+            pane {
+                command "just"
+                args "test-e2e"
+                start_suspended true
+            }
+        }
+    }
+    tab name="bench" cwd="/Users/joe/dev/minibox" {
+        pane {
+            command "cargo"
+            args "xtask" "bench"
+            start_suspended true
+        }
+    }
+    tab name="dash" cwd="/Users/joe/dev/minibox" {
+        pane {
+            command "cargo"
+            args "run" "--bin" "dashbox"
+            start_suspended true
+        }
+    }
+    tab name="claude" cwd="/Users/joe/dev/minibox" {
+        pane {
+            command "claude"
+        }
+    }
+    tab name="preflight" cwd="/Users/joe/dev/minibox" {
+        pane {
+            command "nu"
+            args "scripts/preflight.nu"
+            start_suspended true
+        }
+    }
+}

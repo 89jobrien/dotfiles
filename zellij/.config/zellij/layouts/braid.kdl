@@ -1,0 +1,45 @@
+layout {
+    tab name="dev" cwd="/Users/joe/dev/braid" {
+        pane split_direction="vertical" {
+            pane focus=true
+            pane split_direction="horizontal" {
+                pane {
+                    command "cargo"
+                    args "clippy" "--workspace"
+                    start_suspended true
+                }
+                pane {
+                    command "cargo"
+                    args "check" "--workspace"
+                    start_suspended true
+                }
+            }
+        }
+    }
+    tab name="test" cwd="/Users/joe/dev/braid" {
+        pane {
+            command "cargo"
+            args "nextest" "run" "--workspace"
+            start_suspended true
+        }
+    }
+    tab name="mcp" cwd="/Users/joe/dev/braid" {
+        pane {
+            command "cargo"
+            args "run" "--bin" "braid-mcp"
+            start_suspended true
+        }
+    }
+    tab name="claude" cwd="/Users/joe/dev/braid" {
+        pane {
+            command "claude"
+        }
+    }
+    tab name="preflight" cwd="/Users/joe/dev/braid" {
+        pane {
+            command "nu"
+            args "scripts/preflight.nu"
+            start_suspended true
+        }
+    }
+}
