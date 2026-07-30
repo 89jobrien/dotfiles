@@ -100,7 +100,7 @@ spin_with_msg() {
   local tag="${TAG:-log}"
 
   # Always suppress verbose output and show only tail (no full output scroll)
-  local tmpfile
+  local tmpfile=""
   tmpfile="$(mktemp)"
   trap 'rm -f "${tmpfile}"' RETURN
 
@@ -141,6 +141,8 @@ spin_with_msg() {
     log_err "${msg} (exit code: ${rc})"
   fi
 
+  rm -f "${tmpfile}"
+  trap - RETURN
   return $rc
 }
 

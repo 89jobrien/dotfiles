@@ -134,6 +134,11 @@ if status is-interactive
         end
     end
 
+    # API keys from 1Password (when not already set)
+    if not set -q OPENAI_API_KEY; and command -q op
+        set -gx OPENAI_API_KEY (op read "op://cli/OpenAI/credential" --account=my.1password.com 2>/dev/null)
+    end
+
     if command -q zoxide
         zoxide init fish | source
     end

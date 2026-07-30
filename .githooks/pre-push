@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/cmd.sh"
 
-if has_cmd devkit; then
+if has_cmd devkit && has_cmd op; then
   echo "Running devkit council (advisory — push will not be blocked)..." >&2
-  devkit council --base main 2>&1 | sed 's/^/  [devkit] /' >&2 || true
+  op run --env-file="$HOME/.secrets" -- devkit council --base main 2>&1 | sed 's/^/  [devkit] /' >&2 || true
 fi

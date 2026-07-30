@@ -24,6 +24,7 @@ brew "zoxide"            # [nix-batch-1]
 brew "mise"
 brew "tmux"              # [nix-batch-1]
 brew "neovim"            # [nix-batch-1]
+brew "nushell"
 brew "zsh-autosuggestions"
 brew "zsh-autopair"
 brew "kubectl"           # [nix-batch-1]

@@ -1,0 +1,21 @@
+# Global direnv config — stow-linked to ~/.config/direnv/direnvrc
+# Loaded by direnv before evaluating any .envrc file.
+
+# Per-project opt-in: add `source_up_if_exists` to a project's own .envrc to
+# inherit environment from a parent directory's .envrc (e.g., ~/dev/.envrc).
+# It is intentionally NOT called here — a global default would silently expose
+# secret-bearing parent envs to every directory on the machine.
+
+# Python venv layout helper.
+layout_python() {
+  local python="${1:-python3}"
+  unset PYTHONHOME
+  [[ -d .venv ]] || $python -m venv .venv
+  export VIRTUAL_ENV="$PWD/.venv"
+  PATH_add "$VIRTUAL_ENV/bin"
+}
+
+# Node.js local bin layout helper.
+layout_node() {
+  PATH_add node_modules/.bin
+}

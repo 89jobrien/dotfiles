@@ -310,7 +310,11 @@ run_dot_hooks() {
     run_hook "macOS" "${ROOT_DIR}/scripts/setup-macos.sh"
   fi
 
+  section "direnv"
+  run_hook "direnv" "${ROOT_DIR}/scripts/setup-direnv.sh"
+
   section "AI Tools"
+  run_hook "Claude Config" "${ROOT_DIR}/scripts/setup-claude-config.sh"
   run_hook "AI Tools" "${ROOT_DIR}/scripts/setup-ai-tools.sh"
   run_hook "Hooks" "${ROOT_DIR}/scripts/setup-hooks.sh"
 }
